@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicGuard } from './components/PublicGuard';
+import { PrivateGuard } from './components/PrivateGuard';
 
 import { HomePage } from './pages/public/HomePage';
 import { NosotrosPage } from './pages/public/NosotrosPage';
@@ -26,14 +27,15 @@ function App() {
             <Route path="/servicios" element={<ServiciosPage />} />
             <Route path="/contacto" element={<ContactoPage />} />
           </Route>
+          {/* Login - Sin Layout */}
+          <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        {/* Login - Sin Layout */}
-        <Route path="/login" element={<LoginPage />} />
-
         {/* Rutas Privadas del SaaS - AppLayout */}
-        <Route element={<AppLayout />}>
-          <Route path="/map" element={<MapPage />} />
+        <Route element={<PrivateGuard />}>
+          <Route element={<AppLayout />}>
+            <Route path="/map" element={<MapPage />} />
+          </Route>
         </Route>
 
       </Routes>

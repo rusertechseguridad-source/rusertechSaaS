@@ -39,11 +39,13 @@ async function main() {
   // 3. User Admin
   await prisma.user.upsert({
     where: { email: 'admin@rusertech.com' },
-    update: {},
+    update: {
+      password_hash: '$2b$10$V6ZGhkwuyv9hUVWs3qpTa.ocDTGCoqzHM77mqUClSX1IfOHWPphJC', // Hashed Gusta_Rusertech86
+    },
     create: {
       tenant_id: tenant.id,
       email: 'admin@rusertech.com',
-      password_hash: '$2b$10$YourHashedPasswordHere', // Use a proper hash in production
+      password_hash: '$2b$10$V6ZGhkwuyv9hUVWs3qpTa.ocDTGCoqzHM77mqUClSX1IfOHWPphJC', // Hashed Gusta_Rusertech86
       full_name: 'Admin Demo',
       role_code: 'rusertech_admin',
     },
