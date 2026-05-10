@@ -10,6 +10,8 @@ import { ServiciosPage } from './pages/public/ServiciosPage';
 import { ContactoPage } from './pages/public/ContactoPage';
 
 import { LoginPage } from './pages/auth/LoginPage';
+import { AvlUserListPage } from './pages/avl/AvlUserListPage';
+import { AvlEventDictionaryPage } from './pages/avl/AvlEventDictionaryPage';
 
 // Stub map page for authenticated users
 const MapPage = () => <div className="p-8">Bienvenido al Mapa (SaaS Dashboard)</div>;
@@ -35,6 +37,8 @@ function App() {
         <Route element={<PrivateGuard />}>
           <Route element={<AppLayout />}>
             <Route path="/map" element={<MapPage />} />
+            <Route path="/avl" element={<AvlUserListPage />} />
+            <Route path="/avl/:id/dictionary" element={<AvlEventDictionaryPage />} />
           </Route>
         </Route>
 

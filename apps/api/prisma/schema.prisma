@@ -647,3 +647,16 @@ model TripCommandHistory {
 
   @@map("trip_command_history")
 }
+
+model OutboxMessage {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  queue_name   String    @db.VarChar(100)
+  job_name     String    @db.VarChar(100)
+  payload      Json
+  status       String    @default("pending") @db.VarChar(30)
+  retry_count  Int       @default(0) @db.SmallInt
+  created_at   DateTime  @default(now()) @db.Timestamptz
+  processed_at DateTime? @db.Timestamptz
+
+  @@map("outbox_messages")
+}
