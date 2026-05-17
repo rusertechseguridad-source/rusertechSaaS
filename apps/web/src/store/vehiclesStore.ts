@@ -60,10 +60,14 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to create vehicle');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Error al crear vehículo');
+      }
       await get().fetchVehicles();
     } catch (error: any) {
       console.error(error);
+      alert('Error al crear vehículo: ' + error.message);
     }
   },
 
@@ -74,10 +78,14 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to update vehicle');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Error al actualizar vehículo');
+      }
       await get().fetchVehicles();
     } catch (error: any) {
       console.error(error);
+      alert('Error al actualizar vehículo: ' + error.message);
     }
   },
 
@@ -101,15 +109,16 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify({ blocked, reason }),
       });
-      if (!res.ok) throw new Error('Failed to toggle block');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Error al cambiar estado de bloqueo');
+      }
       
-      set((state) => ({
-        vehicles: state.vehicles.map((v) => 
-          v.id === id ? { ...v, is_blocked: blocked, block_reason: blocked ? (reason || null) : null } : v
-        ),
-      }));
+      // Re-fetch to get the updated state from server
+      await get().fetchVehicles();
     } catch (error: any) {
       console.error(error);
+      alert('Error al cambiar estado de bloqueo: ' + error.message);
     }
   },
 }));

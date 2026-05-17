@@ -53,10 +53,14 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to create location');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Error al crear ubicación');
+      }
       await get().fetchLocations();
     } catch (error: any) {
       console.error(error);
+      alert('Error al crear ubicación: ' + error.message);
     }
   },
 
