@@ -14,5 +14,6 @@ import { BullModule } from '@nestjs/bullmq';
   ],
   controllers: [TelemetryController],
   providers: [TelemetryService, GeocodingService, OutboxProcessorService],
+  exports: [TelemetryService],
 })
 export class TelemetryModule {}

@@ -1,0 +1,215 @@
+import React, { useEffect, useState } from 'react';
+import { useSimulatorStore } from '../../store/simulatorStore';
+import { useAvlStore } from '../../store/avlStore';
+import { Activity, Play, Send, AlertTriangle, X, Trash2 } from 'lucide-react';
+
+export const SimulatorPanel: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'point' | 'route' | 'alert' | 'status'>('point');
+  
+  const { activeJobs, fetchStatus, sendPoint, sendAlert, startRoute, deleteRoute, loading } = useSimulatorStore();
+  const { users, fetchUsers } = useAvlStore();
+
+  const [avlUserId, setAvlUserId] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
+  
+  // Basic Form States
+  const [lat, setLat] = useState('-34.6037');
+  const [lng, setLng] = useState('-58.3816');
+  const [speed, setSpeed] = useState('0');
+  const [alertType, setAlertType] = useState('speed_exceeded');
+
+  useEffect(() => {
+    fetchUsers();
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSendPoint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendPoint({
+      avlUserId,
+      vehicleId,
+      lat: parseFloat(lat),
+      lng: parseFloat(lng),
+      speedKmh: parseFloat(speed)
+    });
+    alert('Punto enviado');
+  };
+
+  const handleSendAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendAlert({
+      avlUserId,
+      vehicleId,
+      lat: parseFloat(lat),
+      lng: parseFloat(lng),
+      alertType
+    });
+    alert('Alerta enviada');
+  };
+
+  const handleStartRoute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Dummy route around Buenos Aires
+    const routeGeoJson = {
+      type: "LineString",
+      coordinates: [
+        [-58.3816, -34.6037],
+        [-58.3820, -34.6040],
+        [-58.3830, -34.6050]
+      ]
+    };
+    await startRoute({
+      avlUserId,
+      vehicleId,
+      routeGeoJson,
+      intervalSeconds: 5,
+      speedKmh: 40
+    });
+    alert('Ruta iniciada');
+    fetchStatus();
+  };
+
+  if (import.meta.env.VITE_AVL_SIMULATOR_ENABLED !== 'true') return null;
+
+  return (
+    <div className={`fixed z-50 transition-all duration-300 ${isOpen ? 'bottom-0 right-0 h-screen w-96 bg-gray-900 border-l border-gray-800 shadow-2xl' : 'bottom-4 right-4'}`}>
+      {!isOpen && (
+        <button 
+          onClick={() => setIsOpen(true)}
+          className="bg-amber-500 hover:bg-amber-600 text-black px-4 py-2 rounded-full font-bold flex items-center shadow-lg shadow-amber-500/20"
+        >
+          <Activity className="w-5 h-5 mr-2" />
+          DEV SIMULATOR
+          {activeJobs.length > 0 && (
+             <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+               {activeJobs.length} ACTIVO
+             </span>
+          )}
+        </button>
+      )}
+
+      {isOpen && (
+        <div className="h-full flex flex-col text-sm text-gray-300">
+          <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-black/50">
+            <h2 className="font-bold text-amber-500 flex items-center">
+              <Activity className="w-5 h-5 mr-2" />
+              AVL SIMULATOR
+            </h2>
+            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex border-b border-gray-800">
+            <button onClick={() => setActiveTab('point')} className={`flex-1 py-3 text-center ${activeTab === 'point' ? 'border-b-2 border-amber-500 text-white' : 'hover:bg-gray-800'}`}><Send className="w-4 h-4 mx-auto" /></button>
+            <button onClick={() => setActiveTab('route')} className={`flex-1 py-3 text-center ${activeTab === 'route' ? 'border-b-2 border-amber-500 text-white' : 'hover:bg-gray-800'}`}><Play className="w-4 h-4 mx-auto" /></button>
+            <button onClick={() => setActiveTab('alert')} className={`flex-1 py-3 text-center ${activeTab === 'alert' ? 'border-b-2 border-amber-500 text-white' : 'hover:bg-gray-800'}`}><AlertTriangle className="w-4 h-4 mx-auto" /></button>
+            <button onClick={() => setActiveTab('status')} className={`flex-1 py-3 text-center ${activeTab === 'status' ? 'border-b-2 border-amber-500 text-white' : 'hover:bg-gray-800'}`}><Activity className="w-4 h-4 mx-auto" /></button>
+          </div>
+
+          <div className="p-4 flex-1 overflow-y-auto">
+            {activeTab !== 'status' && (
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">AVL User (Provider)</label>
+                  <select 
+                    className="w-full bg-black border border-gray-700 rounded p-2 text-white"
+                    value={avlUserId}
+                    onChange={(e) => setAvlUserId(e.target.value)}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.user_avl_code} - {u.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Vehicle ID</label>
+                  <input 
+                    type="text" 
+                    placeholder="UUID del Vehículo"
+                    className="w-full bg-black border border-gray-700 rounded p-2 text-white"
+                    value={vehicleId}
+                    onChange={(e) => setVehicleId(e.target.value)}
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">Latitud</label>
+                    <input type="text" className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={lat} onChange={(e) => setLat(e.target.value)} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">Longitud</label>
+                    <input type="text" className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={lng} onChange={(e) => setLng(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'point' && (
+              <form onSubmit={handleSendPoint} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Velocidad (km/h)</label>
+                  <input type="text" className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={speed} onChange={(e) => setSpeed(e.target.value)} />
+                </div>
+                <button disabled={loading} type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded p-2 font-bold">
+                  Enviar Punto
+                </button>
+              </form>
+            )}
+
+            {activeTab === 'alert' && (
+              <form onSubmit={handleSendAlert} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Tipo de Alerta</label>
+                  <select className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={alertType} onChange={(e) => setAlertType(e.target.value)}>
+                    <option value="speed_exceeded">Exceso de Velocidad</option>
+                    <option value="sos">Botón SOS</option>
+                    <option value="geofence_enter">Ingreso a Geocerca</option>
+                    <option value="signal_loss">Pérdida de Señal</option>
+                  </select>
+                </div>
+                <button disabled={loading} type="submit" className="w-full bg-red-600 hover:bg-red-500 text-white rounded p-2 font-bold">
+                  Lanzar Alerta
+                </button>
+              </form>
+            )}
+
+            {activeTab === 'route' && (
+              <form onSubmit={handleStartRoute} className="space-y-4">
+                <p className="text-xs text-gray-500">Se usará una ruta predefinida de prueba de 3 puntos en Buenos Aires.</p>
+                <button disabled={loading} type="submit" className="w-full bg-green-600 hover:bg-green-500 text-white rounded p-2 font-bold">
+                  Iniciar Simulación de Ruta
+                </button>
+              </form>
+            )}
+
+            {activeTab === 'status' && (
+              <div className="space-y-4">
+                <h3 className="font-bold text-white mb-2">Trabajos en Curso ({activeJobs.length})</h3>
+                {activeJobs.length === 0 ? (
+                  <p className="text-gray-500 italic text-xs">No hay simulaciones de rutas corriendo.</p>
+                ) : (
+                  activeJobs.map(job => (
+                    <div key={job.id} className="bg-black border border-gray-800 p-3 rounded text-xs relative">
+                      <p className="text-amber-500 font-bold mb-1">Job ID: {job.id}</p>
+                      <p>Vehicle: {job.data.vehicleId.slice(0, 8)}...</p>
+                      <p>Index: {job.data.currentIndex} / {job.data.coordinates?.length}</p>
+                      <button 
+                        onClick={() => { deleteRoute(job.id); fetchStatus(); }}
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

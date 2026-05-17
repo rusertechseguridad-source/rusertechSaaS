@@ -13,6 +13,7 @@ import { UsersModule } from './users/users.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { AvlUsersModule } from './avl-users/avl-users.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
+import { SimulatorModule } from './simulator/simulator.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
     UsersModule,
     TelemetryModule,
     AvlUsersModule,
+    SimulatorModule,
   ],
   controllers: [AppController],
   providers: [
