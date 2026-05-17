@@ -44,31 +44,27 @@ export class RoutesService {
     if (!geojson) throw new BadRequestException('GeoJSON LineString is required for the route');
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create the base record
-      const route = await (tx as any).route.create({
-        data: {
-          tenant_id: tenantId,
-          name,
-          description,
-          origin_location_id,
-          destination_location_id,
-          operation_id,
-          corridor_meters,
-          distance_km,
-          estimated_minutes,
-          created_by: userId,
-        }
-      });
-
-      // 2. Set the geography field using PostGIS from GeoJSON
+      // 1. Create the base record and geometry via raw query because of Unsupported
       const geomText = JSON.stringify(geojson);
-      await tx.$executeRawUnsafe(`
-        UPDATE "routes" 
-        SET geometry = ST_SetSRID(ST_GeomFromGeoJSON('${geomText}'), 4326)::geography 
-        WHERE id = '${route.id}'
+      const routeRes: any = await tx.$queryRawUnsafe(`
+        INSERT INTO "routes" (
+          tenant_id, name, description, origin_location_id, destination_location_id, operation_id, corridor_meters, distance_km, estimated_minutes, created_by, geometry
+        ) VALUES (
+          '${tenantId}', 
+          '${name}', 
+          ${description ? `'${description}'` : 'NULL'}, 
+          ${origin_location_id ? `'${origin_location_id}'` : 'NULL'}, 
+          ${destination_location_id ? `'${destination_location_id}'` : 'NULL'}, 
+          ${operation_id ? `'${operation_id}'` : 'NULL'}, 
+          ${corridor_meters}, 
+          ${distance_km || 'NULL'}, 
+          ${estimated_minutes || 'NULL'}, 
+          '${userId}', 
+          ST_SetSRID(ST_GeomFromGeoJSON('${geomText}'), 4326)::geography
+        ) RETURNING *;
       `);
 
-      return route;
+      return routeRes[0];
     });
   }
 

@@ -25,28 +25,24 @@ export class LocationsService {
     if (!lat || !lng) throw new BadRequestException('Coordinates are required');
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create the base record
-      const loc = await (tx as any).savedLocation.create({
-        data: {
-          tenant_id: tenantId,
-          name,
-          address,
-          location_type: location_type || 'generic',
-          latitude: lat,
-          longitude: lng,
-          radius_meters,
-          created_by: userId,
-        }
-      });
-
-      // 2. Set the geography field using PostGIS
-      await tx.$executeRawUnsafe(`
-        UPDATE "saved_locations" 
-        SET geometry = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography 
-        WHERE id = '${loc.id}'
+      // 1. Create the base record and geometry via raw query because of Unsupported
+      const locRes: any = await tx.$queryRawUnsafe(`
+        INSERT INTO "saved_locations" (
+          tenant_id, name, address, location_type, latitude, longitude, radius_meters, created_by, geometry
+        ) VALUES (
+          '${tenantId}', 
+          '${name}', 
+          ${address ? `'${address}'` : 'NULL'}, 
+          '${location_type || 'generic'}', 
+          ${lat}, 
+          ${lng}, 
+          ${radius_meters}, 
+          '${userId}', 
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+        ) RETURNING *;
       `);
 
-      return loc;
+      return locRes[0];
     });
   }
 

@@ -114,9 +114,9 @@ export const LocationsPage: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-gray-800 rounded-xl p-6 w-full max-w-lg">
-            <h2 className="text-2xl font-bold text-white mb-6">Nueva Ubicación</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
+          <div className="bg-surface border border-gray-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col">
+            <h2 className="text-2xl font-bold text-white mb-6 shrink-0">Nueva Ubicación</h2>
+            <form onSubmit={handleCreate} className="space-y-4 overflow-y-auto pr-2 flex-1">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Nombre</label>
                 <input required type="text" className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={name} onChange={e => setName(e.target.value)} />
@@ -152,7 +152,7 @@ export const LocationsPage: React.FC = () => {
                 <input required type="number" className="w-full bg-black border border-gray-700 rounded p-2 text-white" value={radius} onChange={e => setRadius(parseInt(e.target.value))} />
               </div>
               
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-800 shrink-0">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-gray-400 hover:text-white">Cancelar</button>
                 <button type="submit" className="px-6 py-2 bg-brand text-black font-bold rounded hover:bg-brand/90">Guardar</button>
               </div>

@@ -20,7 +20,7 @@ export class RoutesController {
 
   @Post()
   create(@Body() data: any, @CurrentUser() user: any) {
-    return this.service.create(data, user.tenantId, user.userId);
+    return this.service.create(data, user.tenantId, user.id);
   }
 
   @Put(':id')

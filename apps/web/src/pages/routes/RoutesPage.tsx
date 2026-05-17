@@ -60,7 +60,10 @@ export const RoutesPage: React.FC = () => {
             <Upload className="w-5 h-5 mr-2" /> Importar KML
             <input type="file" accept=".kml" className="hidden" onChange={handleFileUpload} />
           </label>
-          <button className="bg-brand hover:bg-brand/90 text-black px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-brand/20">
+          <button 
+            onClick={() => alert('La creación manual de rutas requiere la integración completa del mapa interactivo (MapLibre GL Draw). Por el momento, por favor utilice la función "Importar KML".')}
+            className="bg-brand hover:bg-brand/90 text-black px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-brand/20"
+          >
             <Plus className="w-5 h-5 mr-2" /> Crear Manual
           </button>
         </div>
