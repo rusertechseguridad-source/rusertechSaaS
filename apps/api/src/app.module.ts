@@ -14,6 +14,9 @@ import { TelemetryModule } from './telemetry/telemetry.module';
 import { AvlUsersModule } from './avl-users/avl-users.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { SimulatorModule } from './simulator/simulator.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { LocationsModule } from './locations/locations.module';
+import { RoutesModule } from './routes/routes.module';
 
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { SimulatorModule } from './simulator/simulator.module';
     TelemetryModule,
     AvlUsersModule,
     SimulatorModule,
+    VehiclesModule,
+    LocationsModule,
+    RoutesModule,
   ],
   controllers: [AppController],
   providers: [
