@@ -8,16 +8,39 @@ export const VehiclesPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // AVL Users (providers) list
+  const [avlUsers, setAvlUsers] = useState<any[]>([]);
+
   // Form state
   const [plate, setPlate] = useState('');
   const [alias, setAlias] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [vehicleType, setVehicleType] = useState('truck');
+  const [avlUserId, setAvlUserId] = useState('');
+  const [hubAssetId, setHubAssetId] = useState('');
 
   useEffect(() => {
     fetchVehicles();
+    fetchAvlUsers();
   }, []);
+
+  const fetchAvlUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/avl-users', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvlUsers(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (e) {
+      console.error('Error fetching AVL users', e);
+    }
+  };
 
   const filtered = vehicles.filter(v =>
     v.plate.toLowerCase().includes(search.toLowerCase()) ||
@@ -25,13 +48,17 @@ export const VehiclesPage: React.FC = () => {
   );
 
   const handleToggleBlock = async (id: string, currentlyBlocked: boolean) => {
-    if (currentlyBlocked) {
-      await toggleBlock(id, false);
-    } else {
-      const reason = prompt('Motivo del bloqueo de telemetría:');
-      if (reason !== null) {
-        await toggleBlock(id, true, reason);
+    try {
+      if (currentlyBlocked) {
+        await toggleBlock(id, false);
+      } else {
+        const reason = prompt('Motivo del bloqueo de telemetría:');
+        if (reason !== null) {
+          await toggleBlock(id, true, reason);
+        }
       }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -42,6 +69,8 @@ export const VehiclesPage: React.FC = () => {
     setBrand('');
     setModel('');
     setVehicleType('truck');
+    setAvlUserId('');
+    setHubAssetId('');
     setShowModal(true);
   };
 
@@ -52,17 +81,21 @@ export const VehiclesPage: React.FC = () => {
     setBrand(vehicle.brand || '');
     setModel(vehicle.model || '');
     setVehicleType(vehicle.vehicle_type || 'truck');
+    setAvlUserId(vehicle.avl_user_id || '');
+    setHubAssetId(vehicle.hub_asset_id || '');
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = {
+    const data: any = {
       plate,
       alias: alias || null,
       brand: brand || null,
       model: model || null,
       vehicle_type: vehicleType,
+      avl_user_id: avlUserId || null,
+      hub_asset_id: hubAssetId || null,
     };
 
     if (editingId) {
@@ -108,7 +141,7 @@ export const VehiclesPage: React.FC = () => {
               <thead className="bg-bgStart/60 border-b border-borderDefault text-textMuted uppercase sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-4 font-medium">Vehículo</th>
-                  <th className="px-6 py-4 font-medium">Proveedor (HUB)</th>
+                  <th className="px-6 py-4 font-medium">Proveedor GPS</th>
                   <th className="px-6 py-4 font-medium">Estado</th>
                   <th className="px-6 py-4 font-medium text-right">Acciones</th>
                 </tr>
@@ -118,13 +151,13 @@ export const VehiclesPage: React.FC = () => {
                   <tr key={v.id} className="hover:bg-bgSurfaceHigh/40 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-white text-base">{v.plate}</div>
-                      <div className="text-textMuted">{v.alias || 'Sin alias'} • {v.brand} {v.model}</div>
+                      <div className="text-textMuted">{v.alias || 'Sin alias'} • {v.brand || ''} {v.model || ''}</div>
                     </td>
                     <td className="px-6 py-4">
                       {v.avl_user ? (
                         <div>
                           <span className="text-white">{v.avl_user.name}</span>
-                          <div className="text-xs text-textMuted font-mono mt-1">Asset: {v.hub_asset_id}</div>
+                          <div className="text-xs text-textMuted font-mono mt-1">Asset: {v.hub_asset_id || '—'}</div>
                         </div>
                       ) : (
                         <span className="text-textMuted italic">Sin proveedor</span>
@@ -158,12 +191,14 @@ export const VehiclesPage: React.FC = () => {
                         <button
                           onClick={() => openEditModal(v)}
                           className="p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors"
+                          title="Editar vehículo"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
                           className="p-2 text-textSecondary hover:text-statusDanger hover:bg-bgSurfaceHigh rounded transition-colors"
+                          title="Eliminar vehículo"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -186,14 +221,14 @@ export const VehiclesPage: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
-          <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '80vh' }}>
+          <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
             <div className="p-6 border-b border-borderDefault shrink-0">
               <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Vehículo' : 'Nuevo Vehículo'}</h2>
             </div>
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Patente</label>
+                  <label className="block text-sm text-textSecondary mb-1">Patente *</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white uppercase focus:border-accentGreen focus:outline-none" value={plate} onChange={e => setPlate(e.target.value)} />
                 </div>
                 <div>
@@ -214,10 +249,29 @@ export const VehiclesPage: React.FC = () => {
                   <label className="block text-sm text-textSecondary mb-1">Tipo de Vehículo</label>
                   <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
                     <option value="truck">Camión</option>
+                    <option value="semi">Semi-Remolque</option>
                     <option value="van">Furgón</option>
                     <option value="car">Auto</option>
                     <option value="pickup">Camioneta</option>
+                    <option value="bus">Bus</option>
                   </select>
+                </div>
+
+                <div className="border-t border-borderDefault pt-4 mt-4">
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Proveedor GPS (HUB)</h3>
+                  <div>
+                    <label className="block text-sm text-textSecondary mb-1">Proveedor AVL</label>
+                    <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={avlUserId} onChange={e => setAvlUserId(e.target.value)}>
+                      <option value="">— Ninguno —</option>
+                      {avlUsers.map(a => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.user_avl_code})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3">
+                    <label className="block text-sm text-textSecondary mb-1">Asset ID (identificador del equipo GPS)</label>
+                    <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white font-mono focus:border-accentGreen focus:outline-none" placeholder="Ej: ASSET_123, IMEI, etc." value={hubAssetId} onChange={e => setHubAssetId(e.target.value)} />
+                  </div>
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">

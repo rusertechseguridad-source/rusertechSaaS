@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocationsStore } from '../../store/locationsStore';
-import { MapPin, Plus, Search, Edit, Trash2, Crosshair } from 'lucide-react';
+import { MapPin, Plus, Search, Edit, Trash2, Crosshair, X } from 'lucide-react';
 
 export const LocationsPage: React.FC = () => {
-  const { locations, fetchLocations, deleteLocation, createLocation, loading } = useLocationsStore();
+  const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, loading } = useLocationsStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -14,6 +16,7 @@ export const LocationsPage: React.FC = () => {
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [radius, setRadius] = useState(100);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     fetchLocations();
@@ -21,22 +24,53 @@ export const LocationsPage: React.FC = () => {
 
   const filtered = locations.filter(l => l.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName('');
+    setLocationType('generic');
+    setAddress('');
+    setLat('');
+    setLng('');
+    setRadius(100);
+    setNotes('');
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const openEditModal = (loc: any) => {
+    setEditingId(loc.id);
+    setName(loc.name);
+    setLocationType(loc.location_type || 'generic');
+    setAddress(loc.address || '');
+    setLat(String(loc.latitude));
+    setLng(String(loc.longitude));
+    setRadius(loc.radius_meters || 100);
+    setNotes(loc.notes || '');
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createLocation({
+    const data: any = {
       name,
       location_type: locationType,
       address: address || null,
       lat: parseFloat(lat),
       lng: parseFloat(lng),
       radius_meters: radius,
-    });
+      notes: notes || null,
+    };
+
+    if (editingId) {
+      await updateLocation(editingId, data);
+    } else {
+      await createLocation(data);
+    }
     setShowModal(false);
-    setName('');
-    setAddress('');
-    setLat('');
-    setLng('');
-    setRadius(100);
+    resetForm();
   };
 
   return (
@@ -47,7 +81,7 @@ export const LocationsPage: React.FC = () => {
           Ubicaciones y Nodos
         </h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
         >
           <Plus className="w-5 h-5 mr-2" /> Nueva Ubicación
@@ -55,6 +89,7 @@ export const LocationsPage: React.FC = () => {
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
+        {/* Left Panel: Location List */}
         <div className="w-1/3 flex flex-col bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card">
           <div className="p-4 border-b border-borderDefault bg-bgStart/50 shrink-0">
             <div className="relative">
@@ -77,19 +112,33 @@ export const LocationsPage: React.FC = () => {
             ) : (
               <div className="space-y-2">
                 {filtered.map(loc => (
-                  <div key={loc.id} className="p-4 rounded-lg bg-bgStart/40 hover:bg-bgSurfaceHigh border border-borderDefault cursor-pointer group transition-colors">
+                  <div
+                    key={loc.id}
+                    onClick={() => setSelectedLocation(loc)}
+                    className={`p-4 rounded-lg border cursor-pointer group transition-colors ${
+                      selectedLocation?.id === loc.id
+                        ? 'bg-accentGreen/10 border-accentGreen/30'
+                        : 'bg-bgStart/40 hover:bg-bgSurfaceHigh border-borderDefault'
+                    }`}
+                  >
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-bold text-white">{loc.name}</h3>
                         <div className="text-xs text-textMuted mt-1 uppercase tracking-wider">{loc.location_type}</div>
+                        {loc.address && <div className="text-xs text-textSecondary mt-1">{loc.address}</div>}
                       </div>
                       <div className="flex space-x-1">
-                        <button className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditModal(loc); }}
+                          className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white"
+                          title="Editar ubicación"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); if(confirm('Eliminar ubicación?')) deleteLocation(loc.id); }}
+                          onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ubicación?')) deleteLocation(loc.id); }}
                           className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-statusDanger"
+                          title="Eliminar ubicación"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -102,27 +151,85 @@ export const LocationsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex items-center justify-center">
+        {/* Right Panel: Map placeholder + info */}
+        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex flex-col">
           <div className="absolute top-4 right-4 bg-bgSurface border border-borderDefault rounded p-2 text-xs text-textMuted z-10">
             [MapLibre GL Map View]
           </div>
-          <div className="text-center">
-            <Crosshair className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
-            <p className="text-textMuted font-mono">Seleccione una ubicación para visualizarla en el mapa</p>
-          </div>
+
+          {selectedLocation ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8">
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 w-full max-w-md shadow-card">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{selectedLocation.name}</h3>
+                    <span className="text-xs text-accentGreen uppercase tracking-wider">{selectedLocation.location_type}</span>
+                  </div>
+                  <button onClick={() => setSelectedLocation(null)} className="text-textMuted hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                {selectedLocation.address && (
+                  <p className="text-textSecondary text-sm mb-3">{selectedLocation.address}</p>
+                )}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
+                    <div className="text-textMuted text-xs mb-1">Latitud</div>
+                    <div className="text-white font-mono">{selectedLocation.latitude}</div>
+                  </div>
+                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
+                    <div className="text-textMuted text-xs mb-1">Longitud</div>
+                    <div className="text-white font-mono">{selectedLocation.longitude}</div>
+                  </div>
+                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
+                    <div className="text-textMuted text-xs mb-1">Radio</div>
+                    <div className="text-white font-mono">{selectedLocation.radius_meters} m</div>
+                  </div>
+                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
+                    <div className="text-textMuted text-xs mb-1">Estado</div>
+                    <div className={`font-bold ${selectedLocation.is_active !== false ? 'text-statusOnline' : 'text-statusDanger'}`}>
+                      {selectedLocation.is_active !== false ? 'Activo' : 'Inactivo'}
+                    </div>
+                  </div>
+                </div>
+                {selectedLocation.notes && (
+                  <div className="mt-3 text-sm text-textSecondary bg-bgStart rounded p-3 border border-borderDefault">
+                    <div className="text-textMuted text-xs mb-1">Notas</div>
+                    {selectedLocation.notes}
+                  </div>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => openEditModal(selectedLocation)}
+                    className="flex-1 px-4 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors text-sm"
+                  >
+                    Editar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Crosshair className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
+                <p className="text-textMuted font-mono">Seleccione una ubicación para ver sus detalles</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
-          <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '80vh' }}>
+          <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
             <div className="p-6 border-b border-borderDefault shrink-0">
-              <h2 className="text-2xl font-bold text-white">Nueva Ubicación</h2>
+              <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Ubicación' : 'Nueva Ubicación'}</h2>
             </div>
-            <form onSubmit={handleCreate} className="flex flex-col flex-1 min-h-0">
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Nombre</label>
+                  <label className="block text-sm text-textSecondary mb-1">Nombre *</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={name} onChange={e => setName(e.target.value)} />
                 </div>
                 <div>
@@ -135,29 +242,35 @@ export const LocationsPage: React.FC = () => {
                     <option value="planta">Planta</option>
                     <option value="cliente">Cliente</option>
                     <option value="puerto">Puerto</option>
+                    <option value="aduana">Aduana</option>
+                    <option value="peaje">Peaje</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Dirección (opcional)</label>
+                  <label className="block text-sm text-textSecondary mb-1">Dirección</label>
                   <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Latitud</label>
+                    <label className="block text-sm text-textSecondary mb-1">Latitud *</label>
                     <input required type="number" step="any" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={lat} onChange={e => setLat(e.target.value)} />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Longitud</label>
+                    <label className="block text-sm text-textSecondary mb-1">Longitud *</label>
                     <input required type="number" step="any" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={lng} onChange={e => setLng(e.target.value)} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm text-textSecondary mb-1">Radio de Llegada (metros)</label>
-                  <input required type="number" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={radius} onChange={e => setRadius(parseInt(e.target.value))} />
+                  <input required type="number" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={radius} onChange={e => setRadius(parseInt(e.target.value) || 100)} />
+                </div>
+                <div>
+                  <label className="block text-sm text-textSecondary mb-1">Notas</label>
+                  <textarea className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none h-20 resize-none" value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">Cancelar</button>
                 <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">Guardar</button>
               </div>
             </form>

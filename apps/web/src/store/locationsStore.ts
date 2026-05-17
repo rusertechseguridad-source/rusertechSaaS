@@ -9,6 +9,7 @@ interface Location {
   longitude: number;
   radius_meters: number;
   is_active: boolean;
+  notes: string | null;
 }
 
 interface LocationsState {
@@ -71,10 +72,14 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to update location');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Error al actualizar ubicación');
+      }
       await get().fetchLocations();
     } catch (error: any) {
       console.error(error);
+      alert('Error al actualizar ubicación: ' + error.message);
     }
   },
 
