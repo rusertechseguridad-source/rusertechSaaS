@@ -10,6 +10,9 @@ interface Location {
   radius_meters: number;
   is_active: boolean;
   notes: string | null;
+  operation_id?: string | null;
+  is_authorized_stop?: boolean;
+  operation?: { name: string } | null;
 }
 
 interface LocationsState {

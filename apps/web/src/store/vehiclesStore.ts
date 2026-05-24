@@ -11,6 +11,7 @@ interface Vehicle {
   vehicle_type: string;
   fuel_type: string;
   hub_asset_id: string | null;
+  dictionary_category?: string | null;
   is_blocked: boolean;
   block_reason: string | null;
   status: string;

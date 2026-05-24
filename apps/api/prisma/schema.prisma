@@ -118,6 +118,7 @@ model AvlUser {
 model AvlEventDictionary {
   id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   avl_user_id    String   @db.Uuid
+  category       String   @default("event") @db.VarChar(100)
   raw_code       String   @db.VarChar(50)
   event_type     String   @db.VarChar(100)
   description    String?  @db.VarChar(300)
@@ -126,9 +127,9 @@ model AvlEventDictionary {
   is_active      Boolean  @default(true)
   created_at     DateTime @default(now()) @db.Timestamptz
 
-  avl_user AvlUser @relation(fields: [avl_user_id], references: [id], onDelete: Cascade)
+  avl_user AvlUser   @relation(fields: [avl_user_id], references: [id], onDelete: Cascade)
 
-  @@unique([avl_user_id, raw_code])
+  @@unique([avl_user_id, category, raw_code])
   @@map("avl_event_dictionary")
 }
 
@@ -145,6 +146,7 @@ model Vehicle {
   fuel_efficiency_lper100km Decimal? @db.Decimal(6, 2)
   hub_asset_id              String?  @db.VarChar(100)
   avl_user_id               String?  @db.Uuid
+  dictionary_category       String?  @db.VarChar(100)
   is_blocked                Boolean  @default(false)
   block_reason              String?
   metadata_json             Json     @default("{}")
@@ -152,11 +154,11 @@ model Vehicle {
   created_at                DateTime @default(now()) @db.Timestamptz
   updated_at                DateTime @default(now()) @db.Timestamptz
 
-  tenant      Tenant      @relation(fields: [tenant_id], references: [id])
-  avl_user    AvlUser?    @relation(fields: [avl_user_id], references: [id])
-  trips       Trip[]
-  event_logs  EventLog[]
-  carbon_logs CarbonLog[]
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id])
+  avl_user         AvlUser?            @relation(fields: [avl_user_id], references: [id])
+  trips            Trip[]
+  event_logs       EventLog[]
+  carbon_logs      CarbonLog[]
 
   @@unique([tenant_id, plate])
   @@map("vehicles")
@@ -188,9 +190,10 @@ model Operation {
   description String?
   status      String  @default("active") @db.VarChar(20)
 
-  tenant Tenant  @relation(fields: [tenant_id], references: [id])
-  trips  Trip[]
-  routes Route[]
+  tenant          Tenant          @relation(fields: [tenant_id], references: [id])
+  trips           Trip[]
+  routes          Route[]
+  saved_locations SavedLocation[]
 
   @@map("operations")
 }
@@ -448,23 +451,26 @@ model CarbonLog {
 }
 
 model SavedLocation {
-  id            String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id     String                   @db.Uuid
-  name          String                   @db.VarChar(200)
-  address       String?                  @db.VarChar(500)
-  latitude      Decimal                  @db.Decimal(10, 7)
-  longitude     Decimal                  @db.Decimal(10, 7)
-  geometry      Unsupported("geography")
-  radius_meters Int                      @default(200)
-  location_type String                   @default("generic") @db.VarChar(50)
-  country_code  String                   @default("AR") @db.Char(2)
-  notes         String?
-  is_active     Boolean                  @default(true)
-  created_by    String?                  @db.Uuid
-  created_at    DateTime                 @default(now()) @db.Timestamptz
+  id                 String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id          String                   @db.Uuid
+  operation_id       String?                  @db.Uuid
+  name               String                   @db.VarChar(200)
+  address            String?                  @db.VarChar(500)
+  latitude           Decimal                  @db.Decimal(10, 7)
+  longitude          Decimal                  @db.Decimal(10, 7)
+  geometry           Unsupported("geography")
+  radius_meters      Int                      @default(200)
+  location_type      String                   @default("generic") @db.VarChar(50)
+  is_authorized_stop Boolean                  @default(false)
+  country_code       String                   @default("AR") @db.Char(2)
+  notes              String?
+  is_active          Boolean                  @default(true)
+  created_by         String?                  @db.Uuid
+  created_at         DateTime                 @default(now()) @db.Timestamptz
 
-  tenant  Tenant @relation(fields: [tenant_id], references: [id])
-  creator User?  @relation(fields: [created_by], references: [id])
+  tenant    Tenant     @relation(fields: [tenant_id], references: [id])
+  creator   User?      @relation(fields: [created_by], references: [id])
+  operation Operation? @relation(fields: [operation_id], references: [id])
 
   origin_routes      Route[] @relation("RouteOrigin")
   destination_routes Route[] @relation("RouteDestination")

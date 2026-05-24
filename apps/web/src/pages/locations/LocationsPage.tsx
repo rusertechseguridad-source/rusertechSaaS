@@ -17,10 +17,31 @@ export const LocationsPage: React.FC = () => {
   const [lng, setLng] = useState('');
   const [radius, setRadius] = useState(100);
   const [notes, setNotes] = useState('');
+  const [operationId, setOperationId] = useState('');
+  const [isAuthorizedStop, setIsAuthorizedStop] = useState(false);
+  const [operations, setOperations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchLocations();
+    fetchOperations();
   }, []);
+
+  const fetchOperations = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/operations', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOperations(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Error fetching operations', e);
+    }
+  };
 
   const filtered = locations.filter(l => l.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -33,6 +54,8 @@ export const LocationsPage: React.FC = () => {
     setLng('');
     setRadius(100);
     setNotes('');
+    setOperationId('');
+    setIsAuthorizedStop(false);
   };
 
   const openCreateModal = () => {
@@ -49,6 +72,8 @@ export const LocationsPage: React.FC = () => {
     setLng(String(loc.longitude));
     setRadius(loc.radius_meters || 100);
     setNotes(loc.notes || '');
+    setOperationId(loc.operation_id || '');
+    setIsAuthorizedStop(loc.is_authorized_stop || false);
     setShowModal(true);
   };
 
@@ -62,6 +87,8 @@ export const LocationsPage: React.FC = () => {
       lng: parseFloat(lng),
       radius_meters: radius,
       notes: notes || null,
+      operation_id: operationId || null,
+      is_authorized_stop: isAuthorizedStop,
     };
 
     if (editingId) {
@@ -123,8 +150,16 @@ export const LocationsPage: React.FC = () => {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-bold text-white">{loc.name}</h3>
+                        <h3 className="font-bold text-white flex items-center gap-2">
+                          {loc.name}
+                          {loc.is_authorized_stop && (
+                            <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold" title="Parada Autorizada">P.A.</span>
+                          )}
+                        </h3>
                         <div className="text-xs text-textMuted mt-1 uppercase tracking-wider">{loc.location_type}</div>
+                        {loc.operation && (
+                          <div className="text-xs text-accentMint font-medium mt-0.5">👤 {loc.operation.name}</div>
+                        )}
                         {loc.address && <div className="text-xs text-textSecondary mt-1">{loc.address}</div>}
                       </div>
                       <div className="flex space-x-1">
@@ -162,8 +197,20 @@ export const LocationsPage: React.FC = () => {
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 w-full max-w-md shadow-card">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-xl font-bold text-white">{selectedLocation.name}</h3>
-                    <span className="text-xs text-accentGreen uppercase tracking-wider">{selectedLocation.location_type}</span>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      {selectedLocation.name}
+                      {selectedLocation.is_authorized_stop && (
+                        <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-xs px-2 py-0.5 rounded uppercase font-bold">Parada Autorizada</span>
+                      )}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-accentGreen uppercase tracking-wider">{selectedLocation.location_type}</span>
+                      {selectedLocation.operation && (
+                        <span className="text-xs text-accentMint font-medium bg-accentMint/10 px-2 py-0.5 rounded border border-accentMint/20">
+                          Cliente: {selectedLocation.operation.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button onClick={() => setSelectedLocation(null)} className="text-textMuted hover:text-white">
                     <X className="w-5 h-5" />
@@ -250,7 +297,30 @@ export const LocationsPage: React.FC = () => {
                   <label className="block text-sm text-textSecondary mb-1">Dirección</label>
                   <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
-                <div className="flex gap-4">
+                
+                <div className="border-t border-borderDefault pt-4 mt-2">
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Asignación Operativa</h3>
+                  <div className="mb-3">
+                    <label className="block text-sm text-textSecondary mb-1">Cliente / Operación</label>
+                    <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={operationId} onChange={e => setOperationId(e.target.value)}>
+                      <option value="">— Ninguno (Uso Interno) —</option>
+                      {operations.map(op => (
+                        <option key={op.id} value={op.id}>{op.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input type="checkbox" checked={isAuthorizedStop} onChange={e => setIsAuthorizedStop(e.target.checked)} className="rounded text-accentGreen bg-bgStart border-borderDefault focus:ring-accentGreen h-4 w-4" />
+                      <span className="text-sm text-white font-medium">Parada Autorizada (P.A.)</span>
+                    </label>
+                    <p className="text-xs text-textMuted mt-1 ml-6">
+                      Indica si el vehículo tiene permitido detenerse en esta ubicación durante el viaje.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-borderDefault pt-4 flex gap-4">
                   <div className="flex-1">
                     <label className="block text-sm text-textSecondary mb-1">Latitud *</label>
                     <input required type="number" step="any" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={lat} onChange={e => setLat(e.target.value)} />

@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Patch, Body, Param, UseGuards, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { AvlUsersService } from './avl-users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -66,5 +68,19 @@ export class AvlUsersController {
   @Get(':id/unknown-codes')
   getUnknownCodes(@Param('id') id: string) {
     return this.service.getUnknownCodes(id);
+  }
+
+  @Get(':id/dictionary/export')
+  exportDictionary(@Param('id') id: string, @Res() res: Response) {
+    return this.service.exportDictionary(id, res);
+  }
+
+  @Post(':id/dictionary/import')
+  @UseInterceptors(FileInterceptor('file'))
+  importDictionary(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new Error('No file provided');
+    }
+    return this.service.importDictionary(id, file.buffer);
   }
 }

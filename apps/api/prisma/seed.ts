@@ -75,14 +75,16 @@ async function main() {
   for (const dict of dictionary) {
     await prisma.avlEventDictionary.upsert({
       where: {
-        avl_user_id_raw_code: {
+        avl_user_id_category_raw_code: {
           avl_user_id: avlUser.id,
+          category: 'default',
           raw_code: dict.raw_code,
         },
       },
       update: {},
       create: {
         avl_user_id: avlUser.id,
+        category: 'default',
         raw_code: dict.raw_code,
         event_type: dict.event_type,
         description: dict.description,

@@ -19,6 +19,8 @@ export const VehiclesPage: React.FC = () => {
   const [vehicleType, setVehicleType] = useState('truck');
   const [avlUserId, setAvlUserId] = useState('');
   const [hubAssetId, setHubAssetId] = useState('');
+  const [dictionaryCategory, setDictionaryCategory] = useState('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
     fetchVehicles();
@@ -41,6 +43,36 @@ export const VehiclesPage: React.FC = () => {
       console.error('Error fetching AVL users', e);
     }
   };
+
+  const fetchDictionaryCategories = async (userId: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const categories = Array.from(new Set(data.map((d: any) => d.category)));
+        setAvailableCategories(categories as string[]);
+      } else {
+        setAvailableCategories([]);
+      }
+    } catch (e) {
+      console.error('Error fetching dictionary categories', e);
+      setAvailableCategories([]);
+    }
+  };
+
+  useEffect(() => {
+    if (avlUserId) {
+      fetchDictionaryCategories(avlUserId);
+    } else {
+      setAvailableCategories([]);
+      setDictionaryCategory('');
+    }
+  }, [avlUserId]);
 
   const filtered = vehicles.filter(v =>
     v.plate.toLowerCase().includes(search.toLowerCase()) ||
@@ -71,6 +103,8 @@ export const VehiclesPage: React.FC = () => {
     setVehicleType('truck');
     setAvlUserId('');
     setHubAssetId('');
+    setDictionaryCategory('');
+    setAvailableCategories([]);
     setShowModal(true);
   };
 
@@ -83,6 +117,7 @@ export const VehiclesPage: React.FC = () => {
     setVehicleType(vehicle.vehicle_type || 'truck');
     setAvlUserId(vehicle.avl_user_id || '');
     setHubAssetId(vehicle.hub_asset_id || '');
+    setDictionaryCategory(vehicle.dictionary_category || '');
     setShowModal(true);
   };
 
@@ -96,6 +131,7 @@ export const VehiclesPage: React.FC = () => {
       vehicle_type: vehicleType,
       avl_user_id: avlUserId || null,
       hub_asset_id: hubAssetId || null,
+      dictionary_category: dictionaryCategory || null,
     };
 
     if (editingId) {
@@ -158,6 +194,9 @@ export const VehiclesPage: React.FC = () => {
                         <div>
                           <span className="text-white">{v.avl_user.name}</span>
                           <div className="text-xs text-textMuted font-mono mt-1">Asset: {v.hub_asset_id || '—'}</div>
+                          {v.dictionary_category && (
+                            <div className="text-xs text-accentBlue font-mono mt-0.5">Dict: {v.dictionary_category}</div>
+                          )}
                         </div>
                       ) : (
                         <span className="text-textMuted italic">Sin proveedor</span>
@@ -272,6 +311,24 @@ export const VehiclesPage: React.FC = () => {
                     <label className="block text-sm text-textSecondary mb-1">Asset ID (identificador del equipo GPS)</label>
                     <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white font-mono focus:border-accentGreen focus:outline-none" placeholder="Ej: ASSET_123, IMEI, etc." value={hubAssetId} onChange={e => setHubAssetId(e.target.value)} />
                   </div>
+                  {avlUserId && (
+                    <div className="mt-3 border border-borderDefault/50 p-3 rounded bg-bgStart/30">
+                      <label className="block text-sm text-textSecondary mb-1">Diccionario de Eventos a usar</label>
+                      <select 
+                        className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" 
+                        value={dictionaryCategory} 
+                        onChange={e => setDictionaryCategory(e.target.value)}
+                      >
+                        <option value="">— Predeterminado (Cualquiera) —</option>
+                        {availableCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-textMuted mt-1">
+                        Si el proveedor tiene múltiples diccionarios, selecciona la categoría para este vehículo.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">

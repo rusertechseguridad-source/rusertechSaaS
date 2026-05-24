@@ -7,6 +7,9 @@ interface Route {
   corridor_meters: number;
   distance_km: number | null;
   estimated_minutes: number | null;
+  origin_location_id: string | null;
+  destination_location_id: string | null;
+  operation_id: string | null;
   origin_location: { name: string } | null;
   destination_location: { name: string } | null;
   operation: { name: string } | null;

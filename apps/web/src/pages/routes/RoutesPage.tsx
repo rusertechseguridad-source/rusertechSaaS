@@ -8,10 +8,35 @@ export const RoutesPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [kmlContent, setKmlContent] = useState('');
   const [routeName, setRouteName] = useState('');
+  const [operationId, setOperationId] = useState('');
+  const [originId, setOriginId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
+  const [operations, setOperations] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchRoutes();
+    fetchOperations();
+    fetchLocations();
   }, []);
+
+  const fetchOperations = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/operations', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (res.ok) setOperations(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/locations', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (res.ok) setLocations(await res.json());
+    } catch (e) { console.error(e); }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,13 +68,27 @@ export const RoutesPage: React.FC = () => {
     await createRoute({
       name: routeName,
       corridor_meters: 500,
+      operation_id: operationId || null,
+      origin_location_id: originId || null,
+      destination_location_id: destinationId || null,
       geojson
     });
 
     setShowModal(false);
     setKmlContent('');
     setRouteName('');
+    setOperationId('');
+    setOriginId('');
+    setDestinationId('');
   };
+
+  // Group routes by operation
+  const groupedRoutes = routes.reduce((acc, route) => {
+    const opName = route.operation?.name || 'Internos / Sin Cliente';
+    if (!acc[opName]) acc[opName] = [];
+    acc[opName].push(route);
+    return acc;
+  }, {} as Record<string, typeof routes>);
 
   return (
     <div className="p-8 h-[calc(100vh-4rem)] max-w-7xl mx-auto flex flex-col">
@@ -90,27 +129,43 @@ export const RoutesPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-4">
             {loading ? (
               <div className="text-center text-textMuted p-8">Cargando rutas...</div>
-            ) : routes.length === 0 ? (
+            ) : Object.keys(groupedRoutes).length === 0 ? (
               <div className="text-center text-textMuted p-8">No hay rutas registradas</div>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-textMuted uppercase mb-2">▼ Rutas</h3>
-                  <div className="space-y-1 ml-2 border-l border-borderDefault pl-2">
-                    {routes.map(r => (
-                      <div key={r.id} className="group p-2 hover:bg-bgSurfaceHigh rounded cursor-pointer transition-colors flex justify-between items-center">
-                        <div className="flex items-center text-textSecondary">
-                          <Map className="w-4 h-4 text-accentGreen mr-2" />
-                          <span className="truncate">{r.name}</span>
+                {Object.entries(groupedRoutes).map(([opName, opRoutes]) => (
+                  <div key={opName}>
+                    <h3 className="text-sm font-bold text-textMuted uppercase mb-2 flex items-center gap-2">
+                      ▼ {opName}
+                      <span className="bg-bgSurfaceHigh text-textSecondary text-[10px] px-1.5 py-0.5 rounded-full">
+                        {opRoutes.length}
+                      </span>
+                    </h3>
+                    <div className="space-y-1 ml-2 border-l border-borderDefault pl-2">
+                      {opRoutes.filter(r => r.name.toLowerCase().includes(search.toLowerCase())).map(r => (
+                        <div key={r.id} className="group p-3 hover:bg-bgSurfaceHigh rounded cursor-pointer transition-colors flex justify-between items-center border border-transparent hover:border-borderDefault">
+                          <div className="flex flex-col text-textSecondary">
+                            <div className="flex items-center text-white font-medium">
+                              <Map className="w-4 h-4 text-accentGreen mr-2" />
+                              <span className="truncate">{r.name}</span>
+                            </div>
+                            {(r.origin_location || r.destination_location) && (
+                              <div className="text-xs text-textMuted mt-1 ml-6 flex items-center gap-1">
+                                <span className="truncate max-w-[100px]" title={r.origin_location?.name}>{r.origin_location?.name || '?'}</span>
+                                <span className="text-accentBlue">→</span>
+                                <span className="truncate max-w-[100px]" title={r.destination_location?.name}>{r.destination_location?.name || '?'}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <button className="p-1 text-textMuted hover:text-white"><Download className="w-4 h-4" /></button>
+                            <button onClick={() => { if(confirm('¿Eliminar ruta?')) deleteRoute(r.id); }} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-4 h-4" /></button>
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          <button className="p-1 text-textMuted hover:text-white"><Download className="w-3 h-3" /></button>
-                          <button onClick={() => deleteRoute(r.id)} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-3 h-3" /></button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </div>
@@ -143,7 +198,43 @@ export const RoutesPage: React.FC = () => {
                   <label className="block text-sm text-textSecondary mb-1">Nombre de la Ruta</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={routeName} onChange={e => setRouteName(e.target.value)} />
                 </div>
-                <div className="text-textMuted text-sm bg-bgStart p-3 rounded border border-borderDefault h-32 overflow-hidden relative">
+                
+                <div className="border-t border-borderDefault pt-4 mt-2">
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Asignación y Logística</h3>
+                  
+                  <div className="mb-3">
+                    <label className="block text-sm text-textSecondary mb-1">Cliente / Operación</label>
+                    <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={operationId} onChange={e => setOperationId(e.target.value)}>
+                      <option value="">— Ninguno (Ruta Interna) —</option>
+                      {operations.map(op => (
+                        <option key={op.id} value={op.id}>{op.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-textSecondary mb-1">Origen</label>
+                      <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={originId} onChange={e => setOriginId(e.target.value)}>
+                        <option value="">— Seleccionar —</option>
+                        {locations.filter(l => !operationId || l.operation_id === operationId).map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-textSecondary mb-1">Destino</label>
+                      <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={destinationId} onChange={e => setDestinationId(e.target.value)}>
+                        <option value="">— Seleccionar —</option>
+                        {locations.filter(l => !operationId || l.operation_id === operationId).map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-textMuted text-sm bg-bgStart p-3 rounded border border-borderDefault h-24 overflow-hidden relative mt-4">
                   <div className="absolute inset-0 p-3">
                     {kmlContent.slice(0, 500)}...
                   </div>

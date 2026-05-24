@@ -12,7 +12,7 @@ export const AvlUserForm: React.FC<{
     name: existingUser?.name || '',
     user_avl_code: existingUser?.user_avl_code || '',
     description: existingUser?.description || '',
-    provider_name: existingUser?.provider_name || '',
+    provider_name: existingUser?.provider_name || existingUser?.name || '',
     provider_platform_url: existingUser?.provider_platform_url || '',
     provider_username: existingUser?.provider_username || '',
     provider_password: existingUser?.provider_password || '',
@@ -62,17 +62,17 @@ export const AvlUserForm: React.FC<{
               <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Identificación</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Descriptivo</label>
-                  <input required name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Flota Norte - Teltonika" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="El nombre interno con el que identificamos a este proveedor en nuestra plataforma">Nombre Descriptivo</label>
+                  <input required name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Flota Norte - Teltonika" title="El nombre interno con el que identificamos a este proveedor en nuestra plataforma" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código HUB (User_avl)</label>
-                  <input required name="user_avl_code" value={formData.user_avl_code} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ej: PROV_01" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="El código exacto de cliente o HUB que Rusertech recibirá en el JSON">Código HUB (User_avl)</label>
+                  <input required name="user_avl_code" value={formData.user_avl_code} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ej: PROV_01" title="El código exacto de cliente o HUB que Rusertech recibirá en el JSON" />
                   <p className="text-xs text-gray-500 mt-1">El valor exacto enviado por el HUB.</p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows={2} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Notas o detalles adicionales de este proveedor">Descripción</label>
+                  <textarea name="description" value={formData.description} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" rows={2} title="Notas o detalles adicionales de este proveedor" />
                 </div>
               </div>
             </section>
@@ -85,20 +85,20 @@ export const AvlUserForm: React.FC<{
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor / Plataforma</label>
-                  <input name="provider_name" value={formData.provider_name} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Wialon, TrackSolid..." />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Software base del proveedor">Proveedor / Plataforma</label>
+                  <input name="provider_name" value={formData.provider_name} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Wialon, TrackSolid..." title="Software base del proveedor" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL Plataforma</label>
-                  <input name="provider_platform_url" value={formData.provider_platform_url} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Link de acceso al sitio de rastreo de este proveedor">URL Plataforma</label>
+                  <input name="provider_platform_url" value={formData.provider_platform_url} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://" title="Link de acceso al sitio de rastreo de este proveedor" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-                  <input name="provider_username" value={formData.provider_username} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Usuario que nos proporcionaron para ingresar a su sistema">Usuario</label>
+                  <input name="provider_username" value={formData.provider_username} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" title="Usuario que nos proporcionaron para ingresar a su sistema" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                  <input type="password" name="provider_password" value={formData.provider_password} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Contraseña que nos proporcionaron">Contraseña</label>
+                  <input type="password" name="provider_password" value={formData.provider_password} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" title="Contraseña que nos proporcionaron" />
                 </div>
               </div>
             </section>
@@ -110,9 +110,10 @@ export const AvlUserForm: React.FC<{
               {existingUser && (
                 <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <label className="block text-sm font-medium text-gray-700 mb-2">API Key de Rusertech (Header: X-Hub-Api-Key)</label>
+                  <p className="text-xs text-gray-600 mb-3">Esta API Key es el token de seguridad que el proveedor GPS debe usar cuando envíe datos a <b>nuestra</b> plataforma (Ingesta vía Webhook). No confundir con el usuario y contraseña que ellos nos dan a nosotros.</p>
                   <div className="flex space-x-2">
-                    <input readOnly value={existingUser.api_key} className="flex-grow px-4 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm text-gray-600" />
-                    <button type="button" onClick={() => regenerateApiKey(existingUser.id)} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
+                    <input readOnly value={existingUser.api_key} className="flex-grow px-4 py-2 bg-white border border-gray-300 rounded-lg font-mono text-sm text-gray-600" title="Token de seguridad para la ingesta" />
+                    <button type="button" onClick={() => regenerateApiKey(existingUser.id)} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50" title="Genera una nueva clave y desactiva la anterior">
                       Regenerar
                     </button>
                   </div>

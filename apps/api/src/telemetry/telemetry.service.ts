@@ -80,8 +80,8 @@ export class TelemetryService {
     if (code) {
       let dictData = await this.redis.get<any>(`avl:code:${avlUserId}:${code}`);
       if (!dictData) {
-        const entry = await this.prisma.avlEventDictionary.findUnique({
-          where: { avl_user_id_raw_code: { avl_user_id: avlUserId, raw_code: code } }
+        const entry = await this.prisma.avlEventDictionary.findFirst({
+          where: { avl_user_id: avlUserId, raw_code: code }
         });
         if (entry && entry.is_active) {
           dictData = { eventType: entry.event_type, triggersAlert: entry.triggers_alert, severity: entry.severity };

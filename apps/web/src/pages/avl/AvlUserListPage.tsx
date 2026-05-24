@@ -1,12 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAvlStore } from '../../store/avlStore';
+import { AvlUserForm } from './AvlUserForm';
 
 export const AvlUserListPage: React.FC = () => {
   const { users, loading, error, fetchUsers, toggleActive } = useAvlStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>();
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleOpenNew = () => {
+    setSelectedUserId(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (id: string) => {
+    setSelectedUserId(id);
+    setIsModalOpen(true);
+  };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando Proveedores GPS...</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
@@ -18,7 +32,10 @@ export const AvlUserListPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Proveedores GPS (AVL Users)</h1>
           <p className="text-gray-500 mt-2">Gestiona las conexiones con empresas de rastreo GPS externas.</p>
         </div>
-        <button className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition">
+        <button 
+          onClick={handleOpenNew}
+          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition"
+        >
           + Nuevo Proveedor
         </button>
       </div>
@@ -65,13 +82,30 @@ export const AvlUserListPage: React.FC = () => {
                   <span className="text-xs font-medium text-gray-500">Ingesta</span>
                 </div>
                 <div className="flex space-x-3">
-                  <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">Configurar</button>
-                  <button className="text-sm text-gray-600 hover:text-gray-900 font-medium">Diccionario</button>
+                  <button 
+                    onClick={() => handleOpenEdit(user.id)}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Configurar
+                  </button>
+                  <Link 
+                    to={`/avl/${user.id}/dictionary`}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    Diccionario
+                  </Link>
                 </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {isModalOpen && (
+        <AvlUserForm 
+          userId={selectedUserId} 
+          onClose={() => setIsModalOpen(false)} 
+        />
       )}
     </div>
   );

@@ -24,6 +24,7 @@ interface AvlUser {
 interface AvlEventDictionary {
   id: string;
   avl_user_id: string;
+  category: string;
   raw_code: string;
   event_type: string;
   description: string | null;
@@ -50,6 +51,8 @@ interface AvlStore {
   fetchUnknownCodes: (userId: string) => Promise<void>;
   addDictionaryEntry: (userId: string, data: Partial<AvlEventDictionary>) => Promise<void>;
   updateDictionaryEntry: (dictId: string, data: Partial<AvlEventDictionary>) => Promise<void>;
+  exportDictionary: (userId: string) => Promise<void>;
+  importDictionary: (userId: string, file: File) => Promise<void>;
 }
 
 const getAuthHeaders = () => ({
@@ -194,6 +197,52 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
       }));
     } catch (error: any) {
       console.error(error);
+    }
+  },
+
+  exportDictionary: async (userId: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary/export`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to export dictionary');
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dictionary_${userId}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error(error);
+    }
+  },
+
+  importDictionary: async (userId: string, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary/import`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+          // No Content-Type header here, let the browser set it with the boundary for FormData
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Failed to import dictionary');
+      const result = await res.json();
+      alert(`Importación completada:\n- Insertados: ${result.imported}\n- Actualizados: ${result.updated}\n- Errores: ${result.errors}`);
+      await get().fetchDictionary(userId);
+      await get().fetchUnknownCodes(userId);
+    } catch (error: any) {
+      console.error(error);
+      alert('Error al importar el diccionario');
     }
   },
 }));
