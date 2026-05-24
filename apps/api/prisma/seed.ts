@@ -9,8 +9,8 @@ async function main() {
   const roles = [
     { code: 'rusertech_admin', name: 'Rusertech SuperAdmin', is_system_role: true, permissions: ['*'] },
     { code: 'account_owner', name: 'Dueño de Cuenta', is_system_role: false, permissions: ['tenant:manage', 'billing:read'] },
-    { code: 'manager', name: 'Gerente / Jefe de Flota', is_system_role: false, permissions: ['vehicles:manage', 'trips:manage'] },
-    { code: 'operator', name: 'Operador de Monitoreo', is_system_role: false, permissions: ['trips:read', 'telemetry:read'] },
+    { code: 'manager', name: 'Gerente / Jefe de Flota', is_system_role: false, permissions: ['vehicles:manage', 'trips:manage', 'locations:edit', 'routes:edit', 'avl:edit'] },
+    { code: 'operator', name: 'Operador de Monitoreo', is_system_role: false, permissions: ['trips:read', 'telemetry:read', 'trips:manage'] },
     { code: 'viewer', name: 'Cliente / Viewer', is_system_role: false, permissions: ['trips:read'] },
     { code: 'driver', name: 'Chofer (App Móvil)', is_system_role: false, permissions: ['trips:update_status'] },
   ];

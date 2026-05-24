@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocationsStore } from '../../store/locationsStore';
 import { MapPin, Plus, Search, Edit, Trash2, Crosshair, X } from 'lucide-react';
+import { RequirePermission } from '../../components/RequirePermission';
 
 export const LocationsPage: React.FC = () => {
   const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, loading } = useLocationsStore();
@@ -107,12 +108,14 @@ export const LocationsPage: React.FC = () => {
           <MapPin className="w-8 h-8 mr-3 text-accentGreen" />
           Ubicaciones y Nodos
         </h1>
-        <button
-          onClick={openCreateModal}
-          className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
-        >
-          <Plus className="w-5 h-5 mr-2" /> Nueva Ubicación
-        </button>
+        <RequirePermission permission="locations:edit">
+          <button
+            onClick={openCreateModal}
+            className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
+          >
+            <Plus className="w-5 h-5 mr-2" /> Nueva Ubicación
+          </button>
+        </RequirePermission>
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
@@ -162,22 +165,24 @@ export const LocationsPage: React.FC = () => {
                         )}
                         {loc.address && <div className="text-xs text-textSecondary mt-1">{loc.address}</div>}
                       </div>
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openEditModal(loc); }}
-                          className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white"
-                          title="Editar ubicación"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ubicación?')) deleteLocation(loc.id); }}
-                          className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-statusDanger"
-                          title="Eliminar ubicación"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <RequirePermission permission="locations:edit">
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditModal(loc); }}
+                            className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white"
+                            title="Editar ubicación"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ubicación?')) deleteLocation(loc.id); }}
+                            className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-statusDanger"
+                            title="Eliminar ubicación"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </RequirePermission>
                     </div>
                   </div>
                 ))}
@@ -245,14 +250,16 @@ export const LocationsPage: React.FC = () => {
                     {selectedLocation.notes}
                   </div>
                 )}
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => openEditModal(selectedLocation)}
-                    className="flex-1 px-4 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors text-sm"
-                  >
-                    Editar
-                  </button>
-                </div>
+                <RequirePermission permission="locations:edit">
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => openEditModal(selectedLocation)}
+                      className="flex-1 px-4 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors text-sm"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                </RequirePermission>
               </div>
             </div>
           ) : (

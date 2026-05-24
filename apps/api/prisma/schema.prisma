@@ -278,17 +278,23 @@ model Trip {
   status                String    @default("draft") @db.VarChar(30)
   cancel_reason         String?
   notes                 String?
+  name                  String    @default("") @db.VarChar(300)
+  trip_code             String?   @db.VarChar(100)
+  origin_location_id    String?   @db.Uuid
+  destination_location_id String? @db.Uuid
   vehicle_changes_count Int       @default(0) @db.SmallInt
   driver_changes_count  Int       @default(0) @db.SmallInt
   created_at            DateTime  @default(now()) @db.Timestamptz
   updated_at            DateTime  @default(now()) @db.Timestamptz
 
-  tenant     Tenant     @relation(fields: [tenant_id], references: [id])
-  created_by User       @relation(fields: [created_by_user_id], references: [id])
-  vehicle    Vehicle    @relation(fields: [vehicle_id], references: [id])
-  driver     Driver?    @relation(fields: [driver_id], references: [id])
-  operation  Operation? @relation(fields: [operation_id], references: [id])
-  route      Route?     @relation(fields: [route_id], references: [id])
+  tenant               Tenant         @relation(fields: [tenant_id], references: [id])
+  created_by           User           @relation(fields: [created_by_user_id], references: [id])
+  vehicle              Vehicle        @relation(fields: [vehicle_id], references: [id])
+  driver               Driver?        @relation(fields: [driver_id], references: [id])
+  operation            Operation?     @relation(fields: [operation_id], references: [id])
+  route                Route?         @relation(fields: [route_id], references: [id])
+  origin_location      SavedLocation? @relation("TripOriginLocation", fields: [origin_location_id], references: [id])
+  destination_location SavedLocation? @relation("TripDestinationLocation", fields: [destination_location_id], references: [id])
 
   trip_events          TripEvent[]
   trip_deviations      TripDeviation[]
@@ -474,6 +480,9 @@ model SavedLocation {
 
   origin_routes      Route[] @relation("RouteOrigin")
   destination_routes Route[] @relation("RouteDestination")
+  
+  origin_trips      Trip[] @relation("TripOriginLocation")
+  destination_trips Trip[] @relation("TripDestinationLocation")
 
   @@map("saved_locations")
 }

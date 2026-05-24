@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useVehiclesStore } from '../../store/vehiclesStore';
 import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit, Trash2 } from 'lucide-react';
+import { RequirePermission } from '../../components/RequirePermission';
 
 export const VehiclesPage: React.FC = () => {
   const { vehicles, fetchVehicles, toggleBlock, deleteVehicle, createVehicle, updateVehicle, loading } = useVehiclesStore();
@@ -149,9 +150,11 @@ export const VehiclesPage: React.FC = () => {
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
           Gestión de Flota
         </h1>
-        <button onClick={openCreateModal} className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20">
-          <Plus className="w-5 h-5 mr-2" /> Nuevo Vehículo
-        </button>
+        <RequirePermission permission="vehicles:manage">
+          <button onClick={openCreateModal} className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20">
+            <Plus className="w-5 h-5 mr-2" /> Nuevo Vehículo
+          </button>
+        </RequirePermission>
       </div>
 
       <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-h-0 flex-1">
@@ -179,7 +182,9 @@ export const VehiclesPage: React.FC = () => {
                   <th className="px-6 py-4 font-medium">Vehículo</th>
                   <th className="px-6 py-4 font-medium">Proveedor GPS</th>
                   <th className="px-6 py-4 font-medium">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
+                  <th className="px-6 py-4 font-medium text-right">
+                    <RequirePermission permission="vehicles:manage">Acciones</RequirePermission>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-borderDefault">
@@ -219,29 +224,31 @@ export const VehiclesPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleToggleBlock(v.id, v.is_blocked)}
-                          className={`p-2 rounded transition-colors ${v.is_blocked ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'}`}
-                          title={v.is_blocked ? 'Desbloquear ingesta' : 'Bloquear ingesta'}
-                        >
-                          {v.is_blocked ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => openEditModal(v)}
-                          className="p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors"
-                          title="Editar vehículo"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
-                          className="p-2 text-textSecondary hover:text-statusDanger hover:bg-bgSurfaceHigh rounded transition-colors"
-                          title="Eliminar vehículo"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <RequirePermission permission="vehicles:manage">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleToggleBlock(v.id, v.is_blocked)}
+                            className={`p-2 rounded transition-colors ${v.is_blocked ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'}`}
+                            title={v.is_blocked ? 'Desbloquear ingesta' : 'Bloquear ingesta'}
+                          >
+                            {v.is_blocked ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => openEditModal(v)}
+                            className="p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors"
+                            title="Editar vehículo"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
+                            className="p-2 text-textSecondary hover:text-statusDanger hover:bg-bgSurfaceHigh rounded transition-colors"
+                            title="Eliminar vehículo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </RequirePermission>
                     </td>
                   </tr>
                 ))}

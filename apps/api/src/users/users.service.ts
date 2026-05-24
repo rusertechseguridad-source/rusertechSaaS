@@ -9,9 +9,10 @@ export class UsersService {
   // Buscar un usuario por email (usado para login).
   // Se usa el prisma normal sin extensión RLS porque en el login
   // aún no tenemos un tenant_id en el contexto.
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<User & { role?: any } | null> {
     return this.prisma.user.findUnique({
       where: { email },
+      include: { role: true }
     });
   }
 

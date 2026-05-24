@@ -15,6 +15,8 @@ import { AvlEventDictionaryPage } from './pages/avl/AvlEventDictionaryPage';
 import { VehiclesPage } from './pages/vehicles/VehiclesPage';
 import { LocationsPage } from './pages/locations/LocationsPage';
 import { RoutesPage } from './pages/routes/RoutesPage';
+import { TripsPage } from './pages/trips/TripsPage';
+import { TripDetailsPage } from './pages/trips/TripDetailsPage';
 
 // Stub map page for authenticated users
 const MapPage = () => <div className="p-8">Bienvenido al Mapa (SaaS Dashboard)</div>;
@@ -45,6 +47,8 @@ function App() {
             <Route path="/vehicles" element={<VehiclesPage />} />
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/routes" element={<RoutesPage />} />
+            <Route path="/trips" element={<TripsPage />} />
+            <Route path="/trips/:id" element={<TripDetailsPage />} />
           </Route>
         </Route>
 

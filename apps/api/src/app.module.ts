@@ -18,6 +18,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { LocationsModule } from './locations/locations.module';
 import { RoutesModule } from './routes/routes.module';
 import { OperationsModule } from './operations/operations.module';
+import { TripsModule } from './trips/trips.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { OperationsModule } from './operations/operations.module';
     LocationsModule,
     RoutesModule,
     OperationsModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [

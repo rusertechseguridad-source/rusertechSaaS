@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAvlStore } from '../../store/avlStore';
 import { AvlUserForm } from './AvlUserForm';
+import { RequirePermission } from '../../components/RequirePermission';
 
 export const AvlUserListPage: React.FC = () => {
   const { users, loading, error, fetchUsers, toggleActive } = useAvlStore();
@@ -32,12 +33,14 @@ export const AvlUserListPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Proveedores GPS (AVL Users)</h1>
           <p className="text-gray-500 mt-2">Gestiona las conexiones con empresas de rastreo GPS externas.</p>
         </div>
-        <button 
-          onClick={handleOpenNew}
-          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition"
-        >
-          + Nuevo Proveedor
-        </button>
+        <RequirePermission permission="avl:edit">
+          <button 
+            onClick={handleOpenNew}
+            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition"
+          >
+            + Nuevo Proveedor
+          </button>
+        </RequirePermission>
       </div>
 
       {users.length === 0 ? (
@@ -72,22 +75,26 @@ export const AvlUserListPage: React.FC = () => {
                 </div>
               </div>
               <div className="bg-gray-50 p-4 border-t border-gray-100 flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => toggleActive(user.id, !user.is_active)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user.is_active ? 'bg-blue-600' : 'bg-gray-200'}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                  <span className="text-xs font-medium text-gray-500">Ingesta</span>
-                </div>
+                <RequirePermission permission="avl:edit">
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={() => toggleActive(user.id, !user.is_active)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${user.is_active ? 'bg-blue-600' : 'bg-gray-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${user.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                    <span className="text-xs font-medium text-gray-500">Ingesta</span>
+                  </div>
+                </RequirePermission>
                 <div className="flex space-x-3">
-                  <button 
-                    onClick={() => handleOpenEdit(user.id)}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Configurar
-                  </button>
+                  <RequirePermission permission="avl:edit">
+                    <button 
+                      onClick={() => handleOpenEdit(user.id)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Configurar
+                    </button>
+                  </RequirePermission>
                   <Link 
                     to={`/avl/${user.id}/dictionary`}
                     className="text-sm text-gray-600 hover:text-gray-900 font-medium"

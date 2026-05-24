@@ -6,6 +6,7 @@ interface AuthState {
   error: string | null;
   loading: boolean;
   setToken: (token: string | null) => void;
+  setUser: (user: any) => void;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     else localStorage.removeItem('rusertech_token');
     set({ token });
   },
+  setUser: (user) => set({ user }),
   login: async (email, password) => {
     set({ loading: true, error: null });
     try {

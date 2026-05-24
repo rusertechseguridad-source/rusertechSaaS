@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRoutesStore } from '../../store/routesStore';
 import { Map, Plus, Search, Upload, Download, Route as RouteIcon, Trash2 } from 'lucide-react';
+import { RequirePermission } from '../../components/RequirePermission';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { kml } from '@tmcw/togeojson';
 
 export const RoutesPage: React.FC = () => {
   const { routes, fetchRoutes, deleteRoute, createRoute, loading } = useRoutesStore();
@@ -13,12 +17,80 @@ export const RoutesPage: React.FC = () => {
   const [destinationId, setDestinationId] = useState('');
   const [operations, setOperations] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<any | null>(null);
 
   useEffect(() => {
     fetchRoutes();
     fetchOperations();
     fetchLocations();
   }, []);
+
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+    
+    map.current = new maplibregl.Map({
+      container: mapContainer.current,
+      style: 'https://tiles.openfreemap.org/styles/dark',
+      center: [-58.3816, -34.6037],
+      zoom: 10
+    });
+
+    map.current.on('load', () => {
+      if (!map.current) return;
+      map.current.addSource('route', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.current.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#00FF00',
+          'line-width': 5,
+          'line-opacity': 0.8
+        }
+      });
+    });
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map.current || !selectedRoute || !selectedRoute.geojson) return;
+    
+    const source = map.current.getSource('route') as maplibregl.GeoJSONSource;
+    if (source) {
+      const geojson: any = {
+        type: 'Feature',
+        properties: {},
+        geometry: selectedRoute.geojson
+      };
+      source.setData(geojson);
+      
+      if (selectedRoute.geojson.coordinates && selectedRoute.geojson.coordinates.length > 0) {
+        const bounds = new maplibregl.LngLatBounds();
+        const coords = selectedRoute.geojson.type === 'MultiLineString' 
+          ? selectedRoute.geojson.coordinates.flat(1) 
+          : selectedRoute.geojson.coordinates;
+          
+        coords.forEach((c: number[]) => {
+          bounds.extend([c[0], c[1]]);
+        });
+        map.current.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+      }
+    }
+  }, [selectedRoute]);
 
   const fetchOperations = async () => {
     try {
@@ -57,13 +129,25 @@ export const RoutesPage: React.FC = () => {
 
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
-    const geojson = {
-      type: "LineString",
-      coordinates: [
-        [-58.3816, -34.6037],
-        [-58.3820, -34.6040]
-      ]
-    };
+    
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(kmlContent, 'text/xml');
+    const geojsonData = kml(xmlDoc);
+    
+    let lineStringGeoJSON = null;
+    if (geojsonData.features) {
+      for (const feature of geojsonData.features) {
+        if (feature.geometry && (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString')) {
+          lineStringGeoJSON = feature.geometry;
+          break;
+        }
+      }
+    }
+
+    if (!lineStringGeoJSON) {
+      window.alert("El archivo KML no contiene una ruta válida (LineString).");
+      return;
+    }
 
     await createRoute({
       name: routeName,
@@ -71,7 +155,7 @@ export const RoutesPage: React.FC = () => {
       operation_id: operationId || null,
       origin_location_id: originId || null,
       destination_location_id: destinationId || null,
-      geojson
+      geojson: lineStringGeoJSON
     });
 
     setShowModal(false);
@@ -82,7 +166,6 @@ export const RoutesPage: React.FC = () => {
     setDestinationId('');
   };
 
-  // Group routes by operation
   const groupedRoutes = routes.reduce((acc, route) => {
     const opName = route.operation?.name || 'Internos / Sin Cliente';
     if (!acc[opName]) acc[opName] = [];
@@ -97,18 +180,20 @@ export const RoutesPage: React.FC = () => {
           <RouteIcon className="w-8 h-8 mr-3 text-accentGreen" />
           Recorridos KML
         </h1>
-        <div className="flex gap-4">
-          <label className="cursor-pointer bg-bgSurface border border-borderDefault hover:bg-bgSurfaceHigh text-white px-4 py-2 rounded font-bold flex items-center shadow-card transition-colors">
-            <Upload className="w-5 h-5 mr-2" /> Importar KML
-            <input type="file" accept=".kml" className="hidden" onChange={handleFileUpload} />
-          </label>
-          <button
-            onClick={handleCreateManual}
-            className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
-          >
-            <Plus className="w-5 h-5 mr-2" /> Crear Manual
-          </button>
-        </div>
+        <RequirePermission permission="routes:edit">
+          <div className="flex gap-4">
+            <label className="cursor-pointer bg-bgSurface border border-borderDefault hover:bg-bgSurfaceHigh text-white px-4 py-2 rounded font-bold flex items-center shadow-card transition-colors">
+              <Upload className="w-5 h-5 mr-2" /> Importar KML
+              <input type="file" accept=".kml" className="hidden" onChange={handleFileUpload} />
+            </label>
+            <button
+              onClick={handleCreateManual}
+              className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
+            >
+              <Plus className="w-5 h-5 mr-2" /> Crear Manual
+            </button>
+          </div>
+        </RequirePermission>
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
@@ -143,7 +228,11 @@ export const RoutesPage: React.FC = () => {
                     </h3>
                     <div className="space-y-1 ml-2 border-l border-borderDefault pl-2">
                       {opRoutes.filter(r => r.name.toLowerCase().includes(search.toLowerCase())).map(r => (
-                        <div key={r.id} className="group p-3 hover:bg-bgSurfaceHigh rounded cursor-pointer transition-colors flex justify-between items-center border border-transparent hover:border-borderDefault">
+                        <div 
+                          key={r.id} 
+                          className={`group p-3 rounded cursor-pointer transition-colors flex justify-between items-center border ${selectedRoute?.id === r.id ? 'border-accentGreen bg-bgSurfaceHigh/50' : 'border-transparent hover:bg-bgSurfaceHigh hover:border-borderDefault'}`}
+                          onClick={() => setSelectedRoute(r)}
+                        >
                           <div className="flex flex-col text-textSecondary">
                             <div className="flex items-center text-white font-medium">
                               <Map className="w-4 h-4 text-accentGreen mr-2" />
@@ -159,7 +248,9 @@ export const RoutesPage: React.FC = () => {
                           </div>
                           <div className="flex gap-1">
                             <button className="p-1 text-textMuted hover:text-white"><Download className="w-4 h-4" /></button>
-                            <button onClick={() => { if(confirm('¿Eliminar ruta?')) deleteRoute(r.id); }} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-4 h-4" /></button>
+                            <RequirePermission permission="routes:edit">
+                              <button onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ruta?')) deleteRoute(r.id); }} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-4 h-4" /></button>
+                            </RequirePermission>
                           </div>
                         </div>
                       ))}
@@ -172,14 +263,14 @@ export const RoutesPage: React.FC = () => {
         </div>
 
         <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex items-center justify-center">
-          <div className="absolute top-4 right-4 bg-bgSurface border border-borderDefault rounded p-2 text-xs text-textMuted z-10">
-            [MapLibre GL Map View]
-          </div>
-          <div className="text-center p-8">
-            <RouteIcon className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
-            <p className="text-textMuted font-mono mb-2">Seleccione una ruta para previsualizarla</p>
-            <p className="text-textMuted/50 text-sm italic">Se dibujará la ruta con color verde neón usando MapLibre GL.</p>
-          </div>
+          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+          {!selectedRoute && (
+            <div className="text-center p-8 z-10 pointer-events-none bg-bgStart/80 rounded-xl backdrop-blur-sm shadow-card">
+              <RouteIcon className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
+              <p className="text-white font-bold mb-2">Seleccione una ruta para previsualizarla</p>
+              <p className="text-textMuted/50 text-sm italic">Se dibujará la ruta con color verde neón usando MapLibre GL.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -252,3 +343,4 @@ export const RoutesPage: React.FC = () => {
     </div>
   );
 };
+

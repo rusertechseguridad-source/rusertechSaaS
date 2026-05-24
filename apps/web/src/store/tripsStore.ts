@@ -1,0 +1,113 @@
+import { create } from 'zustand';
+
+export interface Trip {
+  id: string;
+  trip_code: string | null;
+  name: string;
+  status: string;
+  scheduled_start: string;
+  scheduled_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  vehicle_id: string;
+  vehicle?: any;
+  operation_id: string | null;
+  operation?: any;
+  origin_location_id: string | null;
+  origin_location?: any;
+  destination_location_id: string | null;
+  destination_location?: any;
+  route_id: string | null;
+  route?: any;
+  events?: any[];
+  tenant_id: string;
+}
+
+interface TripsState {
+  trips: Trip[];
+  loading: boolean;
+  error: string | null;
+  fetchTrips: () => Promise<void>;
+  createTrip: (data: Partial<Trip>) => Promise<void>;
+  updateTrip: (id: string, data: Partial<Trip>) => Promise<void>;
+  deleteTrip: (id: string) => Promise<void>;
+  getTrip: (id: string) => Promise<Trip | null>;
+}
+
+export const useTripsStore = create<TripsState>((set, get) => ({
+  trips: [],
+  loading: false,
+  error: null,
+  fetchTrips: async () => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/trips', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al obtener viajes');
+      const data = await res.json();
+      set({ trips: data, loading: false });
+    } catch (e: any) {
+      set({ error: e.message, loading: false });
+    }
+  },
+  createTrip: async (data) => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/trips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Error al crear viaje');
+      get().fetchTrips();
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    }
+  },
+  updateTrip: async (id, data) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Error al actualizar viaje');
+      get().fetchTrips();
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    }
+  },
+  deleteTrip: async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al eliminar viaje');
+      get().fetchTrips();
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    }
+  },
+  getTrip: async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al obtener detalle del viaje');
+      return await res.json();
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+}));

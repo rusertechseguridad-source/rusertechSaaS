@@ -26,7 +26,8 @@ export class AuthService {
       email: user.email, 
       sub: user.id, 
       tenantId: user.tenant_id,
-      role: user.role_code 
+      role: user.role_code,
+      permissions: user.role?.permissions || []
     };
     
     return {
@@ -36,7 +37,8 @@ export class AuthService {
         email: user.email,
         full_name: user.full_name,
         tenant_id: user.tenant_id,
-        role: user.role_code
+        role: user.role_code,
+        permissions: user.role?.permissions || []
       }
     };
   }

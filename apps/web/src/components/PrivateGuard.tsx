@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 export const PrivateGuard: React.FC = () => {
-  const { token, logout } = useAuthStore();
+  const { token, logout, setUser } = useAuthStore();
   const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
@@ -18,6 +18,9 @@ export const PrivateGuard: React.FC = () => {
         });
         if (res.status === 401) {
           logout();
+        } else if (res.ok) {
+          const user = await res.json();
+          setUser(user);
         }
       } catch (e) {
         console.error('Token validation error', e);
