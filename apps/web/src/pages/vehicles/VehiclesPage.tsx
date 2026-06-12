@@ -11,6 +11,8 @@ export const VehiclesPage: React.FC = () => {
 
   // AVL Users (providers) list
   const [avlUsers, setAvlUsers] = useState<any[]>([]);
+  // Carriers list
+  const [carriers, setCarriers] = useState<any[]>([]);
 
   // Form state
   const [plate, setPlate] = useState('');
@@ -21,11 +23,16 @@ export const VehiclesPage: React.FC = () => {
   const [avlUserId, setAvlUserId] = useState('');
   const [hubAssetId, setHubAssetId] = useState('');
   const [dictionaryCategory, setDictionaryCategory] = useState('');
+  const [carrierId, setCarrierId] = useState('');
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [imageFrontUrl, setImageFrontUrl] = useState('');
+  const [imageRearUrl, setImageRearUrl] = useState('');
+  const [imageSideUrl, setImageSideUrl] = useState('');
 
   useEffect(() => {
     fetchVehicles();
     fetchAvlUsers();
+    fetchCarriers();
   }, []);
 
   const fetchAvlUsers = async () => {
@@ -42,6 +49,17 @@ export const VehiclesPage: React.FC = () => {
       }
     } catch (e) {
       console.error('Error fetching AVL users', e);
+    }
+  };
+
+  const fetchCarriers = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/carriers', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (res.ok) setCarriers(await res.json());
+    } catch (e) {
+      console.error('Error fetching Carriers', e);
     }
   };
 
@@ -105,6 +123,7 @@ export const VehiclesPage: React.FC = () => {
     setAvlUserId('');
     setHubAssetId('');
     setDictionaryCategory('');
+    setCarrierId('');
     setAvailableCategories([]);
     setShowModal(true);
   };
@@ -119,7 +138,31 @@ export const VehiclesPage: React.FC = () => {
     setAvlUserId(vehicle.avl_user_id || '');
     setHubAssetId(vehicle.hub_asset_id || '');
     setDictionaryCategory(vehicle.dictionary_category || '');
+    setCarrierId(vehicle.carrier_id || '');
+    setImageFrontUrl(vehicle.image_front_url || '');
+    setImageRearUrl(vehicle.image_rear_url || '');
+    setImageSideUrl(vehicle.image_side_url || '');
     setShowModal(true);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setter(data.url);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -133,6 +176,10 @@ export const VehiclesPage: React.FC = () => {
       avl_user_id: avlUserId || null,
       hub_asset_id: hubAssetId || null,
       dictionary_category: dictionaryCategory || null,
+      carrier_id: carrierId || null,
+      image_front_url: imageFrontUrl || null,
+      image_rear_url: imageRearUrl || null,
+      image_side_url: imageSideUrl || null,
     };
 
     if (editingId) {
@@ -144,9 +191,12 @@ export const VehiclesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 h-full max-w-7xl mx-auto flex flex-col">
+    <div className="p-8 h-full w-full flex flex-col">
       <div className="flex justify-between items-center mb-8 shrink-0">
-        <h1 className="text-3xl font-display font-bold text-white flex items-center">
+        <h1 
+          className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center"
+          style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
+        >
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
           Gestión de Flota
         </h1>
@@ -180,6 +230,7 @@ export const VehiclesPage: React.FC = () => {
               <thead className="bg-bgStart/60 border-b border-borderDefault text-textMuted uppercase sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-4 font-medium">Vehículo</th>
+                  <th className="px-6 py-4 font-medium">Transportista</th>
                   <th className="px-6 py-4 font-medium">Proveedor GPS</th>
                   <th className="px-6 py-4 font-medium">Estado</th>
                   <th className="px-6 py-4 font-medium text-right">
@@ -193,6 +244,13 @@ export const VehiclesPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="font-bold text-white text-base">{v.plate}</div>
                       <div className="text-textMuted">{v.alias || 'Sin alias'} • {v.brand || ''} {v.model || ''}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {v.carrier ? (
+                        <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{v.carrier.name}</span>
+                      ) : (
+                        <span className="text-textMuted italic">Independiente</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {v.avl_user ? (
@@ -301,6 +359,37 @@ export const VehiclesPage: React.FC = () => {
                     <option value="pickup">Camioneta</option>
                     <option value="bus">Bus</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-textSecondary mb-1">Transportista</label>
+                  <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={carrierId} onChange={e => setCarrierId(e.target.value)}>
+                    <option value="">— Ninguno (Independiente) —</option>
+                    {carriers.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+
+                <div className="border-t border-borderDefault pt-4 mt-4">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Imágenes del Vehículo</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-textSecondary mb-1">Frente</label>
+                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageFrontUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
+                      {imageFrontUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageFrontUrl} alt="Frente" className="w-full h-full object-cover" /></div>}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-textSecondary mb-1">Trasero</label>
+                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageRearUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
+                      {imageRearUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageRearUrl} alt="Trasero" className="w-full h-full object-cover" /></div>}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-textSecondary mb-1">Lateral</label>
+                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageSideUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
+                      {imageSideUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageSideUrl} alt="Lateral" className="w-full h-full object-cover" /></div>}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border-t border-borderDefault pt-4 mt-4">

@@ -75,34 +75,18 @@ export const SimulatorPanel: React.FC = () => {
   if (import.meta.env.VITE_AVL_SIMULATOR_ENABLED !== 'true') return null;
 
   return (
-    <div className={`fixed z-50 transition-all duration-300 ${isOpen ? 'bottom-0 right-0 h-screen w-96 bg-gray-900 border-l border-gray-800 shadow-2xl' : 'bottom-4 right-4'}`}>
-      {!isOpen && (
-        <button 
-          onClick={() => setIsOpen(true)}
-          title="Abrir el panel de simulación de datos GPS"
-          className="bg-amber-500 hover:bg-amber-600 text-black px-4 py-2 rounded-full font-bold flex items-center shadow-lg shadow-amber-500/20"
-        >
+    <div className="h-full w-full flex flex-col text-sm text-gray-300 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-black/50">
+        <h2 className="font-bold text-amber-500 flex items-center" title="Herramienta para inyectar datos falsos en el sistema como si fueras un GPS real">
           <Activity className="w-5 h-5 mr-2" />
-          DEV SIMULATOR
-          {activeJobs.length > 0 && (
-             <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full animate-pulse">
-               {activeJobs.length} ACTIVO
-             </span>
-          )}
-        </button>
-      )}
-
-      {isOpen && (
-        <div className="h-full flex flex-col text-sm text-gray-300">
-          <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-black/50">
-            <h2 className="font-bold text-amber-500 flex items-center" title="Herramienta para inyectar datos falsos en el sistema como si fueras un GPS real">
-              <Activity className="w-5 h-5 mr-2" />
-              AVL SIMULATOR
-            </h2>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white" title="Cerrar panel">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          AVL SIMULATOR
+        </h2>
+        {activeJobs.length > 0 && (
+          <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+            {activeJobs.length} ACTIVO
+          </span>
+        )}
+      </div>
 
           <div className="flex border-b border-gray-800">
             <button onClick={() => setActiveTab('info')} title="Información y Ayuda" className={`flex-1 py-3 text-center ${activeTab === 'info' ? 'border-b-2 border-amber-500 text-white' : 'hover:bg-gray-800'}`}><Info className="w-4 h-4 mx-auto" /></button>
@@ -227,8 +211,6 @@ export const SimulatorPanel: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      )}
     </div>
   );
 };

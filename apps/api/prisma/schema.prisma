@@ -22,6 +22,7 @@ model Tenant {
   users                User[]
   avl_users            AvlUser[]
   vehicles             Vehicle[]
+  carriers             Carrier[]
   drivers              Driver[]
   operations           Operation[]
   geofences            Geofence[]
@@ -98,6 +99,7 @@ model AvlUser {
   provider_platform_url String?   @db.VarChar(500)
   provider_username     String?
   provider_password     String?
+  operational_contact   String?   @db.VarChar(200)
   provider_api_url      String?   @db.VarChar(500)
   provider_api_key      String?
   provider_notes        String?
@@ -147,6 +149,9 @@ model Vehicle {
   hub_asset_id              String?  @db.VarChar(100)
   avl_user_id               String?  @db.Uuid
   dictionary_category       String?  @db.VarChar(100)
+  image_front_url           String?  @db.VarChar(500)
+  image_rear_url            String?  @db.VarChar(500)
+  image_side_url            String?  @db.VarChar(500)
   is_blocked                Boolean  @default(false)
   block_reason              String?
   metadata_json             Json     @default("{}")
@@ -156,6 +161,8 @@ model Vehicle {
 
   tenant           Tenant              @relation(fields: [tenant_id], references: [id])
   avl_user         AvlUser?            @relation(fields: [avl_user_id], references: [id])
+  carrier_id       String?             @db.Uuid
+  carrier          Carrier?            @relation(fields: [carrier_id], references: [id])
   trips            Trip[]
   event_logs       EventLog[]
   carbon_logs      CarbonLog[]
@@ -167,19 +174,43 @@ model Vehicle {
 model Driver {
   id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   tenant_id      String    @db.Uuid
-  full_name      String    @db.VarChar(200)
-  document       String?   @db.VarChar(50)
-  document_type  String?   @default("dni") @db.VarChar(20)
-  phone          String?   @db.VarChar(30)
-  license_number String?   @db.VarChar(50)
-  license_expiry DateTime? @db.Date
-  status         String    @default("active") @db.VarChar(20)
+  full_name          String    @db.VarChar(200)
+  document           String?   @db.VarChar(50)
+  document_type      String?   @default("dni") @db.VarChar(20)
+  document_image_url String?   @db.VarChar(500)
+  phone              String?   @db.VarChar(30)
+  license_number     String?   @db.VarChar(50)
+  license_expiry     DateTime? @db.Date
+  status             String    @default("active") @db.VarChar(20)
   created_at     DateTime  @default(now()) @db.Timestamptz
 
-  tenant Tenant @relation(fields: [tenant_id], references: [id])
-  trips  Trip[]
+  tenant     Tenant    @relation(fields: [tenant_id], references: [id])
+  carrier_id String?   @db.Uuid
+  carrier    Carrier?  @relation(fields: [carrier_id], references: [id])
+  trips      Trip[]
 
   @@map("drivers")
+}
+
+model Carrier {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id     String   @db.Uuid
+  name             String   @db.VarChar(200)
+  tax_id           String?  @db.VarChar(50)
+  contact_name     String?  @db.VarChar(200)
+  contact_email    String?  @db.VarChar(254)
+  contact_phone    String?  @db.VarChar(50)
+  address          String?  @db.VarChar(300)
+  google_maps_link String?  @db.VarChar(500)
+  operating_bases  String?
+  status           String   @default("active") @db.VarChar(20)
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  tenant   Tenant    @relation(fields: [tenant_id], references: [id])
+  vehicles Vehicle[]
+  drivers  Driver[]
+
+  @@map("carriers")
 }
 
 model Operation {

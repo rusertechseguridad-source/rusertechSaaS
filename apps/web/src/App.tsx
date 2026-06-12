@@ -17,9 +17,11 @@ import { LocationsPage } from './pages/locations/LocationsPage';
 import { RoutesPage } from './pages/routes/RoutesPage';
 import { TripsPage } from './pages/trips/TripsPage';
 import { TripDetailsPage } from './pages/trips/TripDetailsPage';
-
-// Stub map page for authenticated users
-const MapPage = () => <div className="p-8">Bienvenido al Mapa (SaaS Dashboard)</div>;
+import { CarriersPage } from './pages/carriers/CarriersPage';
+import { DriversPage } from './pages/drivers/DriversPage';
+import { AlertsPage } from './pages/alerts/AlertsPage';
+import { SimulatorPage } from './pages/dev/SimulatorPage';
+import { MapPage } from './pages/map/MapPage';
 
 function App() {
   return (
@@ -45,10 +47,14 @@ function App() {
             <Route path="/avl" element={<AvlUserListPage />} />
             <Route path="/avl/:id/dictionary" element={<AvlEventDictionaryPage />} />
             <Route path="/vehicles" element={<VehiclesPage />} />
+            <Route path="/carriers" element={<CarriersPage />} />
+            <Route path="/drivers" element={<DriversPage />} />
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/trips" element={<TripsPage />} />
             <Route path="/trips/:id" element={<TripDetailsPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/simulator" element={<SimulatorPage />} />
           </Route>
         </Route>
 

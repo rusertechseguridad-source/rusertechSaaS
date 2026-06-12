@@ -16,6 +16,7 @@ export const AvlUserForm: React.FC<{
     provider_platform_url: existingUser?.provider_platform_url || '',
     provider_username: existingUser?.provider_username || '',
     provider_password: existingUser?.provider_password || '',
+    operational_contact: existingUser?.operational_contact || '',
     provider_api_url: existingUser?.provider_api_url || '',
     provider_api_key: existingUser?.provider_api_key || '',
     provider_notes: existingUser?.provider_notes || '',
@@ -87,6 +88,10 @@ export const AvlUserForm: React.FC<{
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1" title="Software base del proveedor">Proveedor / Plataforma</label>
                   <input name="provider_name" value={formData.provider_name} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Wialon, TrackSolid..." title="Software base del proveedor" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" title="Contacto Operativo (Nombre/Teléfono)">Contacto Operativo</label>
+                  <input name="operational_contact" value={formData.operational_contact} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre / Teléfono de Guardia" title="Contacto Operativo (Nombre/Teléfono)" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1" title="Link de acceso al sitio de rastreo de este proveedor">URL Plataforma</label>

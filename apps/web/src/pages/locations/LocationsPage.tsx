@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocationsStore } from '../../store/locationsStore';
-import { MapPin, Plus, Search, Edit, Trash2, Crosshair, X } from 'lucide-react';
+import { MapPin, Plus, Search, Edit, Trash2, Power } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 export const LocationsPage: React.FC = () => {
-  const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, loading } = useLocationsStore();
+  const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, toggleActive, loading } = useLocationsStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -26,6 +32,52 @@ export const LocationsPage: React.FC = () => {
     fetchLocations();
     fetchOperations();
   }, []);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    mapRef.current = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: 'https://tiles.openfreemap.org/styles/dark',
+      center: [-58.3816, -34.6037], // Default center
+      zoom: 10,
+    });
+
+    mapRef.current.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
+    }
+
+    if (selectedLocation && selectedLocation.longitude && selectedLocation.latitude) {
+      const el = document.createElement('div');
+      el.className = 'w-6 h-6 bg-accentMint rounded-full border-2 border-white shadow-[0_0_15px_rgba(43,244,182,0.8)] flex items-center justify-center';
+      
+      const dot = document.createElement('div');
+      dot.className = 'w-2 h-2 bg-white rounded-full';
+      el.appendChild(dot);
+
+      markerRef.current = new maplibregl.Marker(el)
+        .setLngLat([selectedLocation.longitude, selectedLocation.latitude])
+        .addTo(mapRef.current);
+
+      mapRef.current.flyTo({
+        center: [selectedLocation.longitude, selectedLocation.latitude],
+        zoom: 15,
+        essential: true
+      });
+    }
+  }, [selectedLocation]);
 
   const fetchOperations = async () => {
     try {
@@ -102,11 +154,14 @@ export const LocationsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 h-[calc(100vh-4rem)] max-w-7xl mx-auto flex flex-col">
+    <div className="p-8 h-[calc(100vh-4rem)] w-full flex flex-col">
       <div className="flex justify-between items-center mb-8 shrink-0">
-        <h1 className="text-3xl font-display font-bold text-white flex items-center">
-          <MapPin className="w-8 h-8 mr-3 text-accentGreen" />
-          Ubicaciones y Nodos
+        <h1 
+          className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wider flex items-center"
+          style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
+        >
+          <MapPin className="w-8 h-8 mr-3 text-accentMint" />
+          Ubicaciones / POIs
         </h1>
         <RequirePermission permission="locations:edit">
           <button
@@ -144,7 +199,12 @@ export const LocationsPage: React.FC = () => {
                 {filtered.map(loc => (
                   <div
                     key={loc.id}
-                    onClick={() => setSelectedLocation(loc)}
+                    onClick={() => {
+                      setSelectedLocation(loc);
+                      if (map.current) {
+                        map.current.flyTo({ center: [loc.longitude as any, loc.latitude as any], zoom: 14, essential: true });
+                      }
+                    }}
                     className={`p-4 rounded-lg border cursor-pointer group transition-colors ${
                       selectedLocation?.id === loc.id
                         ? 'bg-accentGreen/10 border-accentGreen/30'
@@ -158,6 +218,9 @@ export const LocationsPage: React.FC = () => {
                           {loc.is_authorized_stop && (
                             <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold" title="Parada Autorizada">P.A.</span>
                           )}
+                          <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${loc.is_active ? 'bg-statusSuccess/10 text-statusSuccess border border-statusSuccess/20' : 'bg-statusDanger/10 text-statusDanger border border-statusDanger/20'}`}>
+                            {loc.is_active ? 'Activo' : 'Suspendido'}
+                          </span>
                         </h3>
                         <div className="text-xs text-textMuted mt-1 uppercase tracking-wider">{loc.location_type}</div>
                         {loc.operation && (
@@ -166,13 +229,20 @@ export const LocationsPage: React.FC = () => {
                         {loc.address && <div className="text-xs text-textSecondary mt-1">{loc.address}</div>}
                       </div>
                       <RequirePermission permission="locations:edit">
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 shrink-0 ml-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); openEditModal(loc); }}
                             className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white"
                             title="Editar ubicación"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if(confirm(`¿Estás seguro de ${loc.is_active ? 'suspender' : 'reactivar'} esta ubicación?`)) toggleActive(loc.id, !loc.is_active); }}
+                            className={`p-1.5 hover:bg-bgSurfaceHigh rounded ${loc.is_active ? 'text-textSecondary hover:text-statusDanger' : 'text-textSecondary hover:text-statusSuccess'}`}
+                            title={loc.is_active ? 'Suspender ubicación' : 'Reactivar ubicación'}
+                          >
+                            <Power className="w-4 h-4" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ubicación?')) deleteLocation(loc.id); }}
@@ -184,6 +254,45 @@ export const LocationsPage: React.FC = () => {
                         </div>
                       </RequirePermission>
                     </div>
+
+                    {/* Mostrar detalles si está seleccionado */}
+                    {selectedLocation?.id === loc.id && (
+                      <div className="mt-4 pt-4 border-t border-accentGreen/20 animate-fade-in text-sm">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-textMuted text-[10px] uppercase">Latitud</div>
+                            <div className="font-mono text-white">{loc.latitude}</div>
+                          </div>
+                          <div>
+                            <div className="text-textMuted text-[10px] uppercase">Longitud</div>
+                            <div className="font-mono text-white">
+                              {loc.longitude}
+                              <a 
+                                href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="ml-2 text-accentBlue hover:underline text-xs"
+                              >
+                                Ver en Maps
+                              </a>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-textMuted text-[10px] uppercase">Radio</div>
+                            <div className="font-mono text-white">{loc.radius_meters} m</div>
+                          </div>
+                          <div>
+                            <div className="text-textMuted text-[10px] uppercase">Estado</div>
+                            <div className={`font-bold ${loc.is_active !== false ? 'text-statusOnline' : 'text-statusDanger'}`}>
+                              {loc.is_active !== false ? 'Activo' : 'Inactivo'}
+                            </div>
+                          </div>
+                        </div>
+                        {loc.notes && (
+                          <div className="mt-3 text-textSecondary italic text-xs">"{loc.notes}"</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -191,83 +300,13 @@ export const LocationsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel: Map placeholder + info */}
-        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex flex-col">
-          <div className="absolute top-4 right-4 bg-bgSurface border border-borderDefault rounded p-2 text-xs text-textMuted z-10">
-            [MapLibre GL Map View]
-          </div>
-
-          {selectedLocation ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8">
-              <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 w-full max-w-md shadow-card">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      {selectedLocation.name}
-                      {selectedLocation.is_authorized_stop && (
-                        <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-xs px-2 py-0.5 rounded uppercase font-bold">Parada Autorizada</span>
-                      )}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-accentGreen uppercase tracking-wider">{selectedLocation.location_type}</span>
-                      {selectedLocation.operation && (
-                        <span className="text-xs text-accentMint font-medium bg-accentMint/10 px-2 py-0.5 rounded border border-accentMint/20">
-                          Cliente: {selectedLocation.operation.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedLocation(null)} className="text-textMuted hover:text-white">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                {selectedLocation.address && (
-                  <p className="text-textSecondary text-sm mb-3">{selectedLocation.address}</p>
-                )}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
-                    <div className="text-textMuted text-xs mb-1">Latitud</div>
-                    <div className="text-white font-mono">{selectedLocation.latitude}</div>
-                  </div>
-                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
-                    <div className="text-textMuted text-xs mb-1">Longitud</div>
-                    <div className="text-white font-mono">{selectedLocation.longitude}</div>
-                  </div>
-                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
-                    <div className="text-textMuted text-xs mb-1">Radio</div>
-                    <div className="text-white font-mono">{selectedLocation.radius_meters} m</div>
-                  </div>
-                  <div className="bg-bgStart rounded p-3 border border-borderDefault">
-                    <div className="text-textMuted text-xs mb-1">Estado</div>
-                    <div className={`font-bold ${selectedLocation.is_active !== false ? 'text-statusOnline' : 'text-statusDanger'}`}>
-                      {selectedLocation.is_active !== false ? 'Activo' : 'Inactivo'}
-                    </div>
-                  </div>
-                </div>
-                {selectedLocation.notes && (
-                  <div className="mt-3 text-sm text-textSecondary bg-bgStart rounded p-3 border border-borderDefault">
-                    <div className="text-textMuted text-xs mb-1">Notas</div>
-                    {selectedLocation.notes}
-                  </div>
-                )}
-                <RequirePermission permission="locations:edit">
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => openEditModal(selectedLocation)}
-                      className="flex-1 px-4 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors text-sm"
-                    >
-                      Editar
-                    </button>
-                  </div>
-                </RequirePermission>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <Crosshair className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
-                <p className="text-textMuted font-mono">Seleccione una ubicación para ver sus detalles</p>
-              </div>
+        {/* Right Panel: Map */}
+        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex flex-col shadow-card">
+          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
+          {!selectedLocation && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-textMuted pointer-events-none z-10 bg-bgStart/60 backdrop-blur-sm transition-all duration-500">
+              <MapPin className="w-16 h-16 mb-4 opacity-30 animate-pulse" />
+              <p className="text-lg font-medium text-white/50">Seleccione una ubicación en la lista</p>
             </div>
           )}
         </div>

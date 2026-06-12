@@ -174,9 +174,12 @@ export const RoutesPage: React.FC = () => {
   }, {} as Record<string, typeof routes>);
 
   return (
-    <div className="p-8 h-[calc(100vh-4rem)] max-w-7xl mx-auto flex flex-col">
+    <div className="p-8 h-[calc(100vh-4rem)] w-full flex flex-col">
       <div className="flex justify-between items-center mb-8 shrink-0">
-        <h1 className="text-3xl font-display font-bold text-white flex items-center">
+        <h1 
+          className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center"
+          style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
+        >
           <RouteIcon className="w-8 h-8 mr-3 text-accentGreen" />
           Recorridos KML
         </h1>
@@ -262,13 +265,15 @@ export const RoutesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden flex items-center justify-center">
+        <div className="w-2/3 bg-bgStart border border-borderDefault rounded-xl relative overflow-hidden">
           <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
           {!selectedRoute && (
-            <div className="text-center p-8 z-10 pointer-events-none bg-bgStart/80 rounded-xl backdrop-blur-sm shadow-card">
-              <RouteIcon className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
-              <p className="text-white font-bold mb-2">Seleccione una ruta para previsualizarla</p>
-              <p className="text-textMuted/50 text-sm italic">Se dibujará la ruta con color verde neón usando MapLibre GL.</p>
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-bgStart/50 backdrop-blur-sm pointer-events-none">
+              <div className="text-center p-8 bg-bgSurface border border-borderDefault rounded-xl shadow-card max-w-sm">
+                <RouteIcon className="w-16 h-16 mx-auto text-textMuted mb-4" />
+                <p className="text-white font-bold mb-2">Seleccione una ruta para previsualizarla</p>
+                <p className="text-textMuted text-sm italic">Se dibujará la ruta con color verde neón usando MapLibre GL.</p>
+              </div>
             </div>
           )}
         </div>

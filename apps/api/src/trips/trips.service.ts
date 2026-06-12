@@ -18,6 +18,8 @@ export class TripsService {
         id: evt.id,
         generated_at: evt.timestamp,
         event_name: evt.event_type,
+        lat: evt.latitude,
+        lng: evt.longitude,
         speed: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).speed : null,
         address: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).address : null,
       }));
@@ -30,11 +32,17 @@ export class TripsService {
     const trips = await this.prisma.trip.findMany({
       where: { tenant_id: tenantId },
       include: {
-        vehicle: true,
+        vehicle: {
+          include: { avl_user: true }
+        },
         operation: true,
         origin_location: true,
         destination_location: true,
         route: true,
+        trip_events: {
+          orderBy: { timestamp: 'desc' },
+          take: 1
+        }
       },
       orderBy: { planned_start: 'desc' }
     });
@@ -45,7 +53,9 @@ export class TripsService {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
       include: {
-        vehicle: true,
+        vehicle: {
+          include: { avl_user: true }
+        },
         operation: true,
         origin_location: true,
         destination_location: true,
@@ -56,7 +66,19 @@ export class TripsService {
       }
     });
     if (!trip) throw new NotFoundException('Trip not found');
-    return this.mapToDto(trip);
+    
+    const dto = this.mapToDto(trip) as any;
+    
+    if (trip.route_id && dto.route) {
+      const geo: any = await this.prisma.$queryRawUnsafe(`
+        SELECT ST_AsGeoJSON(geometry) as geojson FROM "routes" WHERE id = '${trip.route_id}'
+      `);
+      if (geo && geo[0] && geo[0].geojson) {
+        dto.route.geojson = JSON.parse(geo[0].geojson);
+      }
+    }
+    
+    return dto;
   }
 
   async create(data: any, tenantId: string, userId: string) {
@@ -243,6 +265,48 @@ export class TripsService {
         route: true,
       }
     });
+    });
     return this.mapToDto(trip);
+  }
+
+  async getLogs(id: string) {
+    return this.prisma.eventLog.findMany({
+      where: {
+        trip_id: id,
+        event_type: 'operator_log',
+      },
+      orderBy: { triggered_at: 'desc' },
+      include: {
+        acknowledger: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+  }
+
+  async addLog(id: string, text: string, user: any) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id },
+      select: { tenant_id: true, vehicle_id: true }
+    });
+    if (!trip) throw new Error('Trip not found');
+
+    return this.prisma.eventLog.create({
+      data: {
+        tenant_id: trip.tenant_id,
+        vehicle_id: trip.vehicle_id,
+        trip_id: id,
+        event_type: 'operator_log',
+        severity: 'info',
+        status: 'open',
+        acknowledged_by: user.id,
+        metadata_json: { note: text }
+      },
+      include: {
+        acknowledger: {
+          select: { name: true, email: true }
+        }
+      }
+    });
   }
 }

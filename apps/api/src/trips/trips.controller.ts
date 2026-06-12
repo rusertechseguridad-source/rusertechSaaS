@@ -44,4 +44,14 @@ export class TripsController {
   updateStatus(@Param('id') id: string, @Body() data: any) {
     return this.tripsService.updateStatus(id, data);
   }
+
+  @Get(':id/logs')
+  getLogs(@Param('id') id: string) {
+    return this.tripsService.getLogs(id);
+  }
+
+  @Post(':id/logs')
+  addLog(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.tripsService.addLog(id, data.text, user);
+  }
 }
