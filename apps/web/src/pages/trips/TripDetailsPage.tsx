@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
-import { Map, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit, FileText, Send } from 'lucide-react';
+import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
+import { SensorConfigModal } from '../sensors/SensorConfigModal';
+import { TripModal } from './TripModal';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -14,16 +17,29 @@ export const TripDetailsPage: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [weather, setWeather] = useState<any>(null);
   const [showTrace, setShowTrace] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
   const [editingActualStart, setEditingActualStart] = useState(false);
   const [newActualStart, setNewActualStart] = useState('');
   
-  // Operator Logs (Bitácora) State
   const [operatorLogs, setOperatorLogs] = useState<any[]>([]);
   const [newLogText, setNewLogText] = useState('');
   const [loadingLogs, setLoadingLogs] = useState(false);
 
+  // Sort / type state for events and logs
+  const [eventSort, setEventSort] = useState<'newest' | 'oldest'>('newest');
+  const [logSort, setLogSort] = useState<'newest' | 'oldest'>('newest');
+  const [logType, setLogType] = useState<'note' | 'alert'>('note');
+  
+  const [showModal, setShowModal] = useState(false);
+
+  // Sensor Modal State
+  const [sensorModalOpen, setSensorModalOpen] = useState(false);
+  const [selectedSensorType, setSelectedSensorType] = useState<'temperature' | 'humidity'>('temperature');
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const alertMarkers = useRef<maplibregl.Marker[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -33,39 +49,38 @@ export const TripDetailsPage: React.FC = () => {
 
   const loadTrip = async (tripId: string) => {
     setLoading(true);
-    const data = await getTrip(tripId);
-    setTrip(data);
-    
-    // Fetch weather
-    if (data) {
-      let lat = (data as any).origin_lat;
-      let lng = (data as any).origin_lng;
+    try {
+      const data = await getTrip(tripId);
+      setTrip(data);
       
-      // Use latest event location if available
-      if (data.events && data.events.length > 0) {
-         // Assuming last event is the most recent.
-         const latestEvent = data.events[data.events.length - 1];
-         if (latestEvent.lat && latestEvent.lng) {
-            lat = latestEvent.lat;
-            lng = latestEvent.lng;
-         }
-      }
-      
-      if (lat && lng) {
-        try {
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
-          if (res.ok) {
-            const wData = await res.json();
-            setWeather(wData.current_weather);
-          }
-        } catch (e) {
-          console.error('Weather fetch error', e);
+      // Fetch weather asynchronously (non-blocking)
+      if (data) {
+        let lat = (data as any).origin_lat;
+        let lng = (data as any).origin_lng;
+        
+        if (data.events && data.events.length > 0) {
+           const latestEvent = data.events[data.events.length - 1];
+           if (latestEvent.lat && latestEvent.lng) {
+              lat = latestEvent.lat;
+              lng = latestEvent.lng;
+           }
+        }
+        
+        if (lat && lng) {
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`)
+            .then(res => res.ok ? res.json() : null)
+            .then(wData => {
+              if (wData) setWeather(wData.current_weather);
+            })
+            .catch(e => console.error('Weather fetch error', e));
         }
       }
+      
+      // Load logs asynchronously
+      loadLogs(tripId);
+    } finally {
+      setLoading(false);
     }
-    
-    await loadLogs(tripId);
-    setLoading(false);
   };
 
   const loadLogs = async (tripId: string) => {
@@ -90,10 +105,11 @@ export const TripDetailsPage: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`
         },
-        body: JSON.stringify({ text: newLogText })
+        body: JSON.stringify({ text: newLogText, type: logType })
       });
       if (res.ok) {
         setNewLogText('');
+        setLogType('note');
         loadLogs(trip.id);
       }
     } catch (e) {
@@ -129,24 +145,82 @@ export const TripDetailsPage: React.FC = () => {
     setUpdating(false);
   };
 
+  const exportEventsCSV = () => {
+    if (!trip?.events || trip.events.length === 0) return;
+    const header = ['Fecha/Hora', 'Tipo', 'Lat', 'Lng', 'Velocidad (km/h)', 'Temperatura (C)', 'Humedad (%)'];
+    const rows = trip.events.map((e: any) => [
+      new Date(e.generated_at).toLocaleString(),
+      e.event_type || 'GPS',
+      e.lat, e.lng,
+      e.speed || '',
+      e.temperature_c || '',
+      e.humidity_pct || ''
+    ]);
+    const csvContent = [header, ...rows].map(e => e.map(f => `"${String(f).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `eventos_${trip.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const exportLogsCSV = () => {
+    if (!operatorLogs || operatorLogs.length === 0) return;
+    const header = ['Fecha/Hora', 'Tipo', 'Usuario', 'Mensaje'];
+    const rows = operatorLogs.map((l: any) => [
+      new Date(l.triggered_at).toLocaleString(),
+      l.type,
+      l.acknowledger?.name || 'Sistema',
+      l.metadata_json?.note || l.metadata_json?.alert_message || l.text || ''
+    ]);
+    const csvContent = [header, ...rows].map(e => e.map(f => `"${String(f).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bitacora_${trip?.id || 'export'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  // Initialize map ONCE on mount — use setTimeout to ensure DOM container has dimensions
   useEffect(() => {
-    if (!trip || !mapContainer.current || map.current) return;
+    if (!mapContainer.current) return;
 
-    // Initialize Map
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: 'https://tiles.openfreemap.org/styles/dark',
-      center: [-58.3816, -34.6037],
-      zoom: 10
-    });
+    const initMap = () => {
+      if (map.current) return; // already initialized
+      map.current = new maplibregl.Map({
+        container: mapContainer.current!,
+        style: 'https://tiles.openfreemap.org/styles/dark',
+        center: [-58.3816, -34.6037],
+        zoom: 10
+      });
+    };
 
-    map.current.on('load', () => {
+    const timer = setTimeout(initMap, 100);
+
+    return () => {
+      clearTimeout(timer);
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  // Update route/origin/destination markers when trip changes (identified by trip.id)
+  useEffect(() => {
+    if (!map.current || !trip) return;
+
+    const applyMarkers = () => {
       if (!map.current || !trip) return;
       const bounds = new maplibregl.LngLatBounds();
       let hasBounds = false;
 
-      // Draw Route
-      if (trip.route && trip.route.geojson) {
+      // Draw Route (only add if source not already present)
+      if (trip.route && trip.route.geojson && !map.current.getSource('route')) {
         map.current.addSource('route', {
           type: 'geojson',
           data: {
@@ -162,10 +236,11 @@ export const TripDetailsPage: React.FC = () => {
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: { 'line-color': '#00FF00', 'line-width': 5, 'line-opacity': 0.6 }
         });
+      }
 
-        // Expand bounds
-        const coords = trip.route.geojson.type === 'MultiLineString' 
-          ? trip.route.geojson.coordinates.flat(1) 
+      if (trip.route && trip.route.geojson) {
+        const coords = trip.route.geojson.type === 'MultiLineString'
+          ? trip.route.geojson.coordinates.flat(1)
           : trip.route.geojson.coordinates;
         coords.forEach((c: number[]) => bounds.extend([c[0], c[1]]));
         hasBounds = true;
@@ -175,10 +250,10 @@ export const TripDetailsPage: React.FC = () => {
       const originLat = (trip as any).origin_lat;
       const originLng = (trip as any).origin_lng;
       if (originLat && originLng) {
-        new maplibregl.Marker({ color: '#22c55e' }) // Green
+        new maplibregl.Marker({ color: '#22c55e' })
           .setLngLat([originLng, originLat])
           .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML('<h3>Origen</h3>'))
-          .addTo(map.current);
+          .addTo(map.current!);
         bounds.extend([originLng, originLat]);
         hasBounds = true;
       }
@@ -187,61 +262,128 @@ export const TripDetailsPage: React.FC = () => {
       const destLat = (trip as any).destination_lat;
       const destLng = (trip as any).destination_lng;
       if (destLat && destLng) {
-        new maplibregl.Marker({ color: '#ef4444' }) // Red
+        new maplibregl.Marker({ color: '#ef4444' })
           .setLngLat([destLng, destLat])
           .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML('<h3>Destino</h3>'))
-          .addTo(map.current);
+          .addTo(map.current!);
         bounds.extend([destLng, destLat]);
         hasBounds = true;
       }
 
       if (hasBounds) {
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+        map.current!.fitBounds(bounds, { padding: 50, maxZoom: 15 });
       }
-    });
 
-    return () => {
-      map.current?.remove();
-      map.current = null;
+      // Ensure map resizes properly
+      setTimeout(() => map.current?.resize(), 200);
     };
-  }, [trip]);
+
+    if (map.current.loaded()) {
+      applyMarkers();
+    } else {
+      map.current.once('load', applyMarkers);
+    }
+  }, [trip?.id]);
 
   // Trace effect
   useEffect(() => {
     if (!map.current || !trip) return;
-    
-    // Cleanup existing trace
-    if (map.current.getLayer('trace-line')) map.current.removeLayer('trace-line');
-    if (map.current.getSource('trace')) map.current.removeSource('trace');
 
-    if (showTrace && trip.events && trip.events.length > 1) {
-      const coords = trip.events
-        .filter(e => e.lat && e.lng)
-        .sort((a, b) => new Date(a.generated_at).getTime() - new Date(b.generated_at).getTime())
-        .map(e => [e.lng, e.lat]);
-      
-      if (coords.length > 1) {
-        map.current.addSource('trace', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: coords
+    const applyTrace = () => {
+      if (!map.current) return;
+      // Cleanup existing trace
+      if (map.current.getLayer('trace-line')) map.current.removeLayer('trace-line');
+      if (map.current.getSource('trace')) map.current.removeSource('trace');
+
+      if (showTrace && trip.events && trip.events.length > 1) {
+        const coords = trip.events
+          .filter(e => e.lat && e.lng)
+          .sort((a, b) => new Date(a.generated_at).getTime() - new Date(b.generated_at).getTime())
+          .map(e => [e.lng, e.lat]);
+
+        if (coords.length > 1) {
+          map.current.addSource('trace', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: { type: 'LineString', coordinates: coords }
             }
-          }
-        });
-        map.current.addLayer({
-          id: 'trace-line',
-          type: 'line',
-          source: 'trace',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#2ab3ff', 'line-width': 4, 'line-opacity': 0.8, 'line-dasharray': [2, 2] }
-        });
+          });
+          map.current.addLayer({
+            id: 'trace-line',
+            type: 'line',
+            source: 'trace',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#2ab3ff', 'line-width': 4, 'line-opacity': 0.8, 'line-dasharray': [2, 2] }
+          });
+        }
       }
+    };
+
+    if (map.current.loaded()) {
+      applyTrace();
+    } else {
+      map.current.once('load', applyTrace);
     }
   }, [showTrace, trip]);
+
+  // Alert markers effect
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Remove existing alert markers
+    alertMarkers.current.forEach(m => m.remove());
+    alertMarkers.current = [];
+
+    if (!showAlerts || !trip?.events) return;
+
+    const addAlertMarkers = () => {
+      if (!map.current) return;
+      trip.events!.forEach((evt: any) => {
+        const isAlert =
+          evt.event_type === 'speed_exceeded' ||
+          evt.event_type === 'temperature_alert' ||
+          (evt.metadata_json && evt.metadata_json.alert_message != null);
+
+        if (!isAlert || !evt.lat || !evt.lng) return;
+
+        const el = document.createElement('div');
+        el.style.cssText = [
+          'width:28px', 'height:28px', 'border-radius:50%',
+          'background:radial-gradient(circle,#ff4444,#cc0000)',
+          'border:2px solid #ff6666', 'display:flex',
+          'align-items:center', 'justify-content:center',
+          'font-size:14px', 'cursor:pointer',
+          'box-shadow:0 0 8px rgba(255,68,68,0.7)'
+        ].join(';');
+        el.textContent = '⚠';
+
+        const meta = evt.metadata_json || {};
+        const popupHtml = `
+          <div style="font-family:sans-serif;font-size:12px;color:#fff;background:#1a1a2e;padding:8px;border-radius:6px;min-width:160px">
+            <div style="font-weight:bold;color:#ff6666;margin-bottom:4px">⚠ Alerta</div>
+            <div><b>Tipo:</b> ${evt.event_type || 'alerta'}</div>
+            ${evt.generated_at ? `<div><b>Hora:</b> ${new Date(evt.generated_at).toLocaleString()}</div>` : ''}
+            ${meta.alert_message ? `<div><b>Mensaje:</b> ${meta.alert_message}</div>` : ''}
+            ${evt.speed != null ? `<div><b>Velocidad:</b> ${evt.speed} km/h</div>` : ''}
+          </div>`;
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([evt.lng, evt.lat])
+          .setPopup(new maplibregl.Popup({ offset: 15, closeButton: false }).setHTML(popupHtml))
+          .addTo(map.current!);
+
+        alertMarkers.current.push(marker);
+      });
+    };
+
+    if (map.current.loaded()) {
+      addAlertMarkers();
+    } else {
+      map.current.once('load', addAlertMarkers);
+    }
+  }, [showAlerts, trip]);
 
   if (loading) return <div className="p-8 text-center text-textMuted">Cargando detalles del viaje...</div>;
   if (!trip) return <div className="p-8 text-center text-statusDanger">Viaje no encontrado</div>;
@@ -281,17 +423,25 @@ export const TripDetailsPage: React.FC = () => {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-2 ml-4">
+            <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textSecondary hover:text-white hover:bg-bgSurface transition-colors" title="Editar Viaje">
+              <Edit className="w-4 h-4" /> <span className="text-sm font-bold">Editar</span>
+            </button>
+            <button onClick={() => loadTrip(trip.id)} className="text-textMuted hover:text-white transition-colors p-1" title="Recargar">
+              <RotateCcw className="w-5 h-5" />
+            </button>
+          </div>
         </RequirePermission>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
         
         {/* COLUMNA IZQUIERDA: DETALLES */}
-        <div className="lg:col-span-3 flex flex-col gap-6 overflow-y-auto pr-2 pb-8">
+        <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto pr-2 pb-8">
           {/* Card Resumen */}
-          <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card">
-            <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-4 border-b border-borderDefault pb-2">Logística</h3>
-            <div className="space-y-4 text-sm">
+          <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card">
+            <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5">Logística</h3>
+            <div className="space-y-3 text-xs">
               <div className="flex items-start gap-3">
                 <Truck className="w-5 h-5 text-textMuted mt-0.5" />
                 <div>
@@ -310,9 +460,9 @@ export const TripDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card">
-            <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-4 border-b border-borderDefault pb-2">Ruta</h3>
-            <div className="space-y-4 relative">
+          <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card">
+            <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5">Ruta</h3>
+            <div className="space-y-2 relative">
               <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-borderDefault z-0"></div>
               
               <div className="flex items-start gap-3 relative z-10">
@@ -341,16 +491,16 @@ export const TripDetailsPage: React.FC = () => {
               <div className="mt-4 pt-4 border-t border-borderDefault">
                 <div className="text-textMuted text-xs mb-1">Corredor asignado</div>
                 <div className="flex items-center gap-2 text-white text-sm">
-                  <Map className="w-4 h-4 text-accentGreen" />
+                  <MapIcon className="w-4 h-4 text-accentGreen" />
                   {trip.route.name}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card">
-            <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-4 border-b border-borderDefault pb-2">Tiempos</h3>
-            <div className="space-y-3 text-sm">
+          <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card">
+            <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5">Tiempos</h3>
+            <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-textSecondary"><Calendar className="w-4 h-4" /> Inicio Programado</div>
                 <div className="text-white">{new Date(trip.scheduled_start).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</div>
@@ -395,45 +545,117 @@ export const TripDetailsPage: React.FC = () => {
           </div>
 
           {weather && (
-            <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card shrink-0">
-              <h3 className="text-sm font-bold text-accentBlue uppercase tracking-wider mb-4 border-b border-borderDefault pb-2 flex items-center gap-2" title="El clima mostrado corresponde a la posición actual del vehículo">
+            <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0">
+              <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5 flex items-center gap-2" title="El clima mostrado corresponde a la posición actual del vehículo">
                 {getWeatherDetails(weather.weathercode).icon}
                 Clima en: {trip.events && trip.events.length > 0 && trip.events[trip.events.length - 1].address ? trip.events[trip.events.length - 1].address.substring(0, 30) + '...' : (trip.origin_location?.name || 'Origen')}
               </h3>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-3xl font-display font-bold text-white">{weather.temperature}°C</div>
-                  <div className="text-textSecondary text-sm mt-1">Velocidad Viento: <span className="font-mono text-white">{weather.windspeed} km/h</span></div>
+                  <div className="text-2xl font-display font-bold text-white">{weather.temperature}°C</div>
+                  <div className="text-textSecondary text-[10px] mt-1">Viento: <span className="font-mono text-white">{weather.windspeed} km/h</span></div>
                 </div>
                 <div className="text-right flex flex-col items-end">
-                  <div className="text-xs text-textMuted mb-1">Condiciones</div>
-                  <div className="text-sm font-bold text-accentBlue uppercase">{getWeatherDetails(weather.weathercode).label}</div>
+                  <div className="text-[10px] text-textMuted mb-0.5">Condiciones</div>
+                  <div className="text-xs font-bold text-accentBlue uppercase">{getWeatherDetails(weather.weathercode).label}</div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* SENSORS PANEL */}
+          {(() => {
+            // Fix data mapping: resolve temperature/humidity from metadata_json with direct field fallback
+            const latestEvent = trip.events && trip.events.length > 0
+              ? [...trip.events].sort((a, b) => new Date(b.timestamp ?? b.generated_at).getTime() - new Date(a.timestamp ?? a.generated_at).getTime())[0] as any
+              : null;
+            const latestTemp = latestEvent ? (latestEvent.metadata_json?.temperature_c ?? latestEvent.temperature_c) : undefined;
+            const latestHum  = latestEvent ? (latestEvent.metadata_json?.humidity_pct  ?? latestEvent.humidity_pct)  : undefined;
+            if (latestTemp === undefined) return null;
+            return (
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0">
+                <div className="flex justify-between items-center mb-2 border-b border-borderDefault pb-1.5">
+                  <h3 className="text-xs font-bold text-accentMint uppercase tracking-wider flex items-center gap-2">
+                    <Thermometer className="w-3 h-3 text-statusWarning" />
+                    Sensores del Vehículo
+                  </h3>
+                  <button
+                    onClick={() => setConfigModalOpen(true)}
+                    className="text-textMuted hover:text-white"
+                    title="Configurar Rangos"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className="bg-bgStart/50 border border-borderDefault/50 rounded-lg p-2 text-center cursor-pointer hover:border-accentMint/50 transition-colors"
+                    onClick={() => { setSelectedSensorType('temperature'); setSensorModalOpen(true); }}
+                  >
+                    <Thermometer className={`w-4 h-4 mx-auto mb-1 ${latestTemp > 8 ? 'text-statusDanger' : 'text-accentMint'}`} />
+                    <div className="text-xl font-display font-bold text-white">{latestTemp}°C</div>
+                    <div className="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Temperatura</div>
+                  </div>
+
+                  <div
+                    className="bg-bgStart/50 border border-borderDefault/50 rounded-lg p-2 text-center cursor-pointer hover:border-accentBlue/50 transition-colors"
+                    onClick={() => { setSelectedSensorType('humidity'); setSensorModalOpen(true); }}
+                  >
+                    <Droplets className="w-4 h-4 text-accentBlue mx-auto mb-1" />
+                    <div className="text-xl font-display font-bold text-white">{latestHum ?? '--'}%</div>
+                    <div className="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Humedad</div>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => { setSelectedSensorType('temperature'); setSensorModalOpen(true); }}
+                    className="text-xs font-bold text-accentBlue hover:underline flex items-center gap-1"
+                  >
+                    Ver Histórico Completo <Activity className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* COLUMNA DERECHA: EVENTOS Y MAPA */}
         <div className="lg:col-span-9 flex flex-col gap-6 h-full min-h-0">
-          <div className="bg-bgStart border border-borderDefault rounded-xl flex-1 relative overflow-hidden flex flex-col items-center justify-center">
-            <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+          <div className="bg-bgStart border border-borderDefault rounded-xl flex-1 relative overflow-hidden flex flex-col items-center justify-center" style={{ minHeight: '500px' }}>
+            <div ref={mapContainer} className="absolute inset-0 w-full h-full" style={{ height: '100%', minHeight: '500px' }} />
             
-            {/* Switch para Mostrar Recorrido */}
-            <div className="absolute top-4 right-4 z-10 bg-bgSurfaceHigh/90 backdrop-blur-sm border border-borderDefault rounded-lg shadow-card p-3 flex items-center gap-3">
-              <label className="text-xs font-bold text-white uppercase tracking-wider cursor-pointer select-none" htmlFor="trace-switch">
-                Trazar Recorrido GPS
-              </label>
-              <button
-                id="trace-switch"
-                onClick={() => setShowTrace(!showTrace)}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showTrace ? 'bg-accentBlue' : 'bg-borderDefault'}`}
-              >
-                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${showTrace ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
+            {/* Map Controls */}
+            <div className="absolute top-4 right-4 z-10 bg-bgSurfaceHigh/90 backdrop-blur-sm border border-borderDefault rounded-lg shadow-card p-3 flex flex-col gap-3">
+              {/* Switch: Trazar Recorrido GPS */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-white uppercase tracking-wider cursor-pointer select-none" htmlFor="trace-switch">
+                  Trazar Recorrido GPS
+                </label>
+                <button
+                  id="trace-switch"
+                  onClick={() => setShowTrace(!showTrace)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showTrace ? 'bg-accentBlue' : 'bg-borderDefault'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${showTrace ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              {/* Switch: Alertas en Mapa */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-bold text-white uppercase tracking-wider cursor-pointer select-none" htmlFor="alerts-switch">
+                  Alertas en Mapa
+                </label>
+                <button
+                  id="alerts-switch"
+                  onClick={() => setShowAlerts(!showAlerts)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showAlerts ? 'bg-red-500' : 'bg-borderDefault'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${showAlerts ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
             </div>
             {/* Opcional: overlay para mostrar info temporal si no hay ruta ni origen ni destino */}
-            {!(trip as any).origin_lat && !(trip as any).destination_lat && !trip.route?.geojson && (
+            {!(trip as any).origin_lat && !(trip as any).destination_lat && !trip.route?.geojson && (!trip.events || trip.events.length === 0) && (
               <div className="absolute inset-0 bg-bgStart/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center pointer-events-none p-8 text-center">
                 <MapPin className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
                 <p className="text-white font-bold mb-2">Sin Coordenadas Iniciales</p>
@@ -442,7 +664,7 @@ export const TripDetailsPage: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-72 shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-56 shrink-0">
             {/* Event Logs */}
             <div className="bg-bgSurface border border-borderDefault rounded-xl shadow-card flex flex-col h-full min-h-0">
               <div className="p-4 border-b border-borderDefault shrink-0 flex items-center justify-between">
@@ -450,25 +672,78 @@ export const TripDetailsPage: React.FC = () => {
                   <Activity className="w-4 h-4" />
                   Registro de Eventos (Últimos 100)
                 </h3>
-                <span className="text-xs text-textMuted">{trip.events?.length || 0} total</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-textMuted">{trip.events?.length || 0} total</span>
+                  <button onClick={exportEventsCSV} className="p-1 hover:text-white text-textMuted transition-colors ml-1" title="Exportar a CSV">
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setEventSort('newest')}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      eventSort === 'newest' ? 'bg-accentGreen text-bgStart' : 'bg-bgSurfaceHigh text-textMuted hover:text-white'
+                    }`}
+                  >
+                    Más nuevo ▼
+                  </button>
+                  <button
+                    onClick={() => setEventSort('oldest')}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      eventSort === 'oldest' ? 'bg-accentGreen text-bgStart' : 'bg-bgSurfaceHigh text-textMuted hover:text-white'
+                    }`}
+                  >
+                    Más antiguo ▲
+                  </button>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
-                {trip.events && trip.events.length > 0 ? (
-                  <div className="space-y-3">
-                    {[...trip.events].reverse().slice(0, 100).map((evt: any) => (
-                      <div key={evt.id} className="flex gap-4 text-sm p-3 bg-bgStart border border-borderDefault rounded">
-                        <div className="text-textMuted w-16 shrink-0">
-                          {new Date(evt.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {trip.events && trip.events.length > 0 ? (() => {
+                  const sortedEvents = [...trip.events].sort((a, b) =>
+                    eventSort === 'newest'
+                      ? new Date((b as any).timestamp ?? b.generated_at).getTime() - new Date((a as any).timestamp ?? a.generated_at).getTime()
+                      : new Date((a as any).timestamp ?? a.generated_at).getTime() - new Date((b as any).timestamp ?? b.generated_at).getTime()
+                  ).slice(0, 100);
+                  const translateEvent = (eventType: string) => {
+                    const types: Record<string, string> = {
+                      'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',
+                      'speed_violation': 'EXCESO DE VELOCIDAD',
+                      'speed_exceeded': 'EXCESO DE VELOCIDAD',
+                      'position': 'POSICIÓN',
+                      'harsh_acceleration': 'ACELERACIÓN BRUSCA',
+                      'harsh_braking': 'FRENADA BRUSCA',
+                      'harsh_cornering': 'GIRO BRUSCO',
+                      'jamming': 'INTERFERENCIA DE SEÑAL',
+                      'geofence_enter': 'ENTRADA A GEOFENCE',
+                      'geofence_exit': 'SALIDA DE GEOFENCE',
+                      'power_cut': 'CORTE DE CORRIENTE'
+                    };
+                    return types[eventType] || eventType.replace(/_/g, ' ').toUpperCase();
+                  };
+                  return (
+                    <div className="space-y-2">
+                      {sortedEvents.map((evt: any) => (
+                        <div 
+                          key={evt.id} 
+                          className="flex gap-3 text-xs p-2 bg-bgStart border border-borderDefault rounded cursor-pointer hover:border-accentBlue transition-colors"
+                          onClick={() => {
+                            if (evt.lat && evt.lng && map.current) {
+                              map.current.flyTo({ center: [evt.lng, evt.lat], zoom: 16 });
+                            }
+                          }}
+                        >
+                          <div className="text-textMuted w-24 shrink-0 text-[10px] leading-tight">
+                            {new Date(evt.timestamp ?? evt.generated_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-white mr-2 truncate">{translateEvent(evt.event_type || evt.event_name || 'Evento')}</span>
+                            {evt.speed !== null && <span className="text-[10px] text-accentBlue font-mono">{evt.speed} km/h</span>}
+                            {evt.address && <div className="text-textSecondary text-[10px] mt-0.5 truncate">{evt.address}</div>}
+                            {evt.lat && evt.lng && <div className="text-textMuted text-[9px] mt-0.5 font-mono">[{Number(evt.lat).toFixed(5)}, {Number(evt.lng).toFixed(5)}]</div>}
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <span className="font-bold text-white mr-2">{evt.event_name}</span>
-                          {evt.speed !== null && <span className="text-xs text-accentBlue font-mono">{evt.speed} km/h</span>}
-                          {evt.address && <div className="text-textSecondary text-xs mt-1">{evt.address}</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
+                      ))}
+                    </div>
+                  );
+                })() : (
                   <div className="h-full flex items-center justify-center text-textMuted text-sm text-center">
                     No hay eventos registrados en telemetría todavía.
                   </div>
@@ -483,48 +758,118 @@ export const TripDetailsPage: React.FC = () => {
                   <FileText className="w-4 h-4" />
                   Bitácora del Operador
                 </h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={exportLogsCSV} className="p-1 hover:text-white text-textMuted transition-colors mr-1" title="Exportar a CSV">
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setLogSort('newest')}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      logSort === 'newest' ? 'bg-accentBlue text-bgStart' : 'bg-bgSurfaceHigh text-textMuted hover:text-white'
+                    }`}
+                  >
+                    Más nuevo ▼
+                  </button>
+                  <button
+                    onClick={() => setLogSort('oldest')}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      logSort === 'oldest' ? 'bg-accentBlue text-bgStart' : 'bg-bgSurfaceHigh text-textMuted hover:text-white'
+                    }`}
+                  >
+                    Más antiguo ▲
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col-reverse gap-3">
-                {operatorLogs.length > 0 ? (
-                  operatorLogs.map((log: any) => (
-                    <div key={log.id} className="bg-bgStart border border-borderDefault rounded p-3 text-sm flex gap-3">
-                      <div className="shrink-0 flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-accentBlue/20 text-accentBlue flex items-center justify-center font-bold text-xs uppercase">
-                          {log.acknowledger?.name ? log.acknowledger.name.charAt(0) : 'U'}
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                {operatorLogs.length > 0 ? (() => {
+                  const sortedLogs = [...operatorLogs].sort((a, b) =>
+                    logSort === 'newest'
+                      ? new Date(b.triggered_at).getTime() - new Date(a.triggered_at).getTime()
+                      : new Date(a.triggered_at).getTime() - new Date(b.triggered_at).getTime()
+                  );
+                  return sortedLogs.map((log: any) => {
+                    const isAlert =
+                      log.type === 'alert' ||
+                      (log.metadata_json?.note && log.metadata_json.note.startsWith('[ALERTA')) ||
+                      log.metadata_json?.alert_type != null;
+                    return (
+                      <div
+                        key={log.id}
+                        className={`bg-bgStart rounded p-3 text-sm flex gap-3 border-l-4 ${
+                          isAlert ? 'border-orange-400 border border-orange-400/30' : 'border-accentBlue border border-borderDefault'
+                        }`}
+                      >
+                        <div className="shrink-0 flex flex-col items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${
+                            isAlert ? 'bg-orange-400/20 text-orange-400' : 'bg-accentBlue/20 text-accentBlue'
+                          }`}>
+                            {log.acknowledger?.name ? log.acknowledger.name.charAt(0) : 'U'}
+                          </div>
+                          <div className="text-[10px] text-textMuted mt-1 text-center">
+                            {new Date(log.triggered_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-textMuted mt-1 text-center">
-                          {new Date(log.triggered_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${
+                            isAlert ? 'text-orange-400' : 'text-accentBlue'
+                          }`}>
+                            {isAlert ? '🔔 Alerta Atendida' : '📝 Bitácora'}
+                          </div>
+                          <div className="font-bold text-white text-xs mb-1">
+                            {log.acknowledger?.name || log.acknowledger?.email || 'Usuario'}
+                            <span className="font-normal text-textMuted ml-2 text-[10px]">{new Date(log.triggered_at).toLocaleDateString('es-AR')}</span>
+                          </div>
+                          <div className="text-textSecondary whitespace-pre-wrap break-words">{log.metadata_json?.note || ''}</div>
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-white text-xs mb-1">
-                          {log.acknowledger?.name || log.acknowledger?.email || 'Usuario'}
-                          <span className="font-normal text-textMuted ml-2 text-[10px]">{new Date(log.triggered_at).toLocaleDateString()}</span>
-                        </div>
-                        <div className="text-textSecondary whitespace-pre-wrap break-words">{log.metadata_json?.note || ''}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
+                    );
+                  });
+                })() : (
                   <div className="h-full flex items-center justify-center text-textMuted text-sm">
                     Sin anotaciones.
                   </div>
                 )}
               </div>
               <div className="p-3 border-t border-borderDefault bg-bgStart/50 shrink-0">
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => setLogType('note')}
+                    className={`flex-1 px-3 py-1.5 rounded text-xs font-bold transition-colors border ${
+                      logType === 'note'
+                        ? 'bg-accentBlue/20 border-accentBlue text-accentBlue'
+                        : 'border-borderDefault text-textMuted hover:text-white bg-bgStart'
+                    }`}
+                  >
+                    📝 Nota libre
+                  </button>
+                  <button
+                    onClick={() => setLogType('alert')}
+                    className={`flex-1 px-3 py-1.5 rounded text-xs font-bold transition-colors border ${
+                      logType === 'alert'
+                        ? 'bg-orange-400/20 border-orange-400 text-orange-400'
+                        : 'border-borderDefault text-textMuted hover:text-white bg-bgStart'
+                    }`}
+                  >
+                    🔔 Alerta atendida
+                  </button>
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newLogText}
                     onChange={(e) => setNewLogText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddLog()}
-                    placeholder="Escribir anotación en bitácora..."
-                    className="flex-1 bg-bgStart border border-borderDefault rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accentBlue"
+                    placeholder={logType === 'alert' ? 'Describir alerta atendida...' : 'Escribir anotación en bitácora...'}
+                    className={`flex-1 bg-bgStart border rounded px-3 py-2 text-sm text-white focus:outline-none ${
+                      logType === 'alert' ? 'border-orange-400/50 focus:border-orange-400' : 'border-borderDefault focus:border-accentBlue'
+                    }`}
                   />
                   <button
                     onClick={handleAddLog}
                     disabled={!newLogText.trim()}
-                    className="bg-accentBlue text-bgStart p-2 rounded hover:bg-accentBlue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`text-bgStart p-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      logType === 'alert' ? 'bg-orange-400 hover:bg-orange-400/90' : 'bg-accentBlue hover:bg-accentBlue/90'
+                    }`}
                   >
                     <Send className="w-5 h-5" />
                   </button>
@@ -534,6 +879,28 @@ export const TripDetailsPage: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {sensorModalOpen && trip.vehicle_id && (
+        <SensorHistoryModal 
+          vehicleId={trip.vehicle_id}
+          sensorType={selectedSensorType}
+          onClose={() => setSensorModalOpen(false)}
+        />
+      )}
+
+      {configModalOpen && trip.vehicle_id && (
+        <SensorConfigModal 
+          vehicleId={trip.vehicle_id}
+          onClose={() => setConfigModalOpen(false)}
+        />
+      )}
+
+      <TripModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        tripToEdit={trip}
+        onSaved={() => loadTrip(trip.id)}
+      />
     </div>
   );
 };

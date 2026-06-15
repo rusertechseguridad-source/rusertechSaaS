@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Search, UserCheck, UserX, UserPlus } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 
 import { DriverModal } from './DriverModal';
@@ -9,6 +9,8 @@ export const DriversPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [driverToEdit, setDriverToEdit] = useState<any>(null);
+  const [search, setSearch] = useState('');
 
   const fetchDrivers = async () => {
     try {
@@ -65,70 +67,154 @@ export const DriversPage: React.FC = () => {
         </div>
         <RequirePermission permission="drivers:edit">
           <button 
-            onClick={() => setShowModal(true)}
-            className="px-6 py-2 bg-accentBlue text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentBlue/90 transition"
+            onClick={() => { setDriverToEdit(null); setShowModal(true); }}
+            className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition flex items-center gap-2"
           >
-            + Nuevo Chofer
+            <UserPlus className="w-5 h-5" />
+            <span>Nuevo Chofer</span>
           </button>
         </RequirePermission>
       </div>
 
       <DriverModal 
         isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        onSaved={fetchDrivers} 
+        onClose={() => { setShowModal(false); setDriverToEdit(null); }} 
+        onSaved={fetchDrivers}
+        driverToEdit={driverToEdit}
       />
 
-      {drivers.length === 0 ? (
-        <div className="bg-bgSurface rounded-xl shadow-sm border border-borderDefault p-12 text-center">
-          <p className="text-textMuted">No hay choferes registrados todavía.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {drivers.map(driver => (
-            <div key={driver.id} className="bg-bgSurface rounded-xl shadow-card border border-borderDefault overflow-hidden flex flex-col">
-              <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold text-white">{driver.full_name}</h3>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${driver.status === 'active' ? 'bg-statusSuccess/10 text-statusSuccess border border-statusSuccess/20' : 'bg-statusDanger/10 text-statusDanger border border-statusDanger/20'}`}>
-                      {driver.status === 'active' ? 'Activo' : 'Suspendido'}
-                    </span>
-                    <RequirePermission permission="drivers:edit">
-                      <button 
-                        onClick={() => toggleStatus(driver.id, driver.status)}
-                        className={`text-xs underline ${driver.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusSuccess hover:text-green-400'}`}
-                      >
-                        {driver.status === 'active' ? 'Suspender' : 'Reactivar'}
-                      </button>
-                    </RequirePermission>
-                  </div>
+      {(() => {
+        const filtered = drivers.filter(d => 
+          d.full_name.toLowerCase().includes(search.toLowerCase()) || 
+          (d.document && d.document.toLowerCase().includes(search.toLowerCase()))
+        );
+        const totalDrivers = drivers.length;
+        const activeDrivers = drivers.filter(d => d.status === 'active').length;
+        const suspendedDrivers = totalDrivers - activeDrivers;
+
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Choferes</div>
+                  <div className="text-3xl font-display font-black text-white">{totalDrivers}</div>
                 </div>
-                <div className="space-y-2 text-sm text-textSecondary">
-                  <div className="flex justify-between">
-                    <span>{driver.document_type?.toUpperCase() || 'DOC'}:</span>
-                    <span className="font-mono text-white">{driver.document || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Teléfono:</span>
-                    <span className="text-white">{driver.phone || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Licencia:</span>
-                    <span className="font-mono text-white">{driver.license_number || '-'}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-borderDefault">
-                    <span>Transportista:</span>
-                    <span className="font-medium text-accentGreen bg-accentGreen/10 px-2 py-1 rounded">
-                      {driver.carrier?.name || 'Independiente'}
-                    </span>
-                  </div>
+                <div className="w-12 h-12 rounded-full bg-accentBlue/10 flex items-center justify-center border border-accentBlue/20">
+                  <Users className="w-6 h-6 text-accentBlue" />
+                </div>
+              </div>
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Choferes Activos</div>
+                  <div className="text-3xl font-display font-black text-white">{activeDrivers}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
+                  <UserCheck className="w-6 h-6 text-statusOnline" />
+                </div>
+              </div>
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Suspendidos</div>
+                  <div className="text-3xl font-display font-black text-white">{suspendedDrivers}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
+                  <UserX className="w-6 h-6 text-statusDanger" />
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-h-0 flex-1">
+              <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart/50 shrink-0">
+                <div className="relative w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o documento..."
+                    className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentBlue focus:outline-none"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <span className="text-textSecondary text-sm">{filtered.length} choferes encontrados</span>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                {filtered.length === 0 ? (
+                  <div className="p-12 text-center text-textMuted">No hay choferes que coincidan con la búsqueda.</div>
+                ) : (
+                  <table className="w-full text-left text-sm text-textSecondary">
+                    <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
+                      <tr>
+                        <th className="px-6 py-4">Chofer</th>
+                        <th className="px-6 py-4">Contacto</th>
+                        <th className="px-6 py-4">Licencia</th>
+                        <th className="px-6 py-4">Transportista</th>
+                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4 text-right">
+                          <RequirePermission permission="drivers:edit">Acciones</RequirePermission>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-borderDefault">
+                      {filtered.map(driver => (
+                        <tr key={driver.id} className="hover:bg-bgSurfaceHigh/40 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-white text-base">{driver.full_name}</div>
+                            <div className="text-textMuted text-xs mt-0.5">{driver.document_type?.toUpperCase() || 'DOC'}: {driver.document || 'N/A'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-white">{driver.phone || '—'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-white">{driver.license_number || '—'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {driver.carrier ? (
+                              <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{driver.carrier.name}</span>
+                            ) : (
+                              <span className="text-textMuted italic">Independiente</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {driver.status === 'active' ? (
+                              <div className="inline-flex items-center text-statusOnline bg-statusOnline/10 px-3 py-1 rounded-full text-xs font-bold border border-statusOnline/20">
+                                ACTIVO
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center text-statusDanger bg-statusDanger/10 px-3 py-1 rounded-full text-xs font-bold border border-statusDanger/20">
+                                SUSPENDIDO
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <RequirePermission permission="drivers:edit">
+                              <div className="flex justify-end gap-3 items-center">
+                                <button 
+                                  onClick={() => { setDriverToEdit(driver); setShowModal(true); }}
+                                  className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
+                                >
+                                  EDITAR
+                                </button>
+                                <button 
+                                  onClick={() => toggleStatus(driver.id, driver.status)}
+                                  className={`text-xs underline font-bold ${driver.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
+                                >
+                                  {driver.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                </button>
+                              </div>
+                            </RequirePermission>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 };

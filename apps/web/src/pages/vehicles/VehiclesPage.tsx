@@ -190,9 +190,13 @@ export const VehiclesPage: React.FC = () => {
     setShowModal(false);
   };
 
+  const totalVehicles = vehicles.length;
+  const blockedVehicles = vehicles.filter(v => v.is_blocked).length;
+  const activeVehicles = totalVehicles - blockedVehicles;
+
   return (
     <div className="p-8 h-full w-full flex flex-col">
-      <div className="flex justify-between items-center mb-8 shrink-0">
+      <div className="flex justify-between items-center mb-6 shrink-0">
         <h1 
           className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center"
           style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
@@ -205,6 +209,36 @@ export const VehiclesPage: React.FC = () => {
             <Plus className="w-5 h-5 mr-2" /> Nuevo Vehículo
           </button>
         </RequirePermission>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+        <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+          <div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Flota</div>
+            <div className="text-3xl font-display font-black text-white">{totalVehicles}</div>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-accentBlue/10 flex items-center justify-center border border-accentBlue/20">
+            <Truck className="w-6 h-6 text-accentBlue" />
+          </div>
+        </div>
+        <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+          <div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Vehículos Activos</div>
+            <div className="text-3xl font-display font-black text-white">{activeVehicles}</div>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
+            <ShieldCheck className="w-6 h-6 text-statusOnline" />
+          </div>
+        </div>
+        <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+          <div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Vehículos Bloqueados</div>
+            <div className="text-3xl font-display font-black text-white">{blockedVehicles}</div>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
+            <ShieldAlert className="w-6 h-6 text-statusDanger" />
+          </div>
+        </div>
       </div>
 
       <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-h-0 flex-1">
@@ -227,13 +261,13 @@ export const VehiclesPage: React.FC = () => {
             <div className="p-12 text-center text-textMuted">Cargando flota...</div>
           ) : (
             <table className="w-full text-left text-sm text-textSecondary">
-              <thead className="bg-bgStart/60 border-b border-borderDefault text-textMuted uppercase sticky top-0 z-10">
+              <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Vehículo</th>
-                  <th className="px-6 py-4 font-medium">Transportista</th>
-                  <th className="px-6 py-4 font-medium">Proveedor GPS</th>
-                  <th className="px-6 py-4 font-medium">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">
+                  <th className="px-6 py-4">Vehículo</th>
+                  <th className="px-6 py-4">Transportista</th>
+                  <th className="px-6 py-4">Proveedor GPS</th>
+                  <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4 text-right">
                     <RequirePermission permission="vehicles:manage">Acciones</RequirePermission>
                   </th>
                 </tr>
@@ -246,8 +280,8 @@ export const VehiclesPage: React.FC = () => {
                       <div className="text-textMuted">{v.alias || 'Sin alias'} • {v.brand || ''} {v.model || ''}</div>
                     </td>
                     <td className="px-6 py-4">
-                      {v.carrier ? (
-                        <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{v.carrier.name}</span>
+                      {(v as any).carrier ? (
+                        <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{(v as any).carrier.name}</span>
                       ) : (
                         <span className="text-textMuted italic">Independiente</span>
                       )}

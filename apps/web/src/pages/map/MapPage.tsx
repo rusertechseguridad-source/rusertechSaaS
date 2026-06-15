@@ -1,38 +1,421 @@
-import React from 'react';
-import { useAuthStore } from '../../store/authStore';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { Map as MapIcon, Search, X, Layers } from 'lucide-react';
+
+interface TripEvent {
+  id: string;
+  lat: number | null;
+  lng: number | null;
+  speed: number | null;
+  address: string | null;
+  temperature_c: number | null;
+  humidity_pct: number | null;
+  generated_at: string;
+  metadata_json?: any;
+}
+
+interface TripData {
+  id: string;
+  name: string;
+  trip_code: string | null;
+  status: string;
+  vehicle?: { plate: string; alias?: string; carrier?: { name: string }; avl_user?: { provider_name: string } };
+  driver?: { full_name: string };
+  events?: TripEvent[];
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  EN_CURSO: 'En Curso',
+  PROGRAMADO: 'Programado',
+  FINALIZADO: 'Finalizado',
+  CANCELADO: 'Cancelado',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  EN_CURSO: '#2BF4B6',
+  PROGRAMADO: '#2AB3FF',
+  FINALIZADO: '#6B7280',
+  CANCELADO: '#EF4444',
+};
+
+function getLastEventWithPos(events?: TripEvent[]): TripEvent | null {
+  if (!events || events.length === 0) return null;
+  const sorted = [...events].sort(
+    (a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime()
+  );
+  return sorted.find((e) => e.lat !== null && e.lng !== null) ?? null;
+}
+
+function createMarkerEl(status: string): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.cssText =
+    'width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);cursor:pointer;position:relative;';
+  if (status === 'EN_CURSO') {
+    el.style.background = '#2BF4B6';
+    el.style.animation = 'mapPulse 2s infinite';
+    if (!document.getElementById('map-pulse-style')) {
+      const s = document.createElement('style');
+      s.id = 'map-pulse-style';
+      s.textContent =
+        '@keyframes mapPulse{0%{box-shadow:0 0 0 0 rgba(43,244,182,0.7)}70%{box-shadow:0 0 0 12px rgba(43,244,182,0)}100%{box-shadow:0 0 0 0 rgba(43,244,182,0)}}';
+      document.head.appendChild(s);
+    }
+  } else if (status === 'PROGRAMADO') {
+    el.style.background = '#2AB3FF';
+    el.style.boxShadow = '0 0 8px rgba(42,179,255,0.6)';
+  } else {
+    el.style.background = '#4B5563';
+    el.style.boxShadow = '0 0 4px rgba(0,0,0,0.5)';
+  }
+  return el;
+}
+
+function buildPopupHTML(trip: TripData, event: TripEvent | null): string {
+  const statusColor = STATUS_COLORS[trip.status] ?? '#6B7280';
+  const statusLabel = STATUS_LABELS[trip.status] ?? trip.status;
+  const plate = trip.vehicle?.plate ?? 'N/A';
+  const driver = trip.driver?.full_name ?? 'N/D';
+  const address = event?.address ?? event?.metadata_json?.address ?? 'Sin dirección';
+  const speed = event?.speed != null ? String(event.speed) + ' km/h' : '--';
+  const temp = event?.temperature_c != null ? String(event.temperature_c) + '°C' : '--';
+  const humidity = event?.humidity_pct != null ? String(event.humidity_pct) + '%' : '--';
+  return [
+    '<div style="font-family:system-ui,sans-serif;min-width:220px;max-width:280px;padding:12px;',
+    'background:#0F1C2E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#E2E8F0;">',
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;">',
+    '<span style="font-size:13px;font-weight:700;color:#fff;line-height:1.3;">' + trip.name + '</span>',
+    '<span style="flex-shrink:0;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;',
+    'background:' + statusColor + '22;color:' + statusColor + ';border:1px solid ' + statusColor + '44;',
+    'text-transform:uppercase;letter-spacing:0.05em;">' + statusLabel + '</span></div>',
+    trip.trip_code ? '<div style="font-size:10px;font-family:monospace;color:#94A3B8;margin-bottom:8px;">' + trip.trip_code + '</div>' : '',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;margin-bottom:8px;',
+    'border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">',
+    '<div style="color:#94A3B8;">🚛 Placa</div><div style="color:#fff;font-weight:600;">' + plate + '</div>',
+    '<div style="color:#94A3B8;">👤 Chofer</div><div style="color:#fff;">' + driver + '</div>',
+    '<div style="color:#94A3B8;">📍 Dirección</div><div style="color:#CBD5E1;font-size:10px;">' + address + '</div>',
+    '<div style="color:#94A3B8;">⚡ Velocidad</div><div style="color:#2BF4B6;font-weight:600;">' + speed + '</div>',
+    '<div style="color:#94A3B8;">🌡 Temp.</div><div style="color:#F59E0B;">' + temp + '</div>',
+    '<div style="color:#94A3B8;">💧 Humedad</div><div style="color:#60A5FA;">' + humidity + '</div></div>',
+    '<a href="/trips/' + trip.id + '" style="display:block;text-align:center;background:#2AB3FF22;',
+    'border:1px solid #2AB3FF55;color:#2AB3FF;padding:5px 12px;border-radius:6px;font-size:11px;',
+    'font-weight:700;text-decoration:none;margin-top:4px;">Ver Detalles →</a></div>',
+  ].join('');
+}
 
 export const MapPage: React.FC = () => {
-  const { user } = useAuthStore();
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const [trips, setTrips] = useState<TripData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [carrierFilter, setCarrierFilter] = useState<string>('');
+  const [avlFilter, setAvlFilter] = useState<string>('');
+  const [mapStyle, setMapStyle] = useState('https://tiles.openfreemap.org/styles/dark');
+  const [mapReady, setMapReady] = useState(false);
 
-  if (user?.role === 'SUPERADMIN') {
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-bgStart relative overflow-hidden">
-        {/* Background grid effect */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        
-        <div className="z-10 flex flex-col items-center animate-fade-in-up">
-          <img src="/logo_forma.png" alt="Rusertech Logo" className="w-48 h-48 mb-8 drop-shadow-[0_0_30px_rgba(42,179,255,0.4)]" />
-          <h1 
-            className="text-6xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wider text-center"
-            style={{ textShadow: '0 0 20px rgba(42,179,255,0.5)', animation: 'pulse 3s infinite' }}
+  const fetchTrips = useCallback(async () => {
+    const token = localStorage.getItem('rusertech_token');
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/trips', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setTrips(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTrips();
+    const interval = setInterval(fetchTrips, 30000);
+    return () => clearInterval(interval);
+  }, [fetchTrips]);
+
+  useEffect(() => {
+    if (mapContainer.current && !map.current) {
+      map.current = new maplibregl.Map({
+        container: mapContainer.current,
+        style: mapStyle,
+        center: [-58.38, -34.6],
+        zoom: 6,
+      });
+      map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+      map.current.on('load', () => setMapReady(true));
+    }
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  const filtered = trips.filter((t) => {
+    const matchStatus = !statusFilter || t.status === statusFilter;
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q ||
+      t.name.toLowerCase().includes(q) ||
+      (t.trip_code ?? '').toLowerCase().includes(q) ||
+      (t.vehicle?.plate ?? '').toLowerCase().includes(q);
+    const matchCarrier = !carrierFilter || (t.vehicle as any)?.carrier?.id === carrierFilter;
+    const matchAvl = !avlFilter || (t.vehicle as any)?.avl_user?.id === avlFilter;
+    return matchStatus && matchSearch && matchCarrier && matchAvl;
+  });
+
+  useEffect(() => {
+    if (map.current && mapReady) {
+      map.current.setStyle(mapStyle);
+    }
+  }, [mapStyle, mapReady]);
+
+  const uniqueCarriers = Array.from(
+    new Map(
+      trips
+        .map((t) => (t.vehicle as any)?.carrier)
+        .filter(Boolean)
+        .map((c: any) => [c.id, c])
+    ).values()
+  );
+
+  const uniqueAvl = Array.from(
+    new Map(
+      trips
+        .map((t) => (t.vehicle as any)?.avl_user)
+        .filter(Boolean)
+        .map((a: any) => [a.id, a])
+    ).values()
+  );
+
+  useEffect(() => {
+    if (!map.current || !mapReady) return;
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    filtered.forEach((trip) => {
+      const event = getLastEventWithPos(trip.events);
+      if (!event || event.lat === null || event.lng === null) return;
+      const el = createMarkerEl(trip.status);
+      const popup = new maplibregl.Popup({
+        offset: 14,
+        closeButton: true,
+        maxWidth: '300px',
+        className: 'map-global-popup',
+      }).setHTML(buildPopupHTML(trip, event));
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([event.lng, event.lat])
+        .setPopup(popup)
+        .addTo(map.current!);
+      markersRef.current.push(marker);
+    });
+  }, [filtered, mapReady]);
+
+  const activeCount = trips.filter((t) => t.status === 'EN_CURSO').length;
+  const totalWithPos = trips.filter((t) => getLastEventWithPos(t.events) !== null).length;
+  const filterOpts = [
+    { value: '', label: 'Todos', color: '#94A3B8' },
+    { value: 'EN_CURSO', label: 'En Curso', color: '#2BF4B6' },
+    { value: 'PROGRAMADO', label: 'Program.', color: '#2AB3FF' },
+    { value: 'FINALIZADO', label: 'Finaliz.', color: '#6B7280' },
+  ];
+  const legendRows = [
+    { label: 'En Curso', color: '#2BF4B6', glow: true, count: activeCount },
+    { label: 'Programado', color: '#2AB3FF', glow: false, count: trips.filter((t) => t.status === 'PROGRAMADO').length },
+    { label: 'Finalizado', color: '#4B5563', glow: false, count: trips.filter((t) => t.status === 'FINALIZADO').length },
+  ];
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+      {/* Centre header */}
+      <div
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-2 rounded-xl"
+        style={{
+          background: 'rgba(10,18,30,0.75)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(43,244,182,0.25)',
+          boxShadow: '0 4px 30px rgba(0,0,0,0.5)',
+        }}
+      >
+        <MapIcon className="w-5 h-5 text-accentGreen" />
+        <span className="text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue">
+          Mapa Global Viajes
+        </span>
+      </div>
+
+      {/* Top-left filters */}
+      <div
+        className="absolute top-4 left-4 z-20 flex flex-col gap-2 w-64"
+        style={{
+          background: 'rgba(10,18,30,0.80)',
+          backdropFilter: 'blur(14px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px',
+          padding: '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-textMuted" />
+          <input
+            type="text"
+            placeholder="Buscar viaje, placa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-1.5 text-xs text-white placeholder-textMuted focus:border-accentGreen focus:outline-none transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-textMuted hover:text-white"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <select
+            value={carrierFilter}
+            onChange={(e) => setCarrierFilter(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-accentGreen focus:outline-none"
           >
-            Rusertech
-          </h1>
-          <h2 
-            className="text-2xl mt-2 font-bold text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentMint tracking-widest uppercase"
-            style={{ textShadow: '0 0 10px rgba(42,255,179,0.3)', animation: 'pulse 3s infinite' }}
+            <option value="">Todos los Transportistas</option>
+            {uniqueCarriers.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <select
+            value={avlFilter}
+            onChange={(e) => setAvlFilter(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-accentGreen focus:outline-none"
           >
-            Ruta Logística Segura
-          </h2>
+            <option value="">Todos los Proveedores GPS</option>
+            {uniqueAvl.map((a: any) => (
+              <option key={a.id} value={a.id}>{a.provider_name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5 mt-2">
+          {filterOpts.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className="flex items-center justify-between w-full px-3 py-2 rounded-lg transition-all"
+              style={{
+                border: '1px solid ' + (statusFilter === opt.value ? opt.color : 'rgba(255,255,255,0.05)'),
+                background: statusFilter === opt.value ? opt.color + '15' : 'rgba(255,255,255,0.02)',
+                color: statusFilter === opt.value ? opt.color : '#94A3B8',
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-2 h-2 rounded-full" 
+                  style={{ backgroundColor: statusFilter === opt.value ? opt.color : '#475569' }} 
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider">{opt.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        {loading && (
+          <div className="text-[10px] text-textMuted text-center animate-pulse">Cargando datos...</div>
+        )}
+      </div>
+
+      {/* Map Style Selector - Bottom Left */}
+      <div
+        className="absolute bottom-6 left-4 z-20 flex gap-2"
+        style={{
+          background: 'rgba(10,18,30,0.82)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px',
+          padding: '8px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        {[
+          { label: 'Oscuro', value: 'https://tiles.openfreemap.org/styles/dark' },
+          { label: 'Claro', value: 'https://tiles.openfreemap.org/styles/liberty' },
+        ].map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => setMapStyle(opt.value)}
+            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              mapStyle === opt.value
+                ? 'bg-accentGreen/20 text-accentGreen border border-accentGreen/30'
+                : 'text-textSecondary hover:text-white border border-transparent hover:bg-white/5'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Top-right legend */}
+      <div
+        className="absolute top-4 right-4 z-20 w-52"
+        style={{
+          background: 'rgba(10,18,30,0.82)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px',
+          padding: '14px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
+          <Layers className="w-4 h-4 text-accentGreen" />
+          <span className="text-xs font-bold text-white">Mapa Global de Flota</span>
+        </div>
+        <div className="space-y-1.5 mb-3">
+          {legendRows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: row.color,
+                    boxShadow: row.glow ? '0 0 6px ' + row.color : undefined,
+                  }}
+                />
+                <span className="text-textSecondary">{row.label}</span>
+              </div>
+              <span style={{ color: row.color }} className="font-bold">{row.count}</span>
+            </div>
+          ))}
+        </div>
+        <div
+          className="text-center text-[10px] rounded-lg py-1.5"
+          style={{ background: 'rgba(43,244,182,0.08)', border: '1px solid rgba(43,244,182,0.15)' }}
+        >
+          <span className="text-accentGreen font-bold">{activeCount}</span>
+          <span className="text-textMuted"> activos / </span>
+          <span className="text-white font-bold">{trips.length}</span>
+          <span className="text-textMuted"> total</span>
+        </div>
+        <div className="mt-2 text-[9px] text-textMuted text-center">
+          {totalWithPos} con posición GPS • Auto-refresh 30s
         </div>
       </div>
-    );
-  }
 
-  // Non-superadmin view (empty map container for future)
-  return (
-    <div className="h-full w-full bg-bgStart flex items-center justify-center">
-      <div className="text-textMuted text-lg">Espacio Reservado para Mapa Interactivo del Cliente</div>
+      <style>{`
+        .map-global-popup .maplibregl-popup-content {
+          background: transparent !important; padding: 0 !important;
+          border-radius: 10px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.7) !important;
+        }
+        .map-global-popup .maplibregl-popup-tip { border-top-color: #0F1C2E !important; border-bottom-color: #0F1C2E !important; }
+        .map-global-popup .maplibregl-popup-close-button { color: #94A3B8 !important; font-size: 16px !important; right: 8px !important; top: 6px !important; }
+        .map-global-popup .maplibregl-popup-close-button:hover { color: #fff !important; background: transparent !important; }
+      `}</style>
     </div>
   );
 };

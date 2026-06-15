@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck } from 'lucide-react';
+import { Truck, Search, Briefcase, CheckCircle, XCircle } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 
 import { CarrierModal } from './CarrierModal';
@@ -9,6 +9,8 @@ export const CarriersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [carrierToEdit, setCarrierToEdit] = useState<any>(null);
+  const [search, setSearch] = useState('');
 
   const fetchCarriers = async () => {
     try {
@@ -65,7 +67,7 @@ export const CarriersPage: React.FC = () => {
         </div>
         <RequirePermission permission="carriers:edit">
           <button 
-            onClick={() => setShowModal(true)}
+            onClick={() => { setCarrierToEdit(null); setShowModal(true); }}
             className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
           >
             + Nuevo Transportista
@@ -75,58 +77,139 @@ export const CarriersPage: React.FC = () => {
 
       <CarrierModal 
         isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
-        onSaved={fetchCarriers} 
+        onClose={() => { setShowModal(false); setCarrierToEdit(null); }} 
+        onSaved={fetchCarriers}
+        carrierToEdit={carrierToEdit}
       />
 
-      {carriers.length === 0 ? (
-        <div className="bg-bgSurface rounded-xl shadow-sm border border-borderDefault p-12 text-center">
-          <p className="text-textMuted">No hay transportistas registrados todavía.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {carriers.map(carrier => (
-            <div key={carrier.id} className="bg-bgSurface rounded-xl shadow-card border border-borderDefault overflow-hidden flex flex-col">
-              <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold text-white">{carrier.name}</h3>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${carrier.status === 'active' ? 'bg-statusSuccess/10 text-statusSuccess border border-statusSuccess/20' : 'bg-statusDanger/10 text-statusDanger border border-statusDanger/20'}`}>
-                      {carrier.status === 'active' ? 'Activo' : 'Suspendido'}
-                    </span>
-                    <RequirePermission permission="carriers:edit">
-                      <button 
-                        onClick={() => toggleStatus(carrier.id, carrier.status)}
-                        className={`text-xs underline ${carrier.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusSuccess hover:text-green-400'}`}
-                      >
-                        {carrier.status === 'active' ? 'Suspender' : 'Reactivar'}
-                      </button>
-                    </RequirePermission>
-                  </div>
+      {(() => {
+        const filtered = carriers.filter(c => 
+          c.name.toLowerCase().includes(search.toLowerCase()) || 
+          (c.tax_id && c.tax_id.toLowerCase().includes(search.toLowerCase()))
+        );
+        const totalCarriers = carriers.length;
+        const activeCarriers = carriers.filter(c => c.status === 'active').length;
+        const suspendedCarriers = totalCarriers - activeCarriers;
+
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Transportistas</div>
+                  <div className="text-3xl font-display font-black text-white">{totalCarriers}</div>
                 </div>
-                <div className="space-y-2 text-sm text-textSecondary">
-                  <div className="flex justify-between">
-                    <span>CUIT/RUT:</span>
-                    <span className="font-mono text-white">{carrier.tax_id || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Email:</span>
-                    <span className="text-white">{carrier.contact_email || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Vehículos:</span>
-                    <span className="font-medium text-white">{carrier._count?.vehicles || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Choferes:</span>
-                    <span className="font-medium text-white">{carrier._count?.drivers || 0}</span>
-                  </div>
+                <div className="w-12 h-12 rounded-full bg-accentGreen/10 flex items-center justify-center border border-accentGreen/20">
+                  <Briefcase className="w-6 h-6 text-accentGreen" />
+                </div>
+              </div>
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Activos</div>
+                  <div className="text-3xl font-display font-black text-white">{activeCarriers}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
+                  <CheckCircle className="w-6 h-6 text-statusOnline" />
+                </div>
+              </div>
+              <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
+                <div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Suspendidos</div>
+                  <div className="text-3xl font-display font-black text-white">{suspendedCarriers}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
+                  <XCircle className="w-6 h-6 text-statusDanger" />
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-h-0 flex-1">
+              <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart/50 shrink-0">
+                <div className="relative w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o CUIT/RUT..."
+                    className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentGreen focus:outline-none"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <span className="text-textSecondary text-sm">{filtered.length} transportistas encontrados</span>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                {filtered.length === 0 ? (
+                  <div className="p-12 text-center text-textMuted">No hay transportistas que coincidan con la búsqueda.</div>
+                ) : (
+                  <table className="w-full text-left text-sm text-textSecondary">
+                    <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
+                      <tr>
+                        <th className="px-6 py-4">Transportista</th>
+                        <th className="px-6 py-4">Contacto</th>
+                        <th className="px-6 py-4">Vehículos</th>
+                        <th className="px-6 py-4">Choferes</th>
+                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4 text-right">
+                          <RequirePermission permission="carriers:edit">Acciones</RequirePermission>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-borderDefault">
+                      {filtered.map(carrier => (
+                        <tr key={carrier.id} className="hover:bg-bgSurfaceHigh/40 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-white text-base">{carrier.name}</div>
+                            <div className="text-textMuted text-xs mt-0.5">RUT/CUIT: {carrier.tax_id || 'N/A'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-white">{carrier.contact_email || '—'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-white">{carrier._count?.vehicles || 0}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-white">{carrier._count?.drivers || 0}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {carrier.status === 'active' ? (
+                              <div className="inline-flex items-center text-statusOnline bg-statusOnline/10 px-3 py-1 rounded-full text-xs font-bold border border-statusOnline/20">
+                                ACTIVO
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center text-statusDanger bg-statusDanger/10 px-3 py-1 rounded-full text-xs font-bold border border-statusDanger/20">
+                                SUSPENDIDO
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <RequirePermission permission="carriers:edit">
+                              <div className="flex justify-end gap-3 items-center">
+                                <button 
+                                  onClick={() => { setCarrierToEdit(carrier); setShowModal(true); }}
+                                  className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
+                                >
+                                  EDITAR
+                                </button>
+                                <button 
+                                  onClick={() => toggleStatus(carrier.id, carrier.status)}
+                                  className={`text-xs underline font-bold ${carrier.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
+                                >
+                                  {carrier.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                </button>
+                              </div>
+                            </RequirePermission>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 };

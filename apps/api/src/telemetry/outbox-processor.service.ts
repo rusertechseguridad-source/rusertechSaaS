@@ -16,7 +16,7 @@ export class OutboxProcessorService {
     @InjectQueue('forwarding.send') private forwardingQueue: Queue,
   ) {}
 
-  @Interval(100)
+  @Interval(3000)
   async handleOutbox() {
     if (this.isProcessing) return;
     this.isProcessing = true;

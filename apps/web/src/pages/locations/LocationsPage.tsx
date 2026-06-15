@@ -11,6 +11,7 @@ export const LocationsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [mapStyle, setMapStyle] = useState('https://tiles.openfreemap.org/styles/dark');
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -33,12 +34,13 @@ export const LocationsPage: React.FC = () => {
     fetchOperations();
   }, []);
 
+  // Initialize map once
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     mapRef.current = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/dark',
+      style: mapStyle,
       center: [-58.3816, -34.6037], // Default center
       zoom: 10,
     });
@@ -50,6 +52,13 @@ export const LocationsPage: React.FC = () => {
       mapRef.current = null;
     };
   }, []);
+
+  // Update map style when it changes
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setStyle(mapStyle);
+    }
+  }, [mapStyle]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -201,8 +210,8 @@ export const LocationsPage: React.FC = () => {
                     key={loc.id}
                     onClick={() => {
                       setSelectedLocation(loc);
-                      if (map.current) {
-                        map.current.flyTo({ center: [loc.longitude as any, loc.latitude as any], zoom: 14, essential: true });
+                      if (mapRef.current) {
+                        mapRef.current.flyTo({ center: [loc.longitude as any, loc.latitude as any], zoom: 14, essential: true });
                       }
                     }}
                     className={`p-4 rounded-lg border cursor-pointer group transition-colors ${
@@ -309,6 +318,36 @@ export const LocationsPage: React.FC = () => {
               <p className="text-lg font-medium text-white/50">Seleccione una ubicación en la lista</p>
             </div>
           )}
+
+          {/* Map Style Selector - Bottom Left */}
+          <div
+            className="absolute bottom-6 left-4 z-20 flex gap-2"
+            style={{
+              background: 'rgba(10,18,30,0.82)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '12px',
+              padding: '8px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            {[
+              { label: 'Oscuro', value: 'https://tiles.openfreemap.org/styles/dark' },
+              { label: 'Claro', value: 'https://tiles.openfreemap.org/styles/liberty' },
+            ].map((opt) => (
+              <button
+                key={opt.label}
+                onClick={() => setMapStyle(opt.value)}
+                className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                  mapStyle === opt.value
+                    ? 'bg-white/10 text-white font-bold shadow-sm border border-white/20'
+                    : 'text-textMuted hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

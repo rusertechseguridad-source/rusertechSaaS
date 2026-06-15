@@ -22,6 +22,8 @@ export class TripsService {
         lng: evt.longitude,
         speed: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).speed : null,
         address: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).address : null,
+        temperature_c: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).temperature_c : null,
+        humidity_pct: evt.metadata_json && typeof evt.metadata_json === 'object' ? (evt.metadata_json as any).humidity_pct : null,
       }));
     }
 
@@ -33,8 +35,9 @@ export class TripsService {
       where: { tenant_id: tenantId },
       include: {
         vehicle: {
-          include: { avl_user: true }
+          include: { avl_user: true, carrier: true }
         },
+        carrier: true,
         operation: true,
         origin_location: true,
         destination_location: true,
@@ -54,8 +57,9 @@ export class TripsService {
       where: { id },
       include: {
         vehicle: {
-          include: { avl_user: true }
+          include: { avl_user: true, carrier: true }
         },
+        carrier: true,
         operation: true,
         origin_location: true,
         destination_location: true,
@@ -126,7 +130,8 @@ export class TripsService {
         status: data.status || 'PROGRAMADO',
         planned_start,
         planned_end,
-        vehicle: { connect: { id: data.vehicle_id } },
+        vehicle: data.vehicle_id ? { connect: { id: data.vehicle_id } } : undefined,
+        carrier: data.carrier_id ? { connect: { id: data.carrier_id } } : undefined,
         operation: data.operation_id ? { connect: { id: data.operation_id } } : undefined,
         origin_location: data.origin_location_id ? { connect: { id: data.origin_location_id } } : undefined,
         destination_location: data.destination_location_id ? { connect: { id: data.destination_location_id } } : undefined,
@@ -174,7 +179,10 @@ export class TripsService {
     }
 
     if (data.vehicle_id !== undefined) {
-      updateData.vehicle = { connect: { id: data.vehicle_id } };
+      updateData.vehicle = data.vehicle_id ? { connect: { id: data.vehicle_id } } : { disconnect: true };
+    }
+    if (data.carrier_id !== undefined) {
+      updateData.carrier = data.carrier_id ? { connect: { id: data.carrier_id } } : { disconnect: true };
     }
     if (data.operation_id !== undefined) {
       updateData.operation = data.operation_id ? { connect: { id: data.operation_id } } : { disconnect: true };
@@ -265,7 +273,6 @@ export class TripsService {
         route: true,
       }
     });
-    });
     return this.mapToDto(trip);
   }
 
@@ -278,7 +285,7 @@ export class TripsService {
       orderBy: { triggered_at: 'desc' },
       include: {
         acknowledger: {
-          select: { name: true, email: true }
+          select: { full_name: true, email: true }
         }
       }
     });
@@ -290,6 +297,7 @@ export class TripsService {
       select: { tenant_id: true, vehicle_id: true }
     });
     if (!trip) throw new Error('Trip not found');
+    if (!trip.vehicle_id) throw new Error('Trip must have a vehicle to add logs');
 
     return this.prisma.eventLog.create({
       data: {
@@ -304,7 +312,7 @@ export class TripsService {
       },
       include: {
         acknowledger: {
-          select: { name: true, email: true }
+          select: { full_name: true, email: true }
         }
       }
     });

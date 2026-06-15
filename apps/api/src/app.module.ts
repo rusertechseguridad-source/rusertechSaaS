@@ -21,6 +21,9 @@ import { OperationsModule } from './operations/operations.module';
 import { TripsModule } from './trips/trips.module';
 import { CarriersModule } from './carriers/carriers.module';
 import { DriversModule } from './drivers/drivers.module';
+import { SensorsModule } from './sensors/sensors.module';
+import { DevicesModule } from './devices/devices.module';
+import { AlertsModule } from './alerts/alerts.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { DriversModule } from './drivers/drivers.module';
     TripsModule,
     CarriersModule,
     DriversModule,
+    SensorsModule,
+    DevicesModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [

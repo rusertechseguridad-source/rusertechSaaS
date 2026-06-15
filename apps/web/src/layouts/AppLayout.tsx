@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, Shield } from 'lucide-react';
+import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
@@ -15,13 +15,13 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex flex-col text-textPrimary relative">
+    <div className="h-screen bg-gradient-bg flex flex-col text-textPrimary relative overflow-hidden">
       {/* Navbar */}
       <nav className="bg-bgStart/95 border-b border-borderDefault backdrop-blur-md sticky top-0 z-40">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-28">
             <div className="flex items-center gap-10">
-              <a href="/vehicles" className="flex items-center gap-5 mr-6 group">
+              <a href="/map" className="flex items-center gap-5 mr-6 group">
                 <div 
                   className="relative flex items-center justify-center w-20 h-20 rounded-xl shadow-[0_0_20px_rgba(42,179,255,0.4)] transition-all duration-300"
                   style={{ animation: 'pulse 3s infinite' }}
@@ -42,35 +42,41 @@ export const AppLayout: React.FC = () => {
                   <span 
                     className="text-[17px] font-medium text-white tracking-widest mt-2"
                   >
-                    Seguridad & Logística
+                    Seguridad &amp; Logística
                   </span>
                 </div>
               </a>
-              <div className="flex space-x-1">
+              <div className="flex space-x-0.5 flex-wrap">
                 {[
-                  { path: '/alerts', label: 'Alertas' },
-                  { path: '/trips', label: 'Viajes' },
-                  { path: '/vehicles', label: 'Vehículos' },
-                  { path: '/carriers', label: 'Transportistas' },
-                  { path: '/drivers', label: 'Choferes' },
-                  { path: '/locations', label: 'Ubicaciones' },
-                  { path: '/routes', label: 'Recorridos' },
-                  { path: '/avl', label: 'AVL' },
-                  { path: '/simulator', label: 'Simulador' }
+                  { path: '/map', label: 'Mapa Global', icon: Map },
+                  { path: '/alerts', label: 'Alertas', icon: Bell },
+                  { path: '/trips', label: 'Viajes', icon: Route },
+                  { path: '/vehicles', label: 'Vehículos', icon: Truck },
+                  { path: '/devices', label: 'Dispositivos', icon: Smartphone },
+                  { path: '/carriers', label: 'Transportistas', icon: Building2 },
+                  { path: '/drivers', label: 'Conductores', icon: Users },
+                  { path: '/locations', label: 'Ubicaciones', icon: MapPin },
+                  { path: '/routes', label: 'Recorridos', icon: Navigation },
+                  { path: '/avl', label: 'AVL', icon: Radio },
+                  { path: '/simulator', label: 'Simulador', icon: Zap },
                 ].map(item => {
                   const isActive = location.pathname.startsWith(item.path);
                   return (
-                    <Link 
+                    <Link
                       key={item.path}
-                      to={item.path} 
-                      className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                        isActive 
-                          ? 'font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider' 
-                          : 'font-medium text-textSecondary hover:text-white hover:bg-bgSurfaceHigh'
+                      to={item.path}
+                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all group ${
+                        isActive
+                          ? 'bg-accentGreen/10 text-white border border-accentGreen/30 shadow-[0_0_10px_rgba(0,200,100,0.15)]'
+                          : 'text-textSecondary hover:text-white hover:bg-bgSurfaceHigh border border-transparent'
                       }`}
-                      style={isActive ? { textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' } : {}}
                     >
-                      {item.label}
+                      <item.icon className={`w-5 h-5 ${isActive ? 'text-accentGreen drop-shadow-[0_0_5px_rgba(0,200,100,0.5)]' : 'text-textMuted group-hover:text-white transition-colors'}`} />
+                      <span className={`text-xs font-bold tracking-wide whitespace-nowrap ${
+                        isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
+                      }`}>
+                        {item.label}
+                      </span>
                     </Link>
                   );
                 })}
@@ -92,7 +98,7 @@ export const AppLayout: React.FC = () => {
         </div>
       </nav>
 
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full overflow-y-auto" style={{ minHeight: 0 }}>
         <Outlet />
       </main>
     </div>
