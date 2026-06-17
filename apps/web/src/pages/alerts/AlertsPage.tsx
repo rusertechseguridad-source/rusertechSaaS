@@ -25,6 +25,15 @@ export const AlertsPage: React.FC = () => {
   const [resolutionNote, setResolutionNote] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  let isAdmin = false;
+  const token = localStorage.getItem('rusertech_token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      isAdmin = ['tenant_admin', 'admin', 'super_admin'].includes(payload.role_code);
+    } catch(e) {}
+  }
+
   // Resizable columns state
   const [colWidths, setColWidths] = useState({
     hora: 112,
@@ -355,13 +364,15 @@ export const AlertsPage: React.FC = () => {
           <p className="text-textMuted mt-2">Monitoreo y resolución de eventos críticos.</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowSettings(true)}
-            className="bg-bgSurface hover:bg-borderDefault text-textMuted hover:text-white px-3 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm border border-borderDefault shadow-card"
-            title="Configuración de Alertas"
-          >
-            <Settings className="w-4 h-4" /> Configuración
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="bg-bgSurface hover:bg-borderDefault text-textMuted hover:text-white px-3 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm border border-borderDefault shadow-card"
+              title="Configuración de Alertas"
+            >
+              <Settings className="w-4 h-4" /> Configuración
+            </button>
+          )}
           <button
             onClick={fetchAlerts}
             className="bg-bgSurfaceHigh hover:bg-borderDefault text-white px-4 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm shadow-card"
@@ -479,6 +490,7 @@ export const AlertsPage: React.FC = () => {
             <span className="text-xs text-textMuted font-bold bg-bgSurface px-3 py-1.5 rounded-lg border border-borderDefault">
               {filtered.length} alerta{filtered.length !== 1 ? 's' : ''}
             </span>
+
             <button 
               onClick={handleExport}
               className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
