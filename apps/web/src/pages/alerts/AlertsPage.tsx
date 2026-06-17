@@ -74,74 +74,7 @@ export const AlertsPage: React.FC = () => {
     }
   }, [mapStyle]);
 
-  // Render all active markers
-  useEffect(() => {
-    if (!map.current) return;
-    
-    // Clean up old markers
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
 
-    filtered.forEach(alert => {
-      const lat = Number(alert.latitude);
-      const lng = Number(alert.longitude);
-
-      if (!isNaN(lat) && !isNaN(lng)) {
-        const el = document.createElement('div');
-        
-        // Determine background based on severity
-        let bgClass = 'bg-slate-500';
-        let alertSeverity = tenantSettings?.alert_colors?.[alert.event_type];
-        if (!alertSeverity) {
-          const type = (alert.event_type || '').toUpperCase();
-          if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
-          else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
-          else if (type === 'POSITION') alertSeverity = 'none';
-          else alertSeverity = 'medium';
-        }
-
-        if (alertSeverity === 'none') bgClass = 'bg-green-500';
-        if (alertSeverity === 'low') bgClass = 'bg-blue-500';
-        if (alertSeverity === 'medium') bgClass = 'bg-orange-500';
-        if (alertSeverity === 'high') bgClass = 'bg-red-500';
-        if (alertSeverity === 'critical') bgClass = 'bg-black';
-
-        // Make selected marker larger
-        const isSelected = selectedAlert?.id === alert.id;
-        el.className = `w-4 h-4 ${bgClass} rounded-full border-2 border-white shadow-[0_0_10px_rgba(0,0,0,0.5)] cursor-pointer transition-all hover:scale-125 ${isSelected ? 'scale-150 animate-pulse ring-2 ring-white/50' : ''}`;
-        
-        const dot = document.createElement('div');
-        dot.className = 'w-1.5 h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
-        el.appendChild(dot);
-
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          setSelectedAlert(alert);
-        });
-
-        const m = new maplibregl.Marker({ element: el })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
-          
-        markersRef.current.push(m);
-      }
-    });
-  }, [filtered, tenantSettings, selectedAlert]);
-
-  // Fly to selected alert
-  useEffect(() => {
-    if (!map.current || !selectedAlert) return;
-    const lat = Number(selectedAlert.latitude);
-    const lng = Number(selectedAlert.longitude);
-    if (!isNaN(lat) && !isNaN(lng)) {
-      map.current.flyTo({
-        center: [lng, lat],
-        zoom: 14,
-        essential: true,
-        speed: 1.5
-      });
-    }
-  }, [selectedAlert]);
 
   const submitResolve = async () => {
     if (!alertToResolve) return;
@@ -251,6 +184,83 @@ export const AlertsPage: React.FC = () => {
     const d2 = new Date(b.triggered_at).getTime();
     return sortOrder === 'desc' ? d2 - d1 : d1 - d2;
   });
+
+  // Update map style
+  useEffect(() => {
+    if (map.current) {
+      map.current.setStyle(mapStyle);
+    }
+  }, [mapStyle]);
+
+  // Render all active markers
+  useEffect(() => {
+    if (!map.current) return;
+    
+    // Clean up old markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    filtered.forEach(alert => {
+      const lat = Number(alert.latitude);
+      const lng = Number(alert.longitude);
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const el = document.createElement('div');
+        
+        // Determine background based on severity
+        let bgClass = 'bg-slate-500';
+        let alertSeverity = tenantSettings?.alert_colors?.[alert.event_type];
+        if (!alertSeverity) {
+          const type = (alert.event_type || '').toUpperCase();
+          if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
+          else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
+          else if (type === 'POSITION') alertSeverity = 'none';
+          else alertSeverity = 'medium';
+        }
+
+        if (alertSeverity === 'none') bgClass = 'bg-green-500';
+        if (alertSeverity === 'low') bgClass = 'bg-blue-500';
+        if (alertSeverity === 'medium') bgClass = 'bg-orange-500';
+        if (alertSeverity === 'high') bgClass = 'bg-red-500';
+        if (alertSeverity === 'critical') bgClass = 'bg-black';
+
+        // Make selected marker larger
+        const isSelected = selectedAlert?.id === alert.id;
+        el.className = `w-4 h-4 ${bgClass} rounded-full border-2 border-white shadow-[0_0_10px_rgba(0,0,0,0.5)] cursor-pointer transition-all hover:scale-125 ${isSelected ? 'scale-150 animate-pulse ring-2 ring-white/50' : ''}`;
+        
+        const dot = document.createElement('div');
+        dot.className = 'w-1.5 h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+        el.appendChild(dot);
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setSelectedAlert(alert);
+        });
+
+        const m = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`<b>${translateEvent(alert.event_type)}</b><br/>${alert.vehicle?.plate || ''}`))
+          .addTo(map.current!);
+          
+        markersRef.current.push(m);
+      }
+    });
+  }, [filtered, tenantSettings, selectedAlert]);
+
+  // Fly to selected alert
+  useEffect(() => {
+    if (!map.current || !selectedAlert) return;
+    const lat = Number(selectedAlert.latitude);
+    const lng = Number(selectedAlert.longitude);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: 14,
+        essential: true,
+        speed: 1.5
+      });
+    }
+  }, [selectedAlert]);
 
   const handleExport = () => {
     const headers = ['Fecha/Hora', 'Evento', 'Vehículo', 'Chofer', 'Viaje', 'Ubicación', 'Latitud', 'Longitud'];
