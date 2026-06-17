@@ -104,8 +104,7 @@ async function main() {
         vehicle_id: v.id,
         event_type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
         severity: severities[Math.floor(Math.random() * severities.length)],
-        timestamp: date,
-        is_alert: true,
+        triggered_at: date,
         metadata_json: {},
       }
     });

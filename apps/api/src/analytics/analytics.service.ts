@@ -175,8 +175,7 @@ export class AnalyticsService {
     const alerts = await this.prisma.eventLog.findMany({
       where: {
         tenant_id: tenantId,
-        timestamp: { gte: startDate },
-        is_alert: true,
+        triggered_at: { gte: startDate },
         ...vehicleFilter,
       },
       select: {
