@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
 
 export const AlertsPage: React.FC = () => {
-  const { alerts, loading, fetchAlerts: storeFetch, resolveAlert, setAlerts, setLoading } = useAlertsStore();
+  const { alerts, loading, fetchAlerts: storeFetch, resolveAlert } = useAlertsStore();
 
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -28,21 +28,12 @@ export const AlertsPage: React.FC = () => {
   const marker = useRef<maplibregl.Marker | null>(null);
 
   const fetchAlerts = async () => {
-    setLoading(true);
     try {
+      await storeFetch();
+
       const token = localStorage.getItem('rusertech_token');
       if (!token) return;
 
-      // Fetch alerts
-      const res = await fetch('http://localhost:3000/api/v1/alerts', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAlerts(data);
-      }
-
-      // Fetch settings
       const settingsRes = await fetch('http://localhost:3000/api/v1/alerts/settings', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -50,9 +41,7 @@ export const AlertsPage: React.FC = () => {
         setTenantSettings(await settingsRes.json());
       }
     } catch (err) {
-      console.error('Failed to load alerts data', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load alerts settings', err);
     }
   };
 

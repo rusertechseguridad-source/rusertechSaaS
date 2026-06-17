@@ -33,7 +33,13 @@ export class AlertsService {
     }
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
-    const currentSettings = (tenant?.settings_json as Record<string, any>) || {};
+    let currentSettings: any = tenant?.settings_json;
+    if (typeof currentSettings === 'string') {
+      try { currentSettings = JSON.parse(currentSettings); } catch(e) {}
+    }
+    if (typeof currentSettings !== 'object' || currentSettings === null) {
+      currentSettings = {};
+    }
     
     const updatedSettings = { ...currentSettings, ...settings };
 
