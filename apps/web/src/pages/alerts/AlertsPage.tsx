@@ -13,6 +13,7 @@ export const AlertsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
   const [avlFilter, setAvlFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [selectedAlert, setSelectedAlert] = useState<any>(null);
   const [mapStyle, setMapStyle] = useState('https://tiles.openfreemap.org/styles/dark');
@@ -172,9 +173,9 @@ export const AlertsPage: React.FC = () => {
     }
 
     const type = eventType.toUpperCase();
-    if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT'].includes(type)) return 'border-red-500 text-red-500 bg-red-500/10';
+    if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) return 'border-red-500 text-red-500 bg-red-500/10';
     if (['HARSH_ACCELERATION', 'HARSH_CORNERING', 'TEMPERATURE_HIGH', 'TEMPERATURE_LOW'].includes(type)) return 'border-orange-500 text-orange-500 bg-orange-500/10';
-    if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT'].includes(type)) return 'border-blue-500 text-blue-500 bg-blue-500/10';
+    if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) return 'border-blue-500 text-blue-500 bg-blue-500/10';
     if (type === 'POSITION') return 'border-green-500 text-green-500 bg-green-500/10';
     return 'border-slate-500 text-slate-500 bg-slate-500/10';
   };
@@ -188,10 +189,24 @@ export const AlertsPage: React.FC = () => {
 
   // Filters
   const filtered = activeAlerts.filter(a => {
-    if (search && !a.vehicle?.plate?.toLowerCase().includes(search.toLowerCase()) && !a.trip?.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (carrierFilter && (a.vehicle as any)?.carrier?.name !== carrierFilter) return false;
-    if (avlFilter && (a.vehicle as any)?.device?.avl_user?.provider_name !== avlFilter) return false;
-    return true;
+    const matchesSearch = search
+      ? a.vehicle?.plate?.toLowerCase().includes(search.toLowerCase()) || a.trip?.name.toLowerCase().includes(search.toLowerCase())
+      : true;
+
+    let alertSeverity = tenantSettings?.alert_colors?.[a.event_type];
+    if (!alertSeverity) {
+      const type = a.event_type.toUpperCase();
+      if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
+      else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
+      else if (type === 'POSITION') alertSeverity = 'none';
+      else alertSeverity = 'medium';
+    }
+
+    const matchesSeverity = severityFilter ? alertSeverity === severityFilter : true;
+    const matchesCarrier = carrierFilter ? (a.vehicle as any)?.carrier?.name === carrierFilter : true;
+    const matchesAvl = avlFilter ? (a.vehicle as any)?.device?.avl_user?.provider_name === avlFilter : true;
+
+    return matchesSearch && matchesSeverity && matchesCarrier && matchesAvl;
   }).sort((a, b) => {
     const d1 = new Date(a.triggered_at).getTime();
     const d2 = new Date(b.triggered_at).getTime();
@@ -332,6 +347,11 @@ export const AlertsPage: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none">
+            <option value="">Todas las Severidades</option>
+            {SEVERITY_LEVELS.map(sev => <option key={sev.id} value={sev.id}>{sev.label}</option>)}
+          </select>
 
           <select value={carrierFilter} onChange={(e) => setCarrierFilter(e.target.value)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none">
             <option value="">Todos los Transportistas</option>

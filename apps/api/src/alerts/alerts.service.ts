@@ -27,11 +27,6 @@ export class AlertsService {
   }
 
   async updateSettings(tenantId: string, userId: string, settings: any) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || (user.role_code !== 'tenant_admin' && user.role_code !== 'admin')) {
-      throw new ForbiddenException('Solo un administrador puede cambiar esta configuración.');
-    }
-
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     let currentSettings: any = tenant?.settings_json;
     if (typeof currentSettings === 'string') {

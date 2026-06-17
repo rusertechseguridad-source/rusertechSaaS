@@ -9,17 +9,35 @@ interface AlertsSettingsModalProps {
 }
 
 export const EVENT_TYPES = [
+  // Driving Behavior
   { id: 'SPEED_VIOLATION', label: 'EXCESO DE VELOCIDAD' },
   { id: 'HARSH_ACCELERATION', label: 'ACELERACIÓN BRUSCA' },
   { id: 'HARSH_BRAKING', label: 'FRENADA BRUSCA' },
   { id: 'HARSH_CORNERING', label: 'GIRO BRUSCO' },
+  { id: 'HIGH_RPM', label: 'REVOLUCIONES ALTAS' },
+  { id: 'IDLING', label: 'RALENTÍ EXCESIVO' },
+  // Security & Hardware
   { id: 'JAMMING', label: 'INTERFERENCIA DE SEÑAL' },
   { id: 'POWER_CUT', label: 'CORTE DE CORRIENTE' },
+  { id: 'PANIC_BUTTON', label: 'BOTÓN DE PÁNICO (SOS)' },
+  // Telemetry & Sensors
   { id: 'TEMPERATURE_HIGH', label: 'TEMPERATURA ALTA' },
   { id: 'TEMPERATURE_LOW', label: 'TEMPERATURA BAJA' },
+  { id: 'FUEL_DROP', label: 'CAÍDA/ROBO DE COMBUSTIBLE' },
+  { id: 'REFUELING', label: 'CARGA DE COMBUSTIBLE' },
+  { id: 'DOOR_OPEN', label: 'APERTURA DE PUERTA' },
+  { id: 'DOOR_CLOSE', label: 'CIERRE DE PUERTA' },
+  // Logistics
+  { id: 'TRAILER_CONNECT', label: 'REMOLQUE CONECTADO' },
+  { id: 'TRAILER_DISCONNECT', label: 'REMOLQUE DESCONECTADO' },
   { id: 'GEOFENCE_ENTER', label: 'ENTRADA A GEOFENCE' },
   { id: 'GEOFENCE_EXIT', label: 'SALIDA DE GEOFENCE' },
-  { id: 'POSITION', label: 'POSICIÓN' },
+  // ADAS / DSM
+  { id: 'FATIGUE', label: 'FATIGA DEL CONDUCTOR' },
+  { id: 'DISTRACTION', label: 'DISTRACCIÓN DEL CONDUCTOR' },
+  { id: 'SEATBELT', label: 'CINTURÓN DESABROCHADO' },
+  // Tracking
+  { id: 'POSITION', label: 'POSICIÓN / REPORTE NORMAL' },
 ];
 
 export const SEVERITY_LEVELS = [
@@ -92,8 +110,8 @@ const AlertsSettingsModal: React.FC<AlertsSettingsModalProps> = ({
             {EVENT_TYPES.map(event => {
               // Default mapped values before user customizes
               let defaultSeverity = 'medium';
-              if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT'].includes(event.id)) defaultSeverity = 'high';
-              if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT'].includes(event.id)) defaultSeverity = 'low';
+              if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(event.id)) defaultSeverity = 'high';
+              if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(event.id)) defaultSeverity = 'low';
               if (event.id === 'POSITION') defaultSeverity = 'none';
 
               const currentSeverity = colors[event.id] || defaultSeverity;
