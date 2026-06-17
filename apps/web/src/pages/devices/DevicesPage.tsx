@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Smartphone, Signal, Battery, Plus, Search, AlertTriangle, Edit2, Trash2, X, BatteryMedium, BatteryCharging, BatteryWarning } from 'lucide-react';
+import { Smartphone, Signal, Battery, Plus, Search, AlertTriangle, Edit2, Trash2, X, BatteryMedium, BatteryCharging, BatteryWarning, Download } from 'lucide-react';
 import { useDevicesStore, type Device } from '../../store/devicesStore';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 
 export const DevicesPage: React.FC = () => {
   const { devices, loading, fetchDevices, createDevice, updateDevice, deleteDevice } = useDevicesStore();
@@ -79,6 +80,25 @@ export const DevicesPage: React.FC = () => {
       await createDevice(data);
     }
     setShowModal(false);
+  };
+
+  const handleExportDetail = () => {
+    if (!editingId) return;
+    const headers = ['Nombre', 'IMEI', 'Tipo', 'Estado', 'ID AVL'];
+    const row = [name, imei, deviceType, status, avlUserId];
+    exportToCsv(`Dispositivo_${imei || name}`, headers, [row]);
+  };
+
+  const handleExport = () => {
+    const headers = ['Nombre', 'IMEI', 'Tipo', 'Estado', 'Batería'];
+    const rows = filtered.map(d => [
+      d.name,
+      d.imei || '',
+      d.device_type,
+      d.status,
+      d.battery_level !== null ? `${d.battery_level}%` : 'N/A'
+    ]);
+    exportToCsv('Dispositivos', headers, rows);
   };
 
   const filtered = devices.filter(d => 
@@ -175,20 +195,31 @@ export const DevicesPage: React.FC = () => {
         {/* Table Section */}
         <div className="rounded-2xl border border-borderDefault bg-bgSurface/60 backdrop-blur-md overflow-hidden shadow-xl flex flex-col">
           {/* Table Header Controls */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-borderDefault shrink-0">
-            <h2 className="text-base font-bold text-textPrimary">Listado de Dispositivos</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 border-b border-borderDefault/50 shrink-0">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-textMuted" />
               <input
                 type="text"
+                placeholder="Buscar por nombre o IMEI..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar dispositivo..."
-                className="pl-9 pr-4 py-2 rounded-lg bg-bgSurface border border-borderDefault text-sm text-textPrimary placeholder-textMuted focus:outline-none focus:border-accentBlue/50 transition-colors w-56"
+                className="w-full bg-bgStart border border-borderDefault rounded-xl py-2.5 pl-11 pr-4 text-sm text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accentBlue focus:ring-1 focus:ring-accentBlue transition-all"
               />
             </div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-textMuted flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accentBlue animate-pulse" />
+                {filtered.length} encontrados
+              </div>
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-2 text-sm rounded-xl border border-borderDefault transition-colors"
+              >
+                <Download size={16} className="text-accentBlue" />
+                Exportar CSV
+              </button>
+            </div>
           </div>
-
           {/* Table Data */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -298,12 +329,24 @@ export const DevicesPage: React.FC = () => {
                 <Smartphone className="w-5 h-5 text-accentGreen" />
                 {editingId ? 'Editar Dispositivo' : 'Nuevo Dispositivo'}
               </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-textMuted hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                {editingId && (
+                  <button 
+                    type="button"
+                    onClick={handleExportDetail}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+                  >
+                    <Download size={14} className="text-accentBlue" />
+                    Exportar
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-textMuted hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="p-5 overflow-y-auto">
               <form id="device-form" onSubmit={handleSave} className="space-y-4">

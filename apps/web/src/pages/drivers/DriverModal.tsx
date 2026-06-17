@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, CreditCard, FileText, Car, Calendar, Upload, CheckCircle } from 'lucide-react';
+import { X, User, Phone, CreditCard, FileText, Car, Calendar, Upload, CheckCircle, Download } from 'lucide-react';
+import { exportToCsv } from '../../utils/export';
 
 interface DriverModalProps {
   isOpen: boolean;
@@ -123,6 +124,13 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
     }
   };
 
+  const handleExport = () => {
+    if (!driverToEdit) return;
+    const headers = ['Nombre', 'Apellido', 'Documento', 'Licencia', 'Vencimiento Licencia', 'Teléfono', 'Email', 'Dirección', 'Notas'];
+    const row = [firstName, lastName, documentId, licenseNumber, licenseExpiry, phone, email, address, notes];
+    exportToCsv(`Conductor_${documentId || firstName}`, headers, [row]);
+  };
+
   const inputClass = "w-full bg-bgStart border border-borderDefault rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-accentBlue focus:ring-1 focus:ring-accentBlue placeholder:text-textMuted transition-colors";
   const labelClass = "block text-xs font-semibold text-textSecondary uppercase tracking-wider mb-1.5";
   const sectionClass = "bg-bgStart/40 border border-borderDefault/50 rounded-xl p-5 space-y-4";
@@ -138,11 +146,23 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
               <User className="w-5 h-5 text-accentGreen" />
               {driverToEdit ? 'Editar Chofer' : 'Nuevo Chofer'}
             </h2>
-            <p className="text-xs text-textMuted mt-0.5">Complete los datos del conductor</p>
+            <p className="text-xs text-textMuted mt-1">Completa o edita la información del conductor.</p>
           </div>
-          <button onClick={onClose} className="text-textMuted hover:text-white transition-colors p-1 rounded-lg hover:bg-bgSurfaceHigh">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {driverToEdit && (
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+                title="Exportar detalles a CSV"
+              >
+                <Download size={14} className="text-accentBlue" />
+                Exportar
+              </button>
+            )}
+            <button onClick={onClose} className="text-textMuted hover:text-white transition p-1">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         {/* Form */}

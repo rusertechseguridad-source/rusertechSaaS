@@ -19,6 +19,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.client = new Redis(connectionUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      tls: connectionUrl.startsWith('rediss://') ? {} : undefined,
     });
   }
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useVehiclesStore } from '../../store/vehiclesStore';
-import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit, Trash2 } from 'lucide-react';
+import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit, Trash2, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 
 export const VehiclesPage: React.FC = () => {
   const { vehicles, fetchVehicles, toggleBlock, deleteVehicle, createVehicle, updateVehicle, loading } = useVehiclesStore();
@@ -111,6 +112,26 @@ export const VehiclesPage: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleExport = () => {
+    const headers = ['Patente', 'Alias', 'Marca', 'Modelo', 'Tipo', 'Estado'];
+    const rows = filtered.map(v => [
+      v.plate,
+      v.alias || '',
+      v.brand || '',
+      v.model || '',
+      v.vehicle_type || '',
+      v.status === 'active' ? 'Activo' : 'Inactivo'
+    ]);
+    exportToCsv('Vehiculos', headers, rows);
+  };
+
+  const handleExportDetail = () => {
+    if (!editingId) return;
+    const headers = ['Patente', 'Alias', 'Marca', 'Modelo', 'Tipo', 'Categoría Diccionario', 'ID Activo Hub', 'ID Usuario AVL'];
+    const row = [plate, alias, brand, model, vehicleType, dictionaryCategory, hubAssetId, avlUserId];
+    exportToCsv(`Vehiculo_${plate}`, headers, [row]);
   };
 
   const openCreateModal = () => {
@@ -253,7 +274,16 @@ export const VehiclesPage: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <span className="text-textSecondary text-sm">{filtered.length} vehículos encontrados</span>
+          <div className="flex items-center gap-4">
+            <span className="text-textSecondary text-sm">{filtered.length} vehículos encontrados</span>
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
+            >
+              <Download size={16} className="text-accentBlue" />
+              Exportar CSV
+            </button>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1">
@@ -360,8 +390,18 @@ export const VehiclesPage: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
-            <div className="p-6 border-b border-borderDefault shrink-0">
+            <div className="p-6 border-b border-borderDefault shrink-0 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Vehículo' : 'Nuevo Vehículo'}</h2>
+              {editingId && (
+                <button 
+                  type="button"
+                  onClick={handleExportDetail}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+                >
+                  <Download size={14} className="text-accentBlue" />
+                  Exportar
+                </button>
+              )}
             </div>
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">

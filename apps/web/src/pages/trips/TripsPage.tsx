@@ -3,9 +3,10 @@ import { useTripsStore, type Trip } from '../../store/tripsStore';
 import {
   Truck, Plus, Search, Calendar, MapPin, User, Building2,
   Radio, ChevronRight, CheckCircle, X, Filter, Thermometer,
-  Droplets, AlertTriangle, Clock, Play,
+  Droplets, AlertTriangle, Clock, Play, Download,
 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 import { Link } from 'react-router-dom';
 import { TripModal } from './TripModal';
 
@@ -225,6 +226,24 @@ export const TripsPage: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleExport = () => {
+    const headers = ['Viaje', 'Código', 'Estado', 'Vehículo', 'Placa', 'Transportista', 'Chofer', 'Origen', 'Destino', 'Inicio Programado', 'Inicio Real'];
+    const rows = filtered.map(t => [
+      t.name,
+      t.trip_code || '',
+      t.status,
+      t.vehicle?.alias || '',
+      t.vehicle?.plate || '',
+      (t.vehicle as any)?.carrier?.name || '',
+      (t as any).driver?.full_name || '',
+      t.origin_location?.name || '',
+      t.destination_location?.name || '',
+      fmt(t.scheduled_start) || '',
+      fmt(t.actual_start) || ''
+    ]);
+    exportToCsv('Viajes', headers, rows);
+  };
+
   const statusTabs = [
     { value: '', label: 'Todos', count: trips.length },
     { value: 'EN_CURSO', label: 'En Curso', count: trips.filter((t) => t.status === 'EN_CURSO').length },
@@ -325,9 +344,18 @@ export const TripsPage: React.FC = () => {
             </button>
           )}
 
-          <span className="ml-auto text-xs text-textMuted">
-            {filtered.length} viaje{filtered.length !== 1 ? 's' : ''}
-          </span>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-textMuted">
+              {filtered.length} viaje{filtered.length !== 1 ? 's' : ''}
+            </span>
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
+            >
+              <Download size={14} className="text-accentBlue" />
+              Exportar CSV
+            </button>
+          </div>
         </div>
       </div>
 

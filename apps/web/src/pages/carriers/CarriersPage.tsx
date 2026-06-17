@@ -3,6 +3,8 @@ import { Truck, Search, Briefcase, CheckCircle, XCircle } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 
 import { CarrierModal } from './CarrierModal';
+import { exportToCsv } from '../../utils/export';
+import { Download } from 'lucide-react';
 
 export const CarriersPage: React.FC = () => {
   const [carriers, setCarriers] = useState<any[]>([]);
@@ -43,6 +45,21 @@ export const CarriersPage: React.FC = () => {
     } catch (err: any) {
       alert(err.message);
     }
+  };
+
+  const handleExport = () => {
+    const headers = ['Nombre', 'CUIT/RUT', 'Email Contacto', 'Teléfono', 'Dirección', 'Vehículos', 'Choferes', 'Estado'];
+    const rows = carriers.map(c => [
+      c.name,
+      c.tax_id || '',
+      c.contact_email || '',
+      c.contact_phone || '',
+      c.address || '',
+      c._count?.vehicles || 0,
+      c._count?.drivers || 0,
+      c.status === 'active' ? 'Activo' : 'Suspendido'
+    ]);
+    exportToCsv('Transportistas', headers, rows);
   };
 
   useEffect(() => {
@@ -135,7 +152,16 @@ export const CarriersPage: React.FC = () => {
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <span className="text-textSecondary text-sm">{filtered.length} transportistas encontrados</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-textSecondary text-sm">{filtered.length} transportistas encontrados</span>
+                  <button 
+                    onClick={handleExport}
+                    className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
+                  >
+                    <Download size={16} className="text-accentBlue" />
+                    Exportar CSV
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-y-auto flex-1">

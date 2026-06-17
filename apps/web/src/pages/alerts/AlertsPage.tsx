@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { AlertTriangle, MapPin, Truck, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Search, X, User } from 'lucide-react';
+import { AlertTriangle, MapPin, Truck, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Search, X, User, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAlertsStore } from '../../store/alertsStore';
+import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -137,6 +138,37 @@ export const AlertsPage: React.FC = () => {
     return sortOrder === 'desc' ? d2 - d1 : d1 - d2;
   });
 
+  const handleExport = () => {
+    const headers = ['Fecha/Hora', 'Evento', 'Vehículo', 'Chofer', 'Viaje', 'Ubicación', 'Latitud', 'Longitud'];
+    const rows = filtered.map(a => [
+      new Date(a.triggered_at).toLocaleString(),
+      translateEvent(a.event_type),
+      a.vehicle?.plate || 'Desconocido',
+      (a.vehicle as any)?.driver ? `${(a.vehicle as any).driver.first_name} ${(a.vehicle as any).driver.last_name}` : 'Sin Chofer',
+      a.trip?.name || 'Viaje libre',
+      a.address || 'Ubicación desconocida',
+      a.latitude || '',
+      a.longitude || ''
+    ]);
+    exportToCsv('Alertas', headers, rows);
+  };
+
+  const handleExportDetail = (alert: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const headers = ['Fecha/Hora', 'Evento', 'Vehículo', 'Chofer', 'Viaje', 'Ubicación', 'Latitud', 'Longitud'];
+    const row = [
+      new Date(alert.triggered_at).toLocaleString(),
+      translateEvent(alert.event_type),
+      alert.vehicle?.plate || 'Desconocido',
+      (alert.vehicle as any)?.driver ? `${(alert.vehicle as any).driver.first_name} ${(alert.vehicle as any).driver.last_name}` : 'Sin Chofer',
+      alert.trip?.name || 'Viaje libre',
+      alert.address || 'Ubicación desconocida',
+      alert.latitude || '',
+      alert.longitude || ''
+    ];
+    exportToCsv(`Alerta_${alert.event_type}_${alert.vehicle?.plate || 'Desc'}`, headers, [row]);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden bg-gradient-bg">
       {/* ── HEADER ── */}
@@ -247,9 +279,18 @@ export const AlertsPage: React.FC = () => {
             <option value="asc">Más Antiguos ▲</option>
           </select>
 
-          <span className="ml-auto text-xs text-textMuted font-bold bg-bgSurface px-3 py-1.5 rounded-lg border border-borderDefault">
-            {filtered.length} alerta{filtered.length !== 1 ? 's' : ''}
-          </span>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-textMuted font-bold bg-bgSurface px-3 py-1.5 rounded-lg border border-borderDefault">
+              {filtered.length} alerta{filtered.length !== 1 ? 's' : ''}
+            </span>
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
+            >
+              <Download size={14} className="text-accentBlue" />
+              Exportar CSV
+            </button>
+          </div>
         </div>
       </div>
 
@@ -331,12 +372,19 @@ export const AlertsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="w-32 shrink-0 text-center">
+                  <div className="w-32 shrink-0 text-center flex flex-col gap-2">
                     <button 
                       onClick={(e) => handleResolveClick(alert.id, e)}
                       className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 font-bold py-1.5 rounded text-xs transition-colors shadow-[0_0_10px_rgba(239,68,68,0.1)]"
                     >
                       Marcar Resuelto
+                    </button>
+                    <button
+                      onClick={(e) => handleExportDetail(alert, e)}
+                      className="w-full bg-bgSurfaceHigh hover:bg-bgSurface border border-borderDefault text-textPrimary font-bold py-1.5 rounded text-xs transition-colors flex justify-center items-center gap-1.5"
+                    >
+                      <Download size={14} className="text-accentBlue" />
+                      Exportar
                     </button>
                   </div>
                 </div>

@@ -23,6 +23,7 @@ import { AlertsPage } from './pages/alerts/AlertsPage';
 import { SimulatorPage } from './pages/dev/SimulatorPage';
 import { MapPage } from './pages/map/MapPage';
 import { DevicesPage } from './pages/devices/DevicesPage';
+import { SensorsDashboardPage } from './pages/sensors/SensorsDashboardPage';
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
             <Route path="/trips/:id" element={<TripDetailsPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/sensors" element={<SensorsDashboardPage />} />
             <Route path="/simulator" element={<SimulatorPage />} />
           </Route>
         </Route>

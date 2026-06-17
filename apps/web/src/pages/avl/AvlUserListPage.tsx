@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio } from 'lucide-react';
+import { Radio, Download } from 'lucide-react';
 import { useAvlStore } from '../../store/avlStore';
 import { AvlUserForm } from './AvlUserForm';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 
 export const AvlUserListPage: React.FC = () => {
   const { users, loading, error, fetchUsers, toggleActive } = useAvlStore();
@@ -24,6 +25,19 @@ export const AvlUserListPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleExport = () => {
+    const headers = ['Nombre', 'Descripción', 'Código HUB', 'Vehículos', 'Último Dato', 'Estado'];
+    const rows = users.map(user => [
+      user.name,
+      user.description || '',
+      user.user_avl_code,
+      user._count?.vehicles || 0,
+      user.last_data_at ? new Date(user.last_data_at).toLocaleString() : 'Nunca',
+      user.is_active ? 'Activo' : 'Inactivo'
+    ]);
+    exportToCsv('ProveedoresGPS', headers, rows);
+  };
+
   if (loading) return <div className="p-8 text-center text-textMuted">Cargando Proveedores GPS...</div>;
   if (error) return <div className="p-8 text-center text-statusDanger">{error}</div>;
 
@@ -40,14 +54,23 @@ export const AvlUserListPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">Gestiona las conexiones con empresas de rastreo GPS externas.</p>
         </div>
-        <RequirePermission permission="avl:edit">
+        <div className="flex items-center gap-4">
           <button 
-            onClick={handleOpenNew}
-            className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
+            onClick={handleExport}
+            className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-2 text-sm rounded-lg border border-borderDefault transition-colors"
           >
-            + Nuevo Proveedor
+            <Download size={16} className="text-accentBlue" />
+            Exportar CSV
           </button>
-        </RequirePermission>
+          <RequirePermission permission="avl:edit">
+            <button 
+              onClick={handleOpenNew}
+              className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
+            >
+              + Nuevo Proveedor
+            </button>
+          </RequirePermission>
+        </div>
       </div>
 
       {users.length === 0 ? (

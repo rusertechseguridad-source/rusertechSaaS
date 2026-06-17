@@ -1,27 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { X, Activity } from 'lucide-react';
+import { X, Activity, Download } from 'lucide-react';
+import { exportToCsv } from '../../utils/export';
 
 interface Props {
-  vehicleId: string;
-  sensorType: 'temperature' | 'humidity';
+  vehicle: any;
+  sensorType: string;
+  token: string;
   onClose: () => void;
 }
 
-export const SensorHistoryModal: React.FC<Props> = ({ vehicleId, sensorType, onClose }) => {
+export const SensorHistoryModal: React.FC<Props> = ({ vehicle, sensorType, token, onClose }) => {
   const [data, setData] = useState<any[]>([]);
   const [period, setPeriod] = useState('24h');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
-  }, [vehicleId, sensorType, period]);
+  }, [vehicle.id, sensorType, period]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/sensors/history/${vehicleId}?sensorType=${sensorType}&period=${period}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
+      const res = await fetch(`http://localhost:3000/api/v1/sensors/history/${vehicle.id}?sensorType=${sensorType}&period=${period}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         setData(await res.json());
@@ -30,6 +32,18 @@ export const SensorHistoryModal: React.FC<Props> = ({ vehicleId, sensorType, onC
       console.error(e);
     }
     setLoading(false);
+  };
+
+  const handleExport = () => {
+    const headers = ['Fecha/Hora', 'Valor'];
+    const rows = data.map(d => {
+      const val = sensorType === 'temperature' ? d.avg_temp : d.avg_hum;
+      return [
+        new Date(d.bucket).toLocaleString(),
+        val != null ? Number(val).toFixed(2) : ''
+      ];
+    });
+    exportToCsv(`Historico_${sensorType}_Vehiculo_${vehicle.id}`, headers, rows);
   };
 
   const option = {
@@ -79,9 +93,19 @@ export const SensorHistoryModal: React.FC<Props> = ({ vehicleId, sensorType, onC
             <Activity className={sensorType === 'temperature' ? 'text-statusWarning' : 'text-accentBlue'} />
             Histórico de {sensorType === 'temperature' ? 'Temperatura' : 'Humedad'}
           </h2>
-          <button onClick={onClose} className="text-textMuted hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+            >
+              <Download size={14} className="text-accentBlue" />
+              Exportar
+            </button>
+            <button onClick={onClose} className="text-textMuted hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 flex gap-2 border-b border-borderDefault/50 bg-bgStart/20">

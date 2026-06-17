@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class SensorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private redis: RedisService) {}
 
   async getConfigs(tenantId: string) {
     return this.prisma.sensorConfig.findMany({
@@ -55,21 +56,67 @@ export class SensorsService {
     });
   }
 
+  async getDashboard(tenantId: string) {
+    const configs = await this.prisma.sensorConfig.findMany({
+      where: { tenant_id: tenantId, is_active: true, scope_type: 'vehicle' }
+    });
+    console.log('getDashboard called for tenant:', tenantId, 'found configs:', configs.length);
+
+    if (!configs.length) return [];
+
+    const vehicleIds = configs.map(c => c.scope_id);
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: { id: { in: vehicleIds } },
+      select: { 
+        id: true, plate: true, alias: true, hub_asset_id: true,
+        avl_user: { select: { name: true, user_avl_code: true } },
+        carrier: { select: { name: true } },
+      }
+    });
+
+    const client = this.redis.getClient();
+    const result = [];
+
+    for (const v of vehicles) {
+      const vConfigs = configs.filter(c => c.scope_id === v.id);
+      let latestData = null;
+
+      if (v.hub_asset_id) {
+        const posStr = await client.get(`vehicle:pos:${v.hub_asset_id}`);
+        if (posStr) latestData = JSON.parse(posStr);
+      }
+
+      result.push({
+        vehicle: v,
+        configs: vConfigs,
+        latest: latestData ? {
+          timestamp: latestData.timestamp,
+          temperature_c: latestData.temperature_c,
+          humidity_pct: latestData.humidity_pct
+        } : null
+      });
+    }
+
+    return result;
+  }
+
   async getHistory(vehicleId: string, sensorType: string, period: string) {
     let hours = 24;
     if (period === '1h') hours = 1;
     else if (period === '6h') hours = 6;
     else if (period === '7d') hours = 24 * 7;
     
+    // Using native PostgreSQL date_trunc and math for 5-minute buckets
+    // This matches the Bloque 7 Master Prompt fallback
     const sql = `
       SELECT 
-        date_trunc('minute', te.timestamp) - INTERVAL '1 minute' * (EXTRACT(MINUTE FROM te.timestamp)::int % 5) AS bucket,
-        AVG((te.metadata_json->>'temperature_c')::numeric) as avg_temp, 
-        AVG((te.metadata_json->>'humidity_pct')::numeric) as avg_hum
-      FROM trip_events te
-      JOIN trips t ON t.id = te.trip_id
-      WHERE t.vehicle_id = $1::uuid 
-        AND te.timestamp > NOW() - INTERVAL '${hours} hours'
+        date_trunc('minute', timestamp) - 
+        INTERVAL '1 minute' * (EXTRACT(MINUTE FROM timestamp)::int % 5) AS bucket,
+        AVG(temperature_c) as avg_temp, 
+        AVG(humidity_pct) as avg_hum
+      FROM telemetry
+      WHERE vehicle_id = $1::uuid 
+        AND timestamp > NOW() - INTERVAL '${hours} hours'
       GROUP BY 1 
       ORDER BY 1 ASC
     `;

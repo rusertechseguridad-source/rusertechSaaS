@@ -166,6 +166,24 @@ export const RoutesPage: React.FC = () => {
     setDestinationId('');
   };
 
+  const handleExport = () => {
+    const headers = ['Nombre', 'Operación', 'Origen', 'Destino', 'Corredor (m)'];
+    const rows = routes.map(r => [
+      r.name,
+      r.operation?.name || 'Sin Operación',
+      r.origin_location?.name || '',
+      r.destination_location?.name || '',
+      r.corridor_meters || 500
+    ]);
+    exportToCsv('Rutas', headers, rows);
+  };
+
+  const handleExportDetail = (r: any) => {
+    const headers = ['Nombre', 'ID Operación', 'ID Origen', 'ID Destino', 'Corredor (m)'];
+    const row = [r.name, r.operation_id, r.origin_location_id, r.destination_location_id, r.corridor_meters];
+    exportToCsv(`Ruta_${r.name}`, headers, [row]);
+  };
+
   const groupedRoutes = routes.reduce((acc, route) => {
     const opName = route.operation?.name || 'Internos / Sin Cliente';
     if (!acc[opName]) acc[opName] = [];
@@ -202,7 +220,7 @@ export const RoutesPage: React.FC = () => {
       <div className="flex-1 flex gap-6 min-h-0">
         <div className="w-1/3 flex flex-col bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card">
           <div className="p-4 border-b border-borderDefault bg-bgStart/50 shrink-0">
-            <div className="relative">
+            <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
               <input
                 type="text"
@@ -211,6 +229,16 @@ export const RoutesPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-textSecondary text-sm">{routes.length} rutas encontradas</span>
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
+              >
+                <Download size={14} className="text-accentBlue" />
+                Exportar CSV
+              </button>
             </div>
           </div>
 
@@ -250,7 +278,7 @@ export const RoutesPage: React.FC = () => {
                             )}
                           </div>
                           <div className="flex gap-1">
-                            <button className="p-1 text-textMuted hover:text-white"><Download className="w-4 h-4" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleExportDetail(r); }} className="p-1 text-textMuted hover:text-white"><Download className="w-4 h-4" /></button>
                             <RequirePermission permission="routes:edit">
                               <button onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ruta?')) deleteRoute(r.id); }} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-4 h-4" /></button>
                             </RequirePermission>

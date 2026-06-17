@@ -6,6 +6,7 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
 import { SensorConfigModal } from '../sensors/SensorConfigModal';
 import { TripModal } from './TripModal';
+import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -156,15 +157,7 @@ export const TripDetailsPage: React.FC = () => {
       e.temperature_c || '',
       e.humidity_pct || ''
     ]);
-    const csvContent = [header, ...rows].map(e => e.map(f => `"${String(f).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `eventos_${trip.id}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    exportToCsv(`eventos_${trip.id}`, header, rows);
   };
 
   const exportLogsCSV = () => {
@@ -176,15 +169,7 @@ export const TripDetailsPage: React.FC = () => {
       l.acknowledger?.name || 'Sistema',
       l.metadata_json?.note || l.metadata_json?.alert_message || l.text || ''
     ]);
-    const csvContent = [header, ...rows].map(e => e.map(f => `"${String(f).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `bitacora_${trip?.id || 'export'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    exportToCsv(`bitacora_${trip?.id || 'export'}`, header, rows);
   };
 
   // Initialize map ONCE on mount — use setTimeout to ensure DOM container has dimensions
@@ -670,7 +655,7 @@ export const TripDetailsPage: React.FC = () => {
               <div className="p-4 border-b border-borderDefault shrink-0 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider flex items-center gap-2">
                   <Activity className="w-4 h-4" />
-                  Registro de Eventos (Últimos 100)
+                  Registro de Eventos (Histórico Completo)
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-textMuted">{trip.events?.length || 0} total</span>
@@ -701,7 +686,7 @@ export const TripDetailsPage: React.FC = () => {
                     eventSort === 'newest'
                       ? new Date((b as any).timestamp ?? b.generated_at).getTime() - new Date((a as any).timestamp ?? a.generated_at).getTime()
                       : new Date((a as any).timestamp ?? a.generated_at).getTime() - new Date((b as any).timestamp ?? b.generated_at).getTime()
-                  ).slice(0, 100);
+                  ).slice(0, 1000); // Increased render limit to 1000 for performance, export contains all
                   const translateEvent = (eventType: string) => {
                     const types: Record<string, string> = {
                       'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',

@@ -8,6 +8,11 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class SensorsController {
   constructor(private readonly sensorsService: SensorsService) {}
 
+  @Get('dashboard')
+  getDashboard(@CurrentUser() user: any) {
+    return this.sensorsService.getDashboard(user.tenantId);
+  }
+
   @Get('config')
   getConfigs(@CurrentUser() user: any) {
     return this.sensorsService.getConfigs(user.tenantId);

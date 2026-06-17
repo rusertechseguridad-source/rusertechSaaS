@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { useAvlStore } from '../../store/avlStore';
+import { exportToCsv } from '../../utils/export';
 
 export const AvlUserForm: React.FC<{
   onClose: () => void;
@@ -42,6 +43,20 @@ export const AvlUserForm: React.FC<{
     onClose();
   };
 
+  const handleExportDetail = () => {
+    if (!existingUser) return;
+    const headers = ['Nombre', 'Código HUB', 'Descripción', 'Plataforma', 'Contacto', 'Estado'];
+    const row = [
+      formData.name,
+      formData.user_avl_code,
+      formData.description,
+      formData.provider_name,
+      formData.operational_contact,
+      formData.is_active ? 'Activo' : 'Inactivo'
+    ];
+    exportToCsv(`ProveedorGPS_${formData.user_avl_code}`, headers, [row]);
+  };
+
   return (
     <div className="fixed inset-0 bg-bgStart/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-bgSurface border border-borderDefault rounded-xl shadow-card w-full max-w-3xl flex flex-col max-h-[90vh]">
@@ -51,13 +66,25 @@ export const AvlUserForm: React.FC<{
           <h2 className="text-xl font-bold text-white">
             {existingUser ? 'Configurar Proveedor GPS' : 'Nuevo Proveedor GPS'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-textMuted hover:text-white transition-colors rounded-lg p-1 hover:bg-borderDefault"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {existingUser && (
+              <button 
+                type="button"
+                onClick={handleExportDetail}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+              >
+                <Download size={14} className="text-accentBlue" />
+                Exportar
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-textMuted hover:text-white transition-colors rounded-lg p-1 hover:bg-borderDefault"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form body */}

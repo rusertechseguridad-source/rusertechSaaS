@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocationsStore } from '../../store/locationsStore';
-import { MapPin, Plus, Search, Edit, Trash2, Power } from 'lucide-react';
+import { MapPin, Plus, Search, Edit, Trash2, Power, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -162,6 +163,29 @@ export const LocationsPage: React.FC = () => {
     resetForm();
   };
 
+  const handleExport = () => {
+    const headers = ['Nombre', 'Tipo', 'Dirección', 'Latitud', 'Longitud', 'Radio (m)', 'Operación', 'Parada Autorizada', 'Estado'];
+    const rows = filtered.map(l => [
+      l.name,
+      l.location_type || 'generic',
+      l.address || '',
+      l.latitude,
+      l.longitude,
+      l.radius_meters || 100,
+      l.operation?.name || '',
+      l.is_authorized_stop ? 'Sí' : 'No',
+      l.is_active ? 'Activa' : 'Inactiva'
+    ]);
+    exportToCsv('Ubicaciones', headers, rows);
+  };
+
+  const handleExportDetail = () => {
+    if (!editingId) return;
+    const headers = ['Nombre', 'Tipo', 'Dirección', 'Latitud', 'Longitud', 'Radio (m)', 'ID Operación', 'Parada Autorizada', 'Notas'];
+    const row = [name, locationType, address, lat, lng, radius, operationId, isAuthorizedStop ? 'Sí' : 'No', notes];
+    exportToCsv(`Ubicacion_${name}`, headers, [row]);
+  };
+
   return (
     <div className="p-8 h-[calc(100vh-4rem)] w-full flex flex-col">
       <div className="flex justify-between items-center mb-8 shrink-0">
@@ -186,7 +210,7 @@ export const LocationsPage: React.FC = () => {
         {/* Left Panel: Location List */}
         <div className="w-1/3 flex flex-col bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card">
           <div className="p-4 border-b border-borderDefault bg-bgStart/50 shrink-0">
-            <div className="relative">
+            <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
               <input
                 type="text"
@@ -195,6 +219,16 @@ export const LocationsPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-textSecondary text-sm">{filtered.length} ubicaciones encontradas</span>
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
+              >
+                <Download size={14} className="text-accentBlue" />
+                Exportar CSV
+              </button>
             </div>
           </div>
 
@@ -355,8 +389,18 @@ export const LocationsPage: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
-            <div className="p-6 border-b border-borderDefault shrink-0">
+            <div className="p-6 border-b border-borderDefault shrink-0 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Ubicación' : 'Nueva Ubicación'}</h2>
+              {editingId && (
+                <button 
+                  type="button"
+                  onClick={handleExportDetail}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-xs font-medium rounded-md border border-borderDefault transition-colors"
+                >
+                  <Download size={14} className="text-accentBlue" />
+                  Exportar
+                </button>
+              )}
             </div>
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">

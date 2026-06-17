@@ -3,6 +3,8 @@ import { Users, Search, UserCheck, UserX, UserPlus } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 
 import { DriverModal } from './DriverModal';
+import { exportToCsv } from '../../utils/export';
+import { Download } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -43,6 +45,19 @@ export const DriversPage: React.FC = () => {
     } catch (err: any) {
       alert(err.message);
     }
+  };
+
+  const handleExport = () => {
+    const headers = ['Nombre Completo', 'Documento', 'Teléfono', 'Email', 'Nacionalidad', 'Estado'];
+    const rows = drivers.map(d => [
+      d.full_name,
+      d.document || '',
+      d.phone || '',
+      d.email || '',
+      d.nationality || '',
+      d.status === 'active' ? 'Activo' : 'Suspendido'
+    ]);
+    exportToCsv('Choferes', headers, rows);
   };
 
   useEffect(() => {
@@ -136,7 +151,16 @@ export const DriversPage: React.FC = () => {
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <span className="text-textSecondary text-sm">{filtered.length} choferes encontrados</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-textSecondary text-sm">{filtered.length} choferes encontrados</span>
+                  <button 
+                    onClick={handleExport}
+                    className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
+                  >
+                    <Download size={16} className="text-accentBlue" />
+                    Exportar CSV
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-y-auto flex-1">
