@@ -2,7 +2,6 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { Logger } from '@nestjs/common';
-import fetch from 'node-fetch'; // if needed, or use native fetch if Node 18+
 
 @Processor('carbon')
 export class CarbonProcessor extends WorkerHost {

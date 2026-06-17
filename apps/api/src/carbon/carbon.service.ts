@@ -58,7 +58,7 @@ export class CarbonService {
   }
 
   // Cron Job to calculate partial emissions for active trips
-  @Cron(CronExpression.EVERY_15_MINUTES)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async calculateActiveTripsEmissions() {
     this.logger.log('Running calculateActiveTripsEmissions cron job');
     const activeTrips = await this.prisma.trip.findMany({

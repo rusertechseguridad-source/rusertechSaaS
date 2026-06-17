@@ -107,16 +107,18 @@ export const AlertsPage: React.FC = () => {
   const translateEvent = (eventType: string) => {
     const types: Record<string, string> = {
       'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',
-      'position': 'POSICIÓN',
-      'harsh_acceleration': 'ACELERACIÓN BRUSCA',
-      'harsh_braking': 'FRENADA BRUSCA',
-      'harsh_cornering': 'GIRO BRUSCO',
-      'jamming': 'INTERFERENCIA DE SEÑAL',
-      'geofence_enter': 'ENTRADA A GEOFENCE',
-      'geofence_exit': 'SALIDA DE GEOFENCE',
-      'power_cut': 'CORTE DE CORRIENTE'
+      'POSITION': 'POSICIÓN',
+      'HARSH_ACCELERATION': 'ACELERACIÓN BRUSCA',
+      'HARSH_BRAKING': 'FRENADA BRUSCA',
+      'HARSH_CORNERING': 'GIRO BRUSCO',
+      'JAMMING': 'INTERFERENCIA DE SEÑAL',
+      'GEOFENCE_ENTER': 'ENTRADA A GEOFENCE',
+      'GEOFENCE_EXIT': 'SALIDA DE GEOFENCE',
+      'POWER_CUT': 'CORTE DE CORRIENTE',
+      'TEMPERATURE_HIGH': 'TEMPERATURA ALTA',
+      'TEMPERATURE_LOW': 'TEMPERATURA BAJA'
     };
-    return types[eventType] || eventType.replace(/_/g, ' ').toUpperCase();
+    return types[eventType.toUpperCase()] || eventType.replace(/_/g, ' ').toUpperCase();
   };
 
   // Select only active ones first
@@ -189,9 +191,9 @@ export const AlertsPage: React.FC = () => {
       </div>
 
       {/* ── MAP AREA (TOP FIXED) ── */}
-      <div className="px-8 shrink-0 mb-6 z-10 relative">
-        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card relative h-[300px] w-full">
-          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+      <div className="px-8 shrink-0 mb-4 z-10 relative">
+        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card relative h-[180px] min-h-[100px] max-h-[500px] w-full resize-y flex flex-col">
+          <div ref={mapContainer} className="absolute inset-0 w-full h-full pointer-events-auto" />
           {!selectedAlert && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-bgStart/50 backdrop-blur-[2px] pointer-events-none transition-all duration-300">
               <MapPin className="w-12 h-12 text-textMuted opacity-50 mb-3" />
@@ -320,71 +322,67 @@ export const AlertsPage: React.FC = () => {
                 <div 
                   key={alert.id}
                   onClick={() => setSelectedAlert(alert)}
-                  className={`flex items-center w-full px-4 py-3 border-b border-borderDefault/50 hover:bg-bgSurfaceHigh transition-all cursor-pointer group ${
+                  className={`flex items-center w-full px-2 py-0 border-b border-borderDefault/50 hover:bg-bgSurfaceHigh transition-all cursor-pointer group h-10 ${
                     selectedAlert?.id === alert.id ? 'bg-red-500/10 border-l-4 border-l-red-500' : 'border-l-4 border-l-transparent'
                   }`}
                 >
-                  <div className="w-32 shrink-0 pr-4">
-                    <div className="text-red-400 font-bold text-xs mb-1">
+                  <div className="w-28 shrink-0 pr-2 flex flex-col justify-center">
+                    <div className="text-red-400 font-bold text-[10px] leading-none mb-1">
                       {new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
-                    <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black tracking-widest border border-red-500 text-red-500 bg-red-500/10">
+                    <span className="inline-block px-1 py-0 rounded text-[8px] font-black tracking-widest border border-red-500 text-red-500 bg-red-500/10 leading-tight w-fit">
                       {translateEvent(alert.event_type)}
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-[150px] pr-4">
-                    <div className="text-white font-bold text-sm truncate flex items-center gap-1.5">
-                      <Truck className="w-4 h-4 text-textMuted" />
+                  <div className="flex-1 min-w-[120px] pr-2">
+                    <div className="text-white font-bold text-[11px] truncate flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-textMuted" />
                       {alert.vehicle?.plate || 'Desconocido'}
                     </div>
-                    <div className="text-white text-xs mt-1 truncate flex items-center gap-1.5 font-bold">
-                      <User className="w-3.5 h-3.5 text-textMuted" />
+                    <div className="text-white text-[10px] mt-0.5 truncate flex items-center gap-1.5 font-bold">
+                      <User className="w-3 h-3 text-textMuted" />
                       {(alert as any).trip?.driver?.full_name || 'Sin Chofer'}
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-[150px] pr-4">
+                  <div className="flex-1 min-w-[120px] pr-2">
                     {alert.trip ? (
                       <>
-                        <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-sm truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
-                          <ExternalLink className="w-4 h-4" />
+                        <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-[11px] truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
+                          <ExternalLink className="w-3.5 h-3.5" />
                           {alert.trip.name}
                         </Link>
-                        <div className="text-textMuted text-xs mt-1 truncate font-mono">
+                        <div className="text-textMuted text-[10px] mt-0.5 truncate font-mono">
                           {alert.trip.trip_code || 'SIN_CÓDIGO'}
                         </div>
                       </>
                     ) : (
-                      <span className="text-textMuted text-xs italic font-bold">Viaje No Asignado</span>
+                      <span className="text-textMuted text-[10px] italic font-bold">Viaje No Asignado</span>
                     )}
                   </div>
 
-                  <div className="flex-[1.5] min-w-[200px] pr-4">
-                    <div className="text-white font-bold text-xs line-clamp-2 mb-1 flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-statusDanger shrink-0 mt-0.5" />
-                      {alert.address || 'Sin dirección registrada'}
+                  <div className="flex-[1.5] min-w-[150px] pr-2">
+                    <div className="text-textSecondary text-[10px] flex items-start gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                      <span className="truncate" title={alert.address || ''}>{alert.address || 'Sin dirección registrada'}</span>
                     </div>
-                    {alert.latitude && alert.longitude && (
-                      <div className="text-textSecondary text-[10px] font-mono">
-                        {alert.latitude}, {alert.longitude}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="w-32 shrink-0 text-center flex flex-col gap-2">
+                  <div className="w-28 shrink-0 flex items-center gap-1 justify-end">
                     <button 
-                      onClick={(e) => handleResolveClick(alert.id, e)}
-                      className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 font-bold py-1.5 rounded text-xs transition-colors shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                      onClick={(e) => { e.stopPropagation(); setAlertToResolve(alert.id); setResolutionNote(''); setShowModal(true); }}
+                      className="text-[9px] font-bold text-red-400 hover:text-white border border-red-500/30 hover:bg-red-500/20 px-1.5 py-1 rounded transition-colors flex-1 text-center"
+                      title="Marcar Resuelto"
                     >
-                      Marcar Resuelto
+                      Resuelto
                     </button>
-                    <button
+                    <button 
                       onClick={(e) => handleExportDetail(alert, e)}
-                      className="w-full bg-bgSurfaceHigh hover:bg-bgSurface border border-borderDefault text-textPrimary font-bold py-1.5 rounded text-xs transition-colors flex justify-center items-center gap-1.5"
+                      className="text-[9px] font-bold text-textSecondary hover:text-white border border-borderDefault hover:bg-bgSurface px-1.5 py-1 rounded transition-colors flex items-center justify-center"
+                      title="Exportar"
                     >
-                      <Download size={14} className="text-accentBlue" />
-                      Exportar
+                      <Download className="w-3 h-3" />
                     </button>
                   </div>
                 </div>

@@ -15,12 +15,14 @@ export const AppLayout: React.FC = () => {
       try {
         const token = localStorage.getItem('rusertech_token');
         if (!token) return;
-        const res = await fetch('http://localhost:3000/api/v1/event-logs', {
+        const res = await fetch('http://localhost:3000/api/v1/alerts', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
-          const openAlerts = data.filter((a: any) => a.status !== 'resolved');
+          // Endpoint might return an array or an object like { data: [...] }
+          const alertsArray = Array.isArray(data) ? data : (data.data || []);
+          const openAlerts = alertsArray.filter((a: any) => a.status !== 'resolved');
           setHasAlerts(openAlerts.length > 0);
         }
       } catch (e) { }
@@ -68,7 +70,7 @@ export const AppLayout: React.FC = () => {
                   </span>
                 </div>
               </a>
-              <div className="flex space-x-0.5 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
                 {[
                   { path: '/map', label: 'Mapa Global', icon: Map },
                   { path: '/alerts', label: 'Alertas', icon: Bell },
@@ -93,22 +95,24 @@ export const AppLayout: React.FC = () => {
                       key={item.path}
                       to={item.path}
                       className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all group relative ${
-                        isActive
-                          ? 'bg-accentGreen/10 text-white border border-accentGreen/30 shadow-[0_0_10px_rgba(0,200,100,0.15)]'
-                          : 'text-textSecondary hover:text-white hover:bg-bgSurfaceHigh border border-transparent'
+                        isAlerts
+                          ? 'bg-red-600/40 text-white border border-red-500 shadow-[0_0_20px_rgba(255,0,0,0.8)] animate-pulse'
+                          : isActive
+                            ? 'bg-accentGreen/10 text-white border border-accentGreen/30 shadow-[0_0_10px_rgba(0,200,100,0.15)]'
+                            : 'text-textSecondary hover:text-white hover:bg-bgSurfaceHigh border border-transparent'
                       }`}
                     >
                       <item.icon 
                         className={`w-5 h-5 transition-colors ${
                           isAlerts 
-                            ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' 
+                            ? 'text-[#ff3333] drop-shadow-[0_0_12px_rgba(255,0,0,1)]' 
                             : isActive 
                               ? 'text-accentGreen drop-shadow-[0_0_5px_rgba(0,200,100,0.5)]' 
                               : 'text-textMuted group-hover:text-white'
                         }`} 
                       />
                       <span className={`text-xs font-bold tracking-wide whitespace-nowrap ${
-                        isAlerts ? 'text-red-400' : isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
+                        isAlerts ? 'text-white drop-shadow-[0_0_5px_rgba(255,0,0,1)]' : isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
                       }`}>
                         {item.label}
                       </span>
