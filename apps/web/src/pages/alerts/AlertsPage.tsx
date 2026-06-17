@@ -93,7 +93,7 @@ export const AlertsPage: React.FC = () => {
         let bgClass = 'bg-slate-500';
         let alertSeverity = tenantSettings?.alert_colors?.[alert.event_type];
         if (!alertSeverity) {
-          const type = alert.event_type.toUpperCase();
+          const type = (alert.event_type || '').toUpperCase();
           if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
           else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
           else if (type === 'POSITION') alertSeverity = 'none';
@@ -211,7 +211,7 @@ export const AlertsPage: React.FC = () => {
       if (sev) return sev.colorClass;
     }
 
-    const type = eventType.toUpperCase();
+    const type = (eventType || '').toUpperCase();
     if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) return 'border-red-500 text-red-500 bg-red-500/10';
     if (['HARSH_ACCELERATION', 'HARSH_CORNERING', 'TEMPERATURE_HIGH', 'TEMPERATURE_LOW'].includes(type)) return 'border-orange-500 text-orange-500 bg-orange-500/10';
     if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) return 'border-blue-500 text-blue-500 bg-blue-500/10';
@@ -229,12 +229,12 @@ export const AlertsPage: React.FC = () => {
   // Filters
   const filtered = activeAlerts.filter(a => {
     const matchesSearch = search
-      ? a.vehicle?.plate?.toLowerCase().includes(search.toLowerCase()) || a.trip?.name.toLowerCase().includes(search.toLowerCase())
+      ? a.vehicle?.plate?.toLowerCase().includes(search.toLowerCase()) || a.trip?.name?.toLowerCase().includes(search.toLowerCase())
       : true;
 
     let alertSeverity = tenantSettings?.alert_colors?.[a.event_type];
     if (!alertSeverity) {
-      const type = a.event_type.toUpperCase();
+      const type = (a.event_type || '').toUpperCase();
       if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
       else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
       else if (type === 'POSITION') alertSeverity = 'none';
