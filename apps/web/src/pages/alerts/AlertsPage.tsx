@@ -443,6 +443,7 @@ export const AlertsPage: React.FC = () => {
             <div className="w-36 shrink-0">Chofer</div>
             <div className="w-36 shrink-0">Viaje</div>
             <div className="w-32 shrink-0">Código Viaje</div>
+            <div className="w-32 shrink-0">Coordenadas</div>
             <div className="flex-1 min-w-[200px]">Ubicación</div>
             <div className="w-28 shrink-0 text-right pr-2">Acciones</div>
           </div>
@@ -507,6 +508,17 @@ export const AlertsPage: React.FC = () => {
                       <div className="text-textSecondary text-xs truncate font-mono">
                         {alert.trip.trip_code || 'SIN_CÓDIGO'}
                       </div>
+                    ) : (
+                      <span className="text-textMuted text-xs font-mono">-</span>
+                    )}
+                  </div>
+
+                  <div className="w-32 shrink-0 pr-2 flex items-center">
+                    {alert.latitude && alert.longitude && !isNaN(Number(alert.latitude)) && !isNaN(Number(alert.longitude)) ? (
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}`} target="_blank" rel="noreferrer" className="text-accentBlue hover:text-white font-mono text-[10px] truncate flex items-center gap-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                        {Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}
+                      </a>
                     ) : (
                       <span className="text-textMuted text-xs font-mono">-</span>
                     )}
