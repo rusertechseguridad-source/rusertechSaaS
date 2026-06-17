@@ -24,6 +24,8 @@ import { SimulatorPage } from './pages/dev/SimulatorPage';
 import { MapPage } from './pages/map/MapPage';
 import { DevicesPage } from './pages/devices/DevicesPage';
 import { SensorsDashboardPage } from './pages/sensors/SensorsDashboardPage';
+import { AnalyticsDashboard } from './pages/analytics/AnalyticsDashboard';
+import { CarbonDashboard } from './pages/carbon/CarbonDashboard';
 
 function App() {
   return (
@@ -58,6 +60,8 @@ function App() {
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/sensors" element={<SensorsDashboardPage />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/carbon" element={<CarbonDashboard />} />
             <Route path="/simulator" element={<SimulatorPage />} />
           </Route>
         </Route>

@@ -21,6 +21,8 @@ export const VehiclesPage: React.FC = () => {
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [vehicleType, setVehicleType] = useState('truck');
+  const [fuelType, setFuelType] = useState('diesel');
+  const [fuelEfficiency, setFuelEfficiency] = useState('');
   const [avlUserId, setAvlUserId] = useState('');
   const [hubAssetId, setHubAssetId] = useState('');
   const [dictionaryCategory, setDictionaryCategory] = useState('');
@@ -141,6 +143,8 @@ export const VehiclesPage: React.FC = () => {
     setBrand('');
     setModel('');
     setVehicleType('truck');
+    setFuelType('diesel');
+    setFuelEfficiency('');
     setAvlUserId('');
     setHubAssetId('');
     setDictionaryCategory('');
@@ -156,6 +160,8 @@ export const VehiclesPage: React.FC = () => {
     setBrand(vehicle.brand || '');
     setModel(vehicle.model || '');
     setVehicleType(vehicle.vehicle_type || 'truck');
+    setFuelType(vehicle.fuel_type || 'diesel');
+    setFuelEfficiency(vehicle.fuel_efficiency_lper100km?.toString() || '');
     setAvlUserId(vehicle.avl_user_id || '');
     setHubAssetId(vehicle.hub_asset_id || '');
     setDictionaryCategory(vehicle.dictionary_category || '');
@@ -194,6 +200,8 @@ export const VehiclesPage: React.FC = () => {
       brand: brand || null,
       model: model || null,
       vehicle_type: vehicleType,
+      fuel_type: fuelType,
+      fuel_efficiency_lper100km: fuelEfficiency ? parseFloat(fuelEfficiency) : null,
       avl_user_id: avlUserId || null,
       hub_asset_id: hubAssetId || null,
       dictionary_category: dictionaryCategory || null,
@@ -432,7 +440,23 @@ export const VehiclesPage: React.FC = () => {
                     <option value="car">Auto</option>
                     <option value="pickup">Camioneta</option>
                     <option value="bus">Bus</option>
+                    <option value="motorcycle">Motocicleta</option>
                   </select>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm text-textSecondary mb-1" title="Requerido por Climatiq API">Combustible *</label>
+                    <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={fuelType} onChange={e => setFuelType(e.target.value)}>
+                      <option value="diesel">Diesel</option>
+                      <option value="gasoline">Gasolina / Nafta</option>
+                      <option value="hybrid">Híbrido</option>
+                      <option value="electric">Eléctrico</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm text-textSecondary mb-1" title="Si se omite, se usa el valor promedio de la industria.">Rendimiento (L/100km)</label>
+                    <input type="number" step="0.1" placeholder="Ej: 30.5" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={fuelEfficiency} onChange={e => setFuelEfficiency(e.target.value)} />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-textSecondary mb-1">Transportista</label>

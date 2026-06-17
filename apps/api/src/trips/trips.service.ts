@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CarbonService } from '../carbon/carbon.service';
 
 @Injectable()
 export class TripsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private carbonService: CarbonService) {}
 
   private mapToDto(trip: any) {
     if (!trip) return null;
@@ -243,6 +244,10 @@ export class TripsService {
       }
     });
 
+    if (updateData.status === 'FINALIZADO' && trip.vehicle_id) {
+      await this.carbonService.dispatchFinalCalculation(trip.id, trip.vehicle_id, trip.tenant_id);
+    }
+
     return this.mapToDto(trip);
   }
 
@@ -273,6 +278,11 @@ export class TripsService {
         route: true,
       }
     });
+
+    if (data.status === 'FINALIZADO' && trip.vehicle_id) {
+      await this.carbonService.dispatchFinalCalculation(trip.id, trip.vehicle_id, trip.tenant_id);
+    }
+
     return this.mapToDto(trip);
   }
 

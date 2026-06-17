@@ -24,6 +24,8 @@ import { DriversModule } from './drivers/drivers.module';
 import { SensorsModule } from './sensors/sensors.module';
 import { DevicesModule } from './devices/devices.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { CarbonModule } from './carbon/carbon.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { AlertsModule } from './alerts/alerts.module';
     SensorsModule,
     DevicesModule,
     AlertsModule,
+    CarbonModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

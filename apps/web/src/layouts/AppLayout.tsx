@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
-import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer } from 'lucide-react';
+import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
@@ -59,6 +59,8 @@ export const AppLayout: React.FC = () => {
                   { path: '/routes', label: 'Recorridos', icon: Navigation },
                   { path: '/avl', label: 'AVL', icon: Radio },
                   { path: '/sensors', label: 'Sensores Clima', icon: Thermometer },
+                  { path: '/analytics', label: 'Analytics', icon: PieChart },
+                  { path: '/carbon', label: 'Emisiones', icon: Leaf },
                   { path: '/simulator', label: 'Simulador', icon: Zap },
                 ].map(item => {
                   const isActive = location.pathname.startsWith(item.path);
