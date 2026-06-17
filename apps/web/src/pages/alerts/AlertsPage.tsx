@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { AlertTriangle, MapPin, Truck, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Search, X, User, Download } from 'lucide-react';
+import { AlertTriangle, MapPin, Truck, ExternalLink, RefreshCw, AlertCircle, CheckCircle, Search, X, User, Download, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAlertsStore } from '../../store/alertsStore';
 import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
 
 export const AlertsPage: React.FC = () => {
-  const { alerts, loading, fetchAlerts, resolveAlert } = useAlertsStore();
+  const { alerts, loading, fetchAlerts: storeFetch, resolveAlert, setAlerts, setLoading } = useAlertsStore();
 
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -17,6 +18,8 @@ export const AlertsPage: React.FC = () => {
   const [mapStyle, setMapStyle] = useState('https://tiles.openfreemap.org/styles/dark');
 
   const [showModal, setShowModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [tenantSettings, setTenantSettings] = useState<any>({});
   const [alertToResolve, setAlertToResolve] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
 
@@ -24,11 +27,40 @@ export const AlertsPage: React.FC = () => {
   const map = useRef<maplibregl.Map | null>(null);
   const marker = useRef<maplibregl.Marker | null>(null);
 
+  const fetchAlerts = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('rusertech_token');
+      if (!token) return;
+
+      // Fetch alerts
+      const res = await fetch('http://localhost:3000/api/v1/alerts', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAlerts(data);
+      }
+
+      // Fetch settings
+      const settingsRes = await fetch('http://localhost:3000/api/v1/alerts/settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (settingsRes.ok) {
+        setTenantSettings(await settingsRes.json());
+      }
+    } catch (err) {
+      console.error('Failed to load alerts data', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 60000);
     return () => clearInterval(interval);
-  }, [fetchAlerts]);
+  }, []);
 
   // Init map
   useEffect(() => {
@@ -82,28 +114,51 @@ export const AlertsPage: React.FC = () => {
     }
   }, [selectedAlert]);
 
-  const handleResolveClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setAlertToResolve(id);
-    setResolutionNote('');
-    setShowModal(true);
-  };
-
   const submitResolve = async () => {
     if (!alertToResolve) return;
     if (!resolutionNote.trim()) {
       alert('Debes ingresar una justificación para resolver la alerta.');
       return;
     }
-    await resolveAlert(alertToResolve, resolutionNote);
-    setShowModal(false);
-    setAlertToResolve(null);
-    if (selectedAlert?.id === alertToResolve) {
-      setSelectedAlert(null);
+    try {
+      await resolveAlert(alertToResolve, resolutionNote);
+      setShowModal(false);
+      setAlertToResolve(null);
+      if (selectedAlert?.id === alertToResolve) {
+        setSelectedAlert(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error al resolver la alerta.');
     }
   };
 
+  const handleSaveSettings = async (newSettings: any) => {
+    const token = localStorage.getItem('rusertech_token');
+    const res = await fetch('http://localhost:3000/api/v1/alerts/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(newSettings)
+    });
+    
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        alert(errData.message || 'No tienes permisos de administrador para cambiar esta configuración.');
+      } else {
+        throw new Error('Failed to update settings');
+      }
+      return;
+    }
+    
+    setTenantSettings(await res.json());
+  };
+
   // Helper to translate event types
+  const translateEvent = (eventType: string) => {
     const types: Record<string, string> = {
       'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',
       'POSITION': 'POSICIÓN',
@@ -121,10 +176,17 @@ export const AlertsPage: React.FC = () => {
   };
 
   const getEventColor = (eventType: string) => {
+    const configuredSeverityId = tenantSettings?.alert_colors?.[eventType];
+    if (configuredSeverityId) {
+      const sev = SEVERITY_LEVELS.find(s => s.id === configuredSeverityId);
+      if (sev) return sev.colorClass;
+    }
+
     const type = eventType.toUpperCase();
     if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT'].includes(type)) return 'border-red-500 text-red-500 bg-red-500/10';
     if (['HARSH_ACCELERATION', 'HARSH_CORNERING', 'TEMPERATURE_HIGH', 'TEMPERATURE_LOW'].includes(type)) return 'border-orange-500 text-orange-500 bg-orange-500/10';
     if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT'].includes(type)) return 'border-blue-500 text-blue-500 bg-blue-500/10';
+    if (type === 'POSITION') return 'border-green-500 text-green-500 bg-green-500/10';
     return 'border-slate-500 text-slate-500 bg-slate-500/10';
   };
 
@@ -189,12 +251,21 @@ export const AlertsPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">Monitoreo y resolución de eventos críticos.</p>
         </div>
-        <button
-          onClick={fetchAlerts}
-          className="bg-bgSurfaceHigh hover:bg-borderDefault text-white px-4 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm shadow-card"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="bg-bgSurface hover:bg-borderDefault text-textMuted hover:text-white px-3 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm border border-borderDefault shadow-card"
+            title="Configuración de Alertas"
+          >
+            <Settings className="w-4 h-4" /> Configuración
+          </button>
+          <button
+            onClick={fetchAlerts}
+            className="bg-bgSurfaceHigh hover:bg-borderDefault text-white px-4 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm shadow-card"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+          </button>
+        </div>
       </div>
 
       {/* ── MAP AREA (TOP FIXED) ── */}
@@ -457,6 +528,15 @@ export const AlertsPage: React.FC = () => {
         </div>
       )}
 
+      <AlertsSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        currentSettings={tenantSettings}
+        onSave={handleSaveSettings}
+      />
+
     </div>
   );
 };
+
+export default AlertsPage;

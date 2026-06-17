@@ -12,6 +12,16 @@ export class AlertsController {
     return this.alertsService.findAll(req.user.tenantId);
   }
 
+  @Get('settings')
+  getSettings(@Request() req: any) {
+    return this.alertsService.getSettings(req.user.tenantId);
+  }
+
+  @Put('settings')
+  updateSettings(@Request() req: any, @Body() body: any) {
+    return this.alertsService.updateSettings(req.user.tenantId, req.user.userId, body);
+  }
+
   @Put(':id/resolve')
   resolveAlert(@Request() req: any, @Param('id') id: string, @Body() body: { resolution_note?: string }) {
     return this.alertsService.resolveAlert(req.user.tenantId, id, req.user.userId, body.resolution_note);

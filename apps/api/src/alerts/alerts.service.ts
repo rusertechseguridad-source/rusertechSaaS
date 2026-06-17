@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -16,6 +16,33 @@ export class AlertsService {
         acknowledger: { select: { full_name: true, email: true } },
       },
     });
+  }
+
+  async getSettings(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings_json: true },
+    });
+    return tenant?.settings_json || {};
+  }
+
+  async updateSettings(tenantId: string, userId: string, settings: any) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || (user.role_code !== 'tenant_admin' && user.role_code !== 'admin')) {
+      throw new ForbiddenException('Solo un administrador puede cambiar esta configuración.');
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const currentSettings = (tenant?.settings_json as Record<string, any>) || {};
+    
+    const updatedSettings = { ...currentSettings, ...settings };
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { settings_json: updatedSettings },
+    });
+
+    return updatedSettings;
   }
 
   async resolveAlert(tenantId: string, id: string, userId: string, resolution_note?: string) {
