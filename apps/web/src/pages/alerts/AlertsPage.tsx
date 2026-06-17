@@ -301,11 +301,12 @@ export const AlertsPage: React.FC = () => {
         <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1000px] h-full">
           {/* Header */}
           <div className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-textMuted text-[10px] uppercase tracking-wider font-bold px-4 py-3 flex items-center w-full shrink-0">
-            <div className="w-32 shrink-0">Hora / Evento</div>
+            <div className="w-28 shrink-0">Hora</div>
+            <div className="w-40 shrink-0">Evento</div>
             <div className="flex-1 min-w-[150px]">Vehículo / Chofer</div>
             <div className="flex-1 min-w-[150px]">Viaje (Num)</div>
             <div className="flex-[1.5] min-w-[200px]">Ubicación y Coordenadas</div>
-            <div className="w-32 shrink-0 text-center">Acciones</div>
+            <div className="w-28 shrink-0 text-center">Acciones</div>
           </div>
           
           {/* Body */}
@@ -326,63 +327,66 @@ export const AlertsPage: React.FC = () => {
                     selectedAlert?.id === alert.id ? 'bg-red-500/10 border-l-4 border-l-red-500' : 'border-l-4 border-l-transparent'
                   }`}
                 >
-                  <div className="w-28 shrink-0 pr-2 flex flex-col justify-center">
-                    <div className="text-red-400 font-bold text-[10px] leading-none mb-1">
+                  <div className="w-28 shrink-0 pr-2 flex items-center">
+                    <div className="text-textSecondary font-medium text-xs">
                       {new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
-                    <span className="inline-block px-1 py-0 rounded text-[8px] font-black tracking-widest border border-red-500 text-red-500 bg-red-500/10 leading-tight w-fit">
+                  </div>
+
+                  <div className="w-40 shrink-0 pr-2 flex items-center">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border border-red-500 text-red-500 bg-red-500/10 truncate">
                       {translateEvent(alert.event_type)}
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-[120px] pr-2">
-                    <div className="text-white font-bold text-[11px] truncate flex items-center gap-1.5">
+                  <div className="flex-1 min-w-[150px] pr-2">
+                    <div className="text-white font-bold text-xs truncate flex items-center gap-1.5">
                       <Truck className="w-3.5 h-3.5 text-textMuted" />
                       {alert.vehicle?.plate || 'Desconocido'}
                     </div>
-                    <div className="text-white text-[10px] mt-0.5 truncate flex items-center gap-1.5 font-bold">
+                    <div className="text-textSecondary text-[11px] mt-0.5 truncate flex items-center gap-1.5 font-medium">
                       <User className="w-3 h-3 text-textMuted" />
                       {(alert as any).trip?.driver?.full_name || 'Sin Chofer'}
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-[120px] pr-2">
+                  <div className="flex-1 min-w-[150px] pr-2">
                     {alert.trip ? (
                       <>
-                        <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-[11px] truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-xs truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
                           <ExternalLink className="w-3.5 h-3.5" />
                           {alert.trip.name}
                         </Link>
-                        <div className="text-textMuted text-[10px] mt-0.5 truncate font-mono">
+                        <div className="text-textSecondary text-[11px] mt-0.5 truncate font-mono">
                           {alert.trip.trip_code || 'SIN_CÓDIGO'}
                         </div>
                       </>
                     ) : (
-                      <span className="text-textMuted text-[10px] italic font-bold">Viaje No Asignado</span>
+                      <span className="text-textMuted text-[11px] italic font-medium">Viaje No Asignado</span>
                     )}
                   </div>
 
-                  <div className="flex-[1.5] min-w-[150px] pr-2">
-                    <div className="text-textSecondary text-[10px] flex items-start gap-1.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                  <div className="flex-[1.5] min-w-[200px] pr-2 flex items-center">
+                    <div className="text-textSecondary text-xs flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
                       <span className="truncate" title={alert.address || ''}>{alert.address || 'Sin dirección registrada'}</span>
                     </div>
                   </div>
 
-                  <div className="w-28 shrink-0 flex items-center gap-1 justify-end">
+                  <div className="w-28 shrink-0 flex items-center gap-1.5 justify-end">
                     <button 
                       onClick={(e) => { e.stopPropagation(); setAlertToResolve(alert.id); setResolutionNote(''); setShowModal(true); }}
-                      className="text-[9px] font-bold text-red-400 hover:text-white border border-red-500/30 hover:bg-red-500/20 px-1.5 py-1 rounded transition-colors flex-1 text-center"
+                      className="text-[10px] font-bold text-red-400 hover:text-white border border-red-500/30 hover:bg-red-500/20 px-2 py-1 rounded transition-colors flex-1 text-center"
                       title="Marcar Resuelto"
                     >
                       Resuelto
                     </button>
                     <button 
                       onClick={(e) => handleExportDetail(alert, e)}
-                      className="text-[9px] font-bold text-textSecondary hover:text-white border border-borderDefault hover:bg-bgSurface px-1.5 py-1 rounded transition-colors flex items-center justify-center"
+                      className="text-[10px] font-bold text-textSecondary hover:text-white border border-borderDefault hover:bg-bgSurface px-2 py-1 rounded transition-colors flex items-center justify-center"
                       title="Exportar"
                     >
-                      <Download className="w-3 h-3" />
+                      <Download className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
