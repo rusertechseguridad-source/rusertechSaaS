@@ -295,8 +295,8 @@ export const AlertsPage: React.FC = () => {
       </div>
 
       {/* ── LIST VIEW ── */}
-      <div className="flex-1 overflow-auto flex flex-col relative w-full px-8 pb-8 z-10">
-        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1000px]">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden flex flex-col relative w-full px-8 pb-8 z-10">
+        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1000px] h-full">
           {/* Header */}
           <div className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-textMuted text-[10px] uppercase tracking-wider font-bold px-4 py-3 flex items-center w-full shrink-0">
             <div className="w-32 shrink-0">Hora / Evento</div>
@@ -307,7 +307,7 @@ export const AlertsPage: React.FC = () => {
           </div>
           
           {/* Body */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-y-auto">
             {loading && activeAlerts.length === 0 ? (
               <div className="text-center text-textMuted py-12">Cargando alertas...</div>
             ) : filtered.length === 0 ? (

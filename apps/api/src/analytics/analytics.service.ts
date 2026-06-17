@@ -52,25 +52,47 @@ export class AnalyticsService {
     const canceledTrips = trips.filter(t => t.status === 'CANCELADO').length;
 
     // Get telemetry to calculate distance and avg speed
-    const telemetryQuery: any = await this.prisma.$queryRaw`
-      WITH telemetry_with_prev AS (
+    let telemetryQuery: any;
+    if (filters.vehicleId) {
+      telemetryQuery = await this.prisma.$queryRaw`
+        WITH telemetry_with_prev AS (
+          SELECT 
+            location, 
+            LAG(location) OVER (PARTITION BY vehicle_id ORDER BY timestamp ASC) as prev_location,
+            speed_kmh,
+            timestamp,
+            vehicle_id
+          FROM telemetry
+          WHERE tenant_id = ${tenantId}::uuid
+            AND timestamp >= ${startDate}
+            AND vehicle_id = ${filters.vehicleId}::uuid
+        )
         SELECT 
-          location, 
-          LAG(location) OVER (PARTITION BY vehicle_id ORDER BY timestamp ASC) as prev_location,
-          speed_kmh,
-          timestamp,
-          vehicle_id
-        FROM telemetry
-        WHERE tenant_id = ${tenantId}::uuid
-          AND timestamp >= ${startDate}
-          ${filters.vehicleId ? this.prisma.$queryRaw\`AND vehicle_id = \${filters.vehicleId}::uuid\` : this.prisma.$queryRaw\`\`}
-      )
-      SELECT 
-        SUM(ST_Distance(prev_location, location)) / 1000 as total_km,
-        AVG(speed_kmh) as avg_speed
-      FROM telemetry_with_prev
-      WHERE prev_location IS NOT NULL AND location IS NOT NULL
-    `;
+          SUM(ST_Distance(prev_location, location)) / 1000 as total_km,
+          AVG(speed_kmh) as avg_speed
+        FROM telemetry_with_prev
+        WHERE prev_location IS NOT NULL AND location IS NOT NULL
+      `;
+    } else {
+      telemetryQuery = await this.prisma.$queryRaw`
+        WITH telemetry_with_prev AS (
+          SELECT 
+            location, 
+            LAG(location) OVER (PARTITION BY vehicle_id ORDER BY timestamp ASC) as prev_location,
+            speed_kmh,
+            timestamp,
+            vehicle_id
+          FROM telemetry
+          WHERE tenant_id = ${tenantId}::uuid
+            AND timestamp >= ${startDate}
+        )
+        SELECT 
+          SUM(ST_Distance(prev_location, location)) / 1000 as total_km,
+          AVG(speed_kmh) as avg_speed
+        FROM telemetry_with_prev
+        WHERE prev_location IS NOT NULL AND location IS NOT NULL
+      `;
+    }
 
     const totalKm = telemetryQuery && telemetryQuery.length > 0 && telemetryQuery[0].total_km ? parseFloat(telemetryQuery[0].total_km) : 0;
     const avgSpeed = telemetryQuery && telemetryQuery.length > 0 && telemetryQuery[0].avg_speed ? parseFloat(telemetryQuery[0].avg_speed) : 0;

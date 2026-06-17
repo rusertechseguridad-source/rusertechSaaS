@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
@@ -8,6 +8,28 @@ export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hasAlerts, setHasAlerts] = useState(false);
+
+  useEffect(() => {
+    const checkAlerts = async () => {
+      try {
+        const token = localStorage.getItem('rusertech_token');
+        if (!token) return;
+        const res = await fetch('http://localhost:3000/api/v1/event-logs', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const openAlerts = data.filter((a: any) => a.status !== 'resolved');
+          setHasAlerts(openAlerts.length > 0);
+        }
+      } catch (e) { }
+    };
+    
+    checkAlerts();
+    const interval = setInterval(checkAlerts, 15000); // 15s
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -64,19 +86,29 @@ export const AppLayout: React.FC = () => {
                   { path: '/simulator', label: 'Simulador', icon: Zap },
                 ].map(item => {
                   const isActive = location.pathname.startsWith(item.path);
+                  const isAlerts = item.path === '/alerts' && hasAlerts;
+
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all group ${
+                      className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all group relative ${
                         isActive
                           ? 'bg-accentGreen/10 text-white border border-accentGreen/30 shadow-[0_0_10px_rgba(0,200,100,0.15)]'
                           : 'text-textSecondary hover:text-white hover:bg-bgSurfaceHigh border border-transparent'
                       }`}
                     >
-                      <item.icon className={`w-5 h-5 ${isActive ? 'text-accentGreen drop-shadow-[0_0_5px_rgba(0,200,100,0.5)]' : 'text-textMuted group-hover:text-white transition-colors'}`} />
+                      <item.icon 
+                        className={`w-5 h-5 transition-colors ${
+                          isAlerts 
+                            ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse' 
+                            : isActive 
+                              ? 'text-accentGreen drop-shadow-[0_0_5px_rgba(0,200,100,0.5)]' 
+                              : 'text-textMuted group-hover:text-white'
+                        }`} 
+                      />
                       <span className={`text-xs font-bold tracking-wide whitespace-nowrap ${
-                        isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
+                        isAlerts ? 'text-red-400' : isActive ? 'text-white' : 'text-white/70 group-hover:text-white'
                       }`}>
                         {item.label}
                       </span>
