@@ -104,7 +104,6 @@ export const AlertsPage: React.FC = () => {
   };
 
   // Helper to translate event types
-  const translateEvent = (eventType: string) => {
     const types: Record<string, string> = {
       'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',
       'POSITION': 'POSICIÓN',
@@ -119,6 +118,14 @@ export const AlertsPage: React.FC = () => {
       'TEMPERATURE_LOW': 'TEMPERATURA BAJA'
     };
     return types[eventType.toUpperCase()] || eventType.replace(/_/g, ' ').toUpperCase();
+  };
+
+  const getEventColor = (eventType: string) => {
+    const type = eventType.toUpperCase();
+    if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT'].includes(type)) return 'border-red-500 text-red-500 bg-red-500/10';
+    if (['HARSH_ACCELERATION', 'HARSH_CORNERING', 'TEMPERATURE_HIGH', 'TEMPERATURE_LOW'].includes(type)) return 'border-orange-500 text-orange-500 bg-orange-500/10';
+    if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT'].includes(type)) return 'border-blue-500 text-blue-500 bg-blue-500/10';
+    return 'border-slate-500 text-slate-500 bg-slate-500/10';
   };
 
   // Select only active ones first
@@ -298,15 +305,17 @@ export const AlertsPage: React.FC = () => {
 
       {/* ── LIST VIEW ── */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex flex-col relative w-full px-8 pb-8 z-10">
-        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1000px] h-full">
+        <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1400px] h-full">
           {/* Header */}
           <div className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-textMuted text-[10px] uppercase tracking-wider font-bold px-4 py-3 flex items-center w-full shrink-0">
             <div className="w-28 shrink-0">Hora</div>
             <div className="w-40 shrink-0">Evento</div>
-            <div className="flex-1 min-w-[150px]">Vehículo / Chofer</div>
-            <div className="flex-1 min-w-[150px]">Viaje (Num)</div>
-            <div className="flex-[1.5] min-w-[200px]">Ubicación y Coordenadas</div>
-            <div className="w-28 shrink-0 text-center">Acciones</div>
+            <div className="w-32 shrink-0">Vehículo</div>
+            <div className="w-36 shrink-0">Chofer</div>
+            <div className="w-36 shrink-0">Viaje</div>
+            <div className="w-32 shrink-0">Código Viaje</div>
+            <div className="flex-1 min-w-[200px]">Ubicación</div>
+            <div className="w-28 shrink-0 text-right pr-2">Acciones</div>
           </div>
           
           {/* Body */}
@@ -334,35 +343,43 @@ export const AlertsPage: React.FC = () => {
                   </div>
 
                   <div className="w-40 shrink-0 pr-2 flex items-center">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border border-red-500 text-red-500 bg-red-500/10 truncate">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border truncate ${getEventColor(alert.event_type)}`}>
                       {translateEvent(alert.event_type)}
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-[150px] pr-2">
+                  <div className="w-32 shrink-0 pr-2 flex items-center">
                     <div className="text-white font-bold text-xs truncate flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5 text-textMuted" />
+                      <Truck className="w-3.5 h-3.5 text-textMuted shrink-0" />
                       {alert.vehicle?.plate || 'Desconocido'}
                     </div>
-                    <div className="text-textSecondary text-[11px] mt-0.5 truncate flex items-center gap-1.5 font-medium">
-                      <User className="w-3 h-3 text-textMuted" />
+                  </div>
+
+                  <div className="w-36 shrink-0 pr-2 flex items-center">
+                    <div className="text-textSecondary text-xs truncate flex items-center gap-1.5 font-medium">
+                      <User className="w-3 h-3 text-textMuted shrink-0" />
                       {(alert as any).trip?.driver?.full_name || 'Sin Chofer'}
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-[150px] pr-2">
+                  <div className="w-36 shrink-0 pr-2 flex items-center">
                     {alert.trip ? (
-                      <>
-                        <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-xs truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          {alert.trip.name}
-                        </Link>
-                        <div className="text-textSecondary text-[11px] mt-0.5 truncate font-mono">
-                          {alert.trip.trip_code || 'SIN_CÓDIGO'}
-                        </div>
-                      </>
+                      <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-xs truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{alert.trip.name}</span>
+                      </Link>
                     ) : (
-                      <span className="text-textMuted text-[11px] italic font-medium">Viaje No Asignado</span>
+                      <span className="text-textMuted text-xs italic font-medium">No Asignado</span>
+                    )}
+                  </div>
+
+                  <div className="w-32 shrink-0 pr-2 flex items-center">
+                    {alert.trip ? (
+                      <div className="text-textSecondary text-xs truncate font-mono">
+                        {alert.trip.trip_code || 'SIN_CÓDIGO'}
+                      </div>
+                    ) : (
+                      <span className="text-textMuted text-xs font-mono">-</span>
                     )}
                   </div>
 
