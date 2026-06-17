@@ -23,6 +23,42 @@ export const AlertsPage: React.FC = () => {
   const [tenantSettings, setTenantSettings] = useState<any>({});
   const [alertToResolve, setAlertToResolve] = useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Resizable columns state
+  const [colWidths, setColWidths] = useState({
+    hora: 112,
+    evento: 180,
+    vehiculo: 140,
+    chofer: 160,
+    viaje: 160,
+    codigo: 140,
+    coordenadas: 140,
+  });
+
+  const startResize = (e: React.MouseEvent, col: keyof typeof colWidths) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.pageX;
+    const startWidth = colWidths[col];
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      setColWidths(prev => ({ ...prev, [col]: Math.max(60, startWidth + moveEvent.pageX - startX) }));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const Resizer = ({ col }: { col: keyof typeof colWidths }) => (
+    <div 
+      onMouseDown={(e) => startResize(e, col)}
+      className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-accentBlue/50 z-10 transition-colors"
+    />
+  );
+  
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -79,19 +115,25 @@ export const AlertsPage: React.FC = () => {
   const submitResolve = async () => {
     if (!alertToResolve) return;
     if (!resolutionNote.trim()) {
-      alert('Debes ingresar una justificación para resolver la alerta.');
+      alert('Debes ingresar una justificación para atender la alerta.');
       return;
     }
+    
     try {
-      await resolveAlert(alertToResolve, resolutionNote);
+      if (alertToResolve === 'BULK') {
+        await Promise.all(Array.from(selectedIds).map(id => resolveAlert(id, resolutionNote)));
+        setSelectedIds(new Set());
+      } else {
+        await resolveAlert(alertToResolve, resolutionNote);
+      }
       setShowModal(false);
       setAlertToResolve(null);
       if (selectedAlert?.id === alertToResolve) {
         setSelectedAlert(null);
       }
-    } catch (err) {
-      console.error(err);
-      alert('Error al resolver la alerta.');
+      await storeFetch();
+    } catch (err: any) {
+      alert(err.message || 'Error al atender.');
     }
   };
 
@@ -239,7 +281,15 @@ export const AlertsPage: React.FC = () => {
 
         const m = new maplibregl.Marker({ element: el })
           .setLngLat([lng, lat])
-          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`<b>${translateEvent(alert.event_type)}</b><br/>${alert.vehicle?.plate || ''}`))
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+            <div style="font-family:sans-serif;font-size:12px;color:#333;line-height:1.4;min-width:180px;">
+              <strong style="font-size:13px;color:#d32f2f;display:block;margin-bottom:4px;">${translateEvent(alert.event_type)}</strong>
+              <b>Vehículo:</b> ${alert.vehicle?.plate || 'Desc.'}<br/>
+              <b>Chofer:</b> ${(alert as any).trip?.driver?.full_name || 'Sin Chofer'}<br/>
+              <b>Hora:</b> ${new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}<br/>
+              <div style="margin-top:8px;">${alert.address || 'Ubicación desconocida'}</div>
+            </div>
+          `))
           .addTo(map.current!);
           
         markersRef.current.push(m);
@@ -418,6 +468,14 @@ export const AlertsPage: React.FC = () => {
           </select>
 
           <div className="ml-auto flex items-center gap-3">
+            {selectedIds.size > 0 && (
+              <button 
+                onClick={() => { setAlertToResolve('BULK'); setResolutionNote(''); setShowModal(true); }}
+                className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-bold rounded-lg border border-red-500/50 transition-colors"
+              >
+                Atender Seleccionados ({selectedIds.size})
+              </button>
+            )}
             <span className="text-xs text-textMuted font-bold bg-bgSurface px-3 py-1.5 rounded-lg border border-borderDefault">
               {filtered.length} alerta{filtered.length !== 1 ? 's' : ''}
             </span>
@@ -437,14 +495,25 @@ export const AlertsPage: React.FC = () => {
         <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1400px] h-full">
           {/* Header */}
           <div className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-textMuted text-[10px] uppercase tracking-wider font-bold px-4 py-3 flex items-center w-full shrink-0">
-            <div className="w-28 shrink-0">Hora</div>
-            <div className="w-40 shrink-0">Evento</div>
-            <div className="w-32 shrink-0">Vehículo</div>
-            <div className="w-36 shrink-0">Chofer</div>
-            <div className="w-36 shrink-0">Viaje</div>
-            <div className="w-32 shrink-0">Código Viaje</div>
-            <div className="w-32 shrink-0">Coordenadas</div>
-            <div className="flex-1 min-w-[200px]">Ubicación</div>
+            <div className="w-8 shrink-0 flex items-center justify-center">
+              <input 
+                type="checkbox" 
+                checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedIds(new Set(filtered.map(a => a.id)));
+                  else setSelectedIds(new Set());
+                }}
+                className="w-3.5 h-3.5 rounded border-borderDefault bg-bgSurface text-accentBlue focus:ring-accentBlue/50 cursor-pointer"
+              />
+            </div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.hora }}>Hora <Resizer col="hora" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.evento }}>Evento <Resizer col="evento" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.vehiculo }}>Vehículo <Resizer col="vehiculo" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.chofer }}>Chofer <Resizer col="chofer" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.viaje }}>Viaje <Resizer col="viaje" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.codigo }}>Código Viaje <Resizer col="codigo" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.coordenadas }}>Coordenadas <Resizer col="coordenadas" /></div>
+            <div className="flex-1 min-w-[200px] relative pr-2">Ubicación</div>
             <div className="w-28 shrink-0 text-right pr-2">Acciones</div>
           </div>
           
@@ -466,33 +535,46 @@ export const AlertsPage: React.FC = () => {
                     selectedAlert?.id === alert.id ? 'bg-red-500/10 border-l-4 border-l-red-500' : 'border-l-4 border-l-transparent'
                   }`}
                 >
-                  <div className="w-28 shrink-0 pr-2 flex items-center">
+                  <div className="w-8 shrink-0 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.has(alert.id)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedIds);
+                        if (e.target.checked) newSet.add(alert.id);
+                        else newSet.delete(alert.id);
+                        setSelectedIds(newSet);
+                      }}
+                      className="w-3.5 h-3.5 rounded border-borderDefault bg-bgSurface text-accentBlue focus:ring-accentBlue/50 cursor-pointer"
+                    />
+                  </div>
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.hora }}>
                     <div className="text-textSecondary font-medium text-xs">
                       {new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   </div>
 
-                  <div className="w-40 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.evento }}>
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border truncate ${getEventColor(alert.event_type)}`}>
                       {translateEvent(alert.event_type)}
                     </span>
                   </div>
 
-                  <div className="w-32 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.vehiculo }}>
                     <div className="text-white font-bold text-xs truncate flex items-center gap-1.5">
                       <Truck className="w-3.5 h-3.5 text-textMuted shrink-0" />
                       {alert.vehicle?.plate || 'Desconocido'}
                     </div>
                   </div>
 
-                  <div className="w-36 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.chofer }}>
                     <div className="text-textSecondary text-xs truncate flex items-center gap-1.5 font-medium">
                       <User className="w-3 h-3 text-textMuted shrink-0" />
                       {(alert as any).trip?.driver?.full_name || 'Sin Chofer'}
                     </div>
                   </div>
 
-                  <div className="w-36 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.viaje }}>
                     {alert.trip ? (
                       <Link to={`/trips/${alert.trip.id}`} className="text-accentBlue hover:text-white font-bold text-xs truncate flex items-center gap-1.5 transition-colors" onClick={(e) => e.stopPropagation()}>
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" />
@@ -503,7 +585,7 @@ export const AlertsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="w-32 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.codigo }}>
                     {alert.trip ? (
                       <div className="text-textSecondary text-xs truncate font-mono">
                         {alert.trip.trip_code || 'SIN_CÓDIGO'}
@@ -513,7 +595,7 @@ export const AlertsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="w-32 shrink-0 pr-2 flex items-center">
+                  <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.coordenadas }}>
                     {alert.latitude && alert.longitude && !isNaN(Number(alert.latitude)) && !isNaN(Number(alert.longitude)) ? (
                       <a href={`https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}`} target="_blank" rel="noreferrer" className="text-accentBlue hover:text-white font-mono text-[10px] truncate flex items-center gap-1 transition-colors" onClick={(e) => e.stopPropagation()}>
                         <ExternalLink className="w-3 h-3 shrink-0" />
@@ -535,9 +617,9 @@ export const AlertsPage: React.FC = () => {
                     <button 
                       onClick={(e) => { e.stopPropagation(); setAlertToResolve(alert.id); setResolutionNote(''); setShowModal(true); }}
                       className="text-[10px] font-bold text-red-400 hover:text-white border border-red-500/30 hover:bg-red-500/20 px-2 py-1 rounded transition-colors flex-1 text-center"
-                      title="Marcar Resuelto"
+                      title="Atender Incidente"
                     >
-                      Resuelto
+                      Atender
                     </button>
                     <button 
                       onClick={(e) => handleExportDetail(alert, e)}
