@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
-import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart } from 'lucide-react';
+import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
+  const userRole = user?.role || user?.role_code || '';
+  const isAdmin = userRole === 'rusertech_admin' || userRole === 'super_admin' || user?.permissions?.includes('admin_global');
+  const isManagerOrOwner = userRole === 'account_owner' || userRole === 'manager' || user?.permissions?.includes('manage_settings');
   const navigate = useNavigate();
   const location = useLocation();
   const [hasAlerts, setHasAlerts] = useState(false);
@@ -72,21 +75,28 @@ export const AppLayout: React.FC = () => {
               </a>
               <div className="flex gap-2 flex-wrap">
                 {[
-                  { path: '/map', label: 'Mapa Global', icon: Map },
-                  { path: '/alerts', label: 'Alertas', icon: Bell },
-                  { path: '/trips', label: 'Viajes', icon: Route },
-                  { path: '/vehicles', label: 'Vehículos', icon: Truck },
-                  { path: '/devices', label: 'Dispositivos', icon: Smartphone },
-                  { path: '/carriers', label: 'Transportistas', icon: Building2 },
-                  { path: '/drivers', label: 'Conductores', icon: Users },
-                  { path: '/locations', label: 'Ubicaciones', icon: MapPin },
-                  { path: '/routes', label: 'Recorridos', icon: Navigation },
-                  { path: '/avl', label: 'AVL', icon: Radio },
-                  { path: '/sensors', label: 'Sensores Clima', icon: Thermometer },
-                  { path: '/analytics', label: 'Analytics', icon: PieChart },
-                  { path: '/carbon', label: 'Emisiones', icon: Leaf },
-                  { path: '/simulator', label: 'Simulador', icon: Zap },
-                ].map(item => {
+                  { path: '/map', label: 'Mapa Global', icon: Map, perm: 'view_map' },
+                  { path: '/alerts', label: 'Alertas', icon: Bell, perm: 'view_alerts' },
+                  { path: '/trips', label: 'Viajes', icon: Route, perm: 'view_trips' },
+                  { path: '/vehicles', label: 'Vehículos', icon: Truck, perm: 'view_vehicles' },
+                  { path: '/devices', label: 'Dispositivos', icon: Smartphone, perm: 'view_devices' },
+                  { path: '/carriers', label: 'Transportistas', icon: Building2, perm: 'view_carriers' },
+                  { path: '/drivers', label: 'Conductores', icon: Users, perm: 'view_drivers' },
+                  { path: '/locations', label: 'Ubicaciones', icon: MapPin, perm: 'view_locations' },
+                  { path: '/routes', label: 'Recorridos', icon: Navigation, perm: 'view_locations' },
+                  { path: '/avl', label: 'AVL', icon: Radio, perm: 'view_avl' },
+                  { path: '/sensors', label: 'Sensores Clima', icon: Thermometer, perm: 'view_sensors' },
+                  { path: '/analytics', label: 'Analytics', icon: PieChart, perm: 'view_analytics' },
+                  { path: '/carbon', label: 'Emisiones', icon: Leaf, perm: 'view_carbon' },
+                  { path: '/simulator', label: 'Simulador', icon: Zap, perm: 'view_simulator' },
+                  ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: 'Config', icon: Settings, perm: 'view_settings' }] : []),
+                  ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Shield, perm: 'admin_global' }] : []),
+                ].filter(item => {
+                  if (userRole === 'super_admin') return true;
+                  // Si no hay permisos listados en el usuario, mostramos igual por seguridad temporal o lo bloqueamos
+                  if (!user?.permissions) return false;
+                  return user.permissions.includes(item.perm);
+                }).map(item => {
                   const isActive = location.pathname.startsWith(item.path);
                   const isAlerts = item.path === '/alerts' && hasAlerts;
 

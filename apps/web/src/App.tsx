@@ -3,6 +3,7 @@ import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicGuard } from './components/PublicGuard';
 import { PrivateGuard } from './components/PrivateGuard';
+import { ToastContainer } from './components/ToastContainer';
 
 import { HomePage } from './pages/public/HomePage';
 import { NosotrosPage } from './pages/public/NosotrosPage';
@@ -26,10 +27,13 @@ import { DevicesPage } from './pages/devices/DevicesPage';
 import { SensorsDashboardPage } from './pages/sensors/SensorsDashboardPage';
 import { AnalyticsDashboard } from './pages/analytics/AnalyticsDashboard';
 import { CarbonDashboard } from './pages/carbon/CarbonDashboard';
+import { AdminPage } from './pages/admin/AdminPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         
         {/* Rutas Públicas con PublicGuard y PublicLayout */}
@@ -62,6 +66,8 @@ function App() {
             <Route path="/sensors" element={<SensorsDashboardPage />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/carbon" element={<CarbonDashboard />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/simulator" element={<SimulatorPage />} />
           </Route>
         </Route>

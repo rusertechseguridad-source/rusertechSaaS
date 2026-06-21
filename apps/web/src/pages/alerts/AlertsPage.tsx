@@ -30,7 +30,7 @@ export const AlertsPage: React.FC = () => {
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      isAdmin = ['tenant_admin', 'admin', 'super_admin'].includes(payload.role_code);
+      isAdmin = ['tenant_admin', 'admin', 'super_admin', 'rusertech_admin'].includes(payload.role || payload.role_code);
     } catch(e) {}
   }
 
