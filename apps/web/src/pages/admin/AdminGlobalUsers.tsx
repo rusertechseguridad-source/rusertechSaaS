@@ -8,11 +8,7 @@ export const AdminGlobalUsers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'credentials'>('list');
-  const [credUsers, setCredUsers] = useState<any[]>([]);
-  const [credLoading, setCredLoading] = useState(false);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
-  const [searchCred, setSearchCred] = useState('');
 
   // Edit State
   const [editRoleCode, setEditRoleCode] = useState('');
@@ -118,23 +114,7 @@ export const AdminGlobalUsers: React.FC = () => {
     return 'inherit';
   };
 
-  const fetchCredentials = async () => {
-    setCredLoading(true);
-    try {
-      const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/users/credentials', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setCredUsers(await res.json());
-        setRevealedPasswords({});
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCredLoading(false);
-    }
-  };
+
 
   const handleResetPassword = async (userId: string, userEmail: string) => {
     if (!window.confirm(`¿Regenerar contraseña para ${userEmail}? La nueva clave temporal se mostrará aquí.`)) return;
@@ -161,11 +141,6 @@ export const AdminGlobalUsers: React.FC = () => {
     alert('¡Copiado al portapapeles!');
   };
 
-  const filteredCreds = credUsers.filter(u =>
-    u.email.toLowerCase().includes(searchCred.toLowerCase()) ||
-    (u.full_name && u.full_name.toLowerCase().includes(searchCred.toLowerCase()))
-  );
-
   const filtered = users.filter(u => 
     u.email.toLowerCase().includes(search.toLowerCase()) || 
     (u.full_name && u.full_name.toLowerCase().includes(search.toLowerCase())) ||
@@ -176,124 +151,19 @@ export const AdminGlobalUsers: React.FC = () => {
     <div className="h-full flex flex-col">
       <div className="bg-bgSurface border border-borderDefault rounded-xl shadow-card overflow-hidden flex-1 flex flex-col min-h-0">
         <div className="p-4 border-b border-borderDefault flex gap-4 items-center">
-          {viewMode === 'list' ? (
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, email o empresa..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
-              />
-            </div>
-          ) : (
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
-              <input
-                type="text"
-                placeholder="Buscar usuario..."
-                value={searchCred}
-                onChange={e => setSearchCred(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
-              />
-            </div>
-          )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${
-                viewMode === 'list' ? 'bg-accentBlue text-white' : 'bg-bgStart text-textMuted hover:text-white border border-borderDefault'
-              }`}
-            >
-              <Users className="w-4 h-4" /> Lista de Usuarios
-            </button>
-            <button
-              onClick={() => { setViewMode('credentials'); fetchCredentials(); }}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${
-                viewMode === 'credentials' ? 'bg-accentBlue text-white' : 'bg-bgStart text-textMuted hover:text-white border border-borderDefault'
-              }`}
-            >
-              <Key className="w-4 h-4" /> Gestión de Credenciales
-            </button>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email o empresa..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
+            />
           </div>
         </div>
 
-        {viewMode === 'credentials' ? (
-          <div className="overflow-x-auto flex-1 bg-bgSurface">
-            <div className="p-4 bg-yellow-500/5 border-b border-yellow-500/20 flex items-center gap-3">
-              <Key className="w-4 h-4 text-yellow-500" />
-              <p className="text-yellow-400 text-sm font-bold">Zona Sensible — Solo visible para rusertech_admin. Regenerar contraseña invalida la anterior inmediatamente.</p>
-              <button onClick={fetchCredentials} className="ml-auto p-2 text-textMuted hover:text-white rounded transition-colors" title="Refrescar lista"><RefreshCw className="w-4 h-4" /></button>
-            </div>
-            {credLoading ? (
-              <div className="p-8 text-center text-textMuted">Cargando credenciales...</div>
-            ) : (
-              <table className="w-full text-left">
-                <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">Usuario</th>
-                    <th className="px-6 py-4">Empresa</th>
-                    <th className="px-6 py-4">Rol</th>
-                    <th className="px-6 py-4">Email (User)</th>
-                    <th className="px-6 py-4">Último Login</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCreds.map(u => (
-                    <tr key={u.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-white">{u.full_name || 'Sin nombre'}</div>
-                        <div className="text-textMuted text-xs">{u.email}</div>
-                      </td>
-                      <td className="px-6 py-4 text-textSecondary text-sm">{u.tenant?.name || '—'}</td>
-                      <td className="px-6 py-4">
-                        <span className="bg-accentBlue/10 text-accentBlue border border-accentBlue/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold">
-                          {u.role?.name || u.role_code}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <code className="text-accentMint text-xs bg-bgStart px-2 py-1 rounded font-mono">{u.email}</code>
-                          <button onClick={() => copyToClipboard(u.email)} className="p-1 text-textMuted hover:text-white transition-colors" title="Copiar email">
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                        {revealedPasswords[u.id] && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <code className="text-yellow-400 text-xs bg-yellow-400/10 border border-yellow-400/20 px-2 py-1 rounded font-mono">{revealedPasswords[u.id]}</code>
-                            <button onClick={() => copyToClipboard(revealedPasswords[u.id])} className="p-1 text-textMuted hover:text-white transition-colors" title="Copiar contraseña">
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-textMuted text-xs">
-                        {u.last_login_at ? new Date(u.last_login_at).toLocaleString('es-AR') : 'Nunca'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                          u.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                        }`}>{u.status === 'active' ? 'Activo' : 'Suspendido'}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleResetPassword(u.id, u.email)}
-                          className="flex items-center gap-1.5 ml-auto px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 rounded text-xs font-bold transition-colors"
-                          title="Regenerar contraseña"
-                        >
-                          <RefreshCw className="w-3 h-3" /> Resetear Clave
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ) : (
+
         <div className="overflow-x-auto flex-1 bg-bgSurface">
           <table className="w-full text-left">
             <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
@@ -376,7 +246,6 @@ export const AdminGlobalUsers: React.FC = () => {
             </tbody>
           </table>
         </div>
-        )}
 
       </div>
 
@@ -397,18 +266,46 @@ export const AdminGlobalUsers: React.FC = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-              <div>
-                <label className="block text-sm font-bold text-textSecondary mb-2 uppercase">Rol Base (Plantilla)</label>
-                <select 
-                  value={editRoleCode} 
-                  onChange={e => setEditRoleCode(e.target.value)}
-                  className="w-full max-w-md p-2.5 bg-bgStart border border-borderDefault rounded-lg text-white text-sm"
-                >
-                  {roles.map(r => (
-                    <option key={r.code} value={r.code}>{r.name} ({r.code})</option>
-                  ))}
-                </select>
-                <p className="text-xs text-textMuted mt-2">El usuario heredará todos los permisos de este rol por defecto.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-textSecondary mb-2 uppercase">Rol Base (Plantilla)</label>
+                  <select 
+                    value={editRoleCode} 
+                    onChange={e => setEditRoleCode(e.target.value)}
+                    className="w-full p-2.5 bg-bgStart border border-borderDefault rounded-lg text-white text-sm"
+                  >
+                    {roles.map(r => (
+                      <option key={r.code} value={r.code}>{r.name} ({r.code})</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-textMuted mt-2">El usuario heredará todos los permisos de este rol por defecto.</p>
+                </div>
+
+                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-4 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Key className="w-4 h-4 text-yellow-500" />
+                    <label className="text-sm font-bold text-yellow-400 uppercase">Gestión de Credenciales</label>
+                  </div>
+                  <p className="text-xs text-textMuted mb-3">La clave no se puede visualizar por seguridad. Puedes revocarla y generar una nueva clave temporal.</p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleResetPassword(editingUser.id, editingUser.email)}
+                      className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Regenerar Clave
+                    </button>
+                    {revealedPasswords[editingUser.id] && (
+                      <div className="flex items-center gap-2">
+                        <code className="text-yellow-400 text-sm bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5 rounded-lg font-mono">
+                          {revealedPasswords[editingUser.id]}
+                        </code>
+                        <button onClick={() => copyToClipboard(revealedPasswords[editingUser.id])} className="p-2 text-textMuted hover:text-white transition-colors bg-bgStart rounded-lg" title="Copiar contraseña">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>
