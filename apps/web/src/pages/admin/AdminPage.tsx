@@ -3,8 +3,10 @@ import { ShieldCheck, Plus, Search, Building, Users, Play, Pause, Activity, Shie
 import { AdminGlobalUsers } from './AdminGlobalUsers';
 import { AdminRolesPermissions } from './AdminRolesPermissions';
 import { AdminSystemParameters } from './AdminSystemParameters';
+import { useTranslation } from 'react-i18next';
 
 export const AdminPage: React.FC = () => {
+  const { t } = useTranslation();
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -236,15 +238,15 @@ export const AdminPage: React.FC = () => {
             style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
           >
             <ShieldCheck className="w-8 h-8 mr-3 text-accentGreen" />
-            Panel Super Admin
+            {t('admin_tenants.title')}
           </h1>
-          <p className="text-textMuted mt-2">Gestión global de empresas y subscripciones</p>
+          <p className="text-textMuted mt-2">{t('admin_tenants.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
           className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20 transition-colors"
         >
-          <Plus className="w-5 h-5 mr-2" /> Nuevo Cliente
+          <Plus className="w-5 h-5 mr-2" /> {t('admin_tenants.new_tenant')}
         </button>
       </div>
 
@@ -254,25 +256,25 @@ export const AdminPage: React.FC = () => {
           onClick={() => setActiveTab('tenants')}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'tenants' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
-          <Building className="w-4 h-4 inline mr-2" /> Empresas (Tenants)
+          <Building className="w-4 h-4 inline mr-2" /> {t('admin.tab_tenants')}
         </button>
         <button 
           onClick={() => setActiveTab('users')}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'users' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
-          <Users className="w-4 h-4 inline mr-2" /> Usuarios Globales
+          <Users className="w-4 h-4 inline mr-2" /> {t('admin.tab_users_global')}
         </button>
         <button 
           onClick={() => setActiveTab('roles')}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'roles' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
-          <Shield className="w-4 h-4 inline mr-2" /> Roles y Permisos
+          <Shield className="w-4 h-4 inline mr-2" /> {t('admin.tab_roles')}
         </button>
         <button 
           onClick={() => setActiveTab('parameters')}
           className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'parameters' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
-          <Settings className="w-4 h-4 inline mr-2" /> Parámetros
+          <Settings className="w-4 h-4 inline mr-2" /> {t('admin.tab_parameters')}
         </button>
       </div>
 
@@ -283,7 +285,7 @@ export const AdminPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
             <input
               type="text"
-              placeholder="Buscar cliente por nombre o slug..."
+              placeholder={t('admin_tenants.search')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue transition-colors"
@@ -296,21 +298,21 @@ export const AdminPage: React.FC = () => {
             <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>
-                  <div className="flex items-center gap-2">Empresa / Slug <ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center gap-2">{t('admin_tenants.col_empresa')} <ArrowUpDown className="w-3 h-3" /></div>
                 </th>
                 <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>
-                  <div className="flex items-center gap-2">Estado <ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center gap-2">{t('admin_tenants.col_estado')} <ArrowUpDown className="w-3 h-3" /></div>
                 </th>
                 <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('plan')}>
-                  <div className="flex items-center gap-2">Plan <ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center gap-2">{t('admin_tenants.col_plan')} <ArrowUpDown className="w-3 h-3" /></div>
                 </th>
                 <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('users')}>
-                  <div className="flex items-center gap-2">Usuarios <ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center gap-2">{t('admin_tenants.col_usuarios')} <ArrowUpDown className="w-3 h-3" /></div>
                 </th>
                 <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('vehicles')}>
-                  <div className="flex items-center gap-2">Vehículos <ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center gap-2">{t('admin_tenants.col_vehiculos')} <ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="px-6 py-4 text-right">Acciones</th>
+                <th className="px-6 py-4 text-right">{t('admin_tenants.col_acciones')}</th>
               </tr>
             </thead>
             <tbody>
@@ -335,7 +337,7 @@ export const AdminPage: React.FC = () => {
                     <span className={`px-2.5 py-1 rounded text-xs font-bold ${
                       t.status === 'active' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
                     }`}>
-                      {t.status === 'active' ? 'ACTIVO' : 'SUSPENDIDO'}
+                      {t.status === 'active' ? t('admin_tenants.status_active') : t('admin_tenants.status_suspended')}
                     </span>
                   </td>
                   <td className="px-6 py-4">

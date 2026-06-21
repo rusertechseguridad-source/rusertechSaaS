@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Shield, Check, X, Search, Save } from 'lucide-react';
 import { PERMISSION_LIST } from '../../constants/permissions';
+import { useTranslation } from 'react-i18next';
+import { translateRole } from '../../utils/labels';
 
 export const AdminRolesPermissions: React.FC = () => {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<any>(null);
@@ -93,13 +96,13 @@ export const AdminRolesPermissions: React.FC = () => {
       });
       if (res.ok) {
         setRoles(roles.map(r => r.id === selectedRole.id ? selectedRole : r));
-        alert('Permisos guardados correctamente.');
+        alert(t('admin_roles.save_success'));
       } else {
-        alert('Error al guardar permisos.');
+        alert(t('admin_roles.save_error'));
       }
     } catch (err) {
       console.error(err);
-      alert('Error de conexión');
+      alert(t('admin_roles.error_conn'));
     }
   };
 
@@ -114,7 +117,7 @@ export const AdminRolesPermissions: React.FC = () => {
       <div className="w-1/3 bg-bgSurface border border-borderDefault rounded-xl shadow-card overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-accentBlue" /> Roles Globales
+            <Shield className="w-5 h-5 text-accentBlue" /> {t('admin_roles.title')}
           </h2>
           <button onClick={() => setShowModal(true)} className="p-1.5 bg-accentBlue/20 text-accentBlue hover:bg-accentBlue hover:text-white rounded transition-colors">
             <Plus className="w-4 h-4" />
@@ -122,7 +125,7 @@ export const AdminRolesPermissions: React.FC = () => {
         </div>
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
           {loading ? (
-            <p className="text-textMuted text-sm">Cargando roles...</p>
+            <p className="text-textMuted text-sm">{t('common.loading')}</p>
           ) : roles.map(role => (
             <button
               key={role.id}
@@ -133,10 +136,10 @@ export const AdminRolesPermissions: React.FC = () => {
                   : 'bg-bgStart border-borderDefault text-textSecondary hover:border-borderHighlight'
               }`}
             >
-              <div className="font-bold">{role.name}</div>
+              <div className="font-bold">{translateRole(role.name)}</div>
               <div className="text-xs opacity-70"><code>{role.code}</code></div>
               {role.is_system_role && (
-                <span className="inline-block mt-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-500 text-[10px] uppercase font-bold rounded">Sistema</span>
+                <span className="inline-block mt-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-500 text-[10px] uppercase font-bold rounded">{t('admin_roles.system')}</span>
               )}
             </button>
           ))}
@@ -150,15 +153,15 @@ export const AdminRolesPermissions: React.FC = () => {
             <div className="p-4 border-b border-borderDefault bg-bgStart flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-bold text-white">
-                  Permisos: <span className="text-accentBlue">{selectedRole.name}</span>
+                  {t('admin_roles.perms_title')} <span className="text-accentBlue">{translateRole(selectedRole.name)}</span>
                 </h2>
-                <p className="text-textMuted text-sm mt-1">Configura las habilitaciones base para todos los usuarios con este rol.</p>
+                <p className="text-textMuted text-sm mt-1">{t('admin_roles.subtitle')}</p>
                 
                 <div className="mt-4 relative max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
                   <input
                     type="text"
-                    placeholder="Buscar permiso..."
+                    placeholder={t('admin_roles.search')}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-bgSurface border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
@@ -169,7 +172,7 @@ export const AdminRolesPermissions: React.FC = () => {
                 onClick={handleSaveRole}
                 className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2"
               >
-                <Save className="w-4 h-4" /> Guardar Cambios
+                <Save className="w-4 h-4" /> {t('admin_roles.save')}
               </button>
             </div>
             
@@ -207,7 +210,7 @@ export const AdminRolesPermissions: React.FC = () => {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-textMuted">
             <Shield className="w-16 h-16 opacity-20 mb-4" />
-            <p>Selecciona un rol a la izquierda para configurar sus permisos</p>
+            <p>{t('admin_roles.empty_state')}</p>
           </div>
         )}
       </div>
@@ -216,20 +219,20 @@ export const AdminRolesPermissions: React.FC = () => {
         <div className="fixed inset-0 bg-bgOverlay z-[100] flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-sm shadow-card overflow-hidden">
             <div className="p-4 border-b border-borderDefault bg-bgStart">
-              <h2 className="text-lg font-bold text-white">Nuevo Rol</h2>
+              <h2 className="text-lg font-bold text-white">{t('admin_roles.new_role')}</h2>
             </div>
             <form onSubmit={handleCreateRole} className="p-4 flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Código del Rol</label>
+                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_roles.form_code')}</label>
                 <input required type="text" value={newRoleCode} onChange={e => setNewRoleCode(e.target.value)} placeholder="ej. analista_datos" className="w-full p-2 bg-bgStart border border-borderDefault rounded text-white text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Nombre Visible</label>
+                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_roles.form_name')}</label>
                 <input required type="text" value={newRoleName} onChange={e => setNewRoleName(e.target.value)} placeholder="Analista de Datos" className="w-full p-2 bg-bgStart border border-borderDefault rounded text-white text-sm" />
               </div>
               <div className="flex justify-end gap-3 mt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded">Crear</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">{t('admin_roles.cancel')}</button>
+                <button type="submit" className="px-4 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded">{t('admin_roles.create')}</button>
               </div>
             </form>
           </div>

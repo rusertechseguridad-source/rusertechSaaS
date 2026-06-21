@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit2, Trash2, Check, X, ShieldAlert, HelpCircle } from 'lucide-react';
 import { translateParameterKey } from '../../utils/labels';
+import { useTranslation } from 'react-i18next';
 
 export const AdminSystemParameters: React.FC = () => {
+  const { t } = useTranslation();
   const [parameters, setParameters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -78,7 +80,7 @@ export const AdminSystemParameters: React.FC = () => {
   };
 
   const handleDelete = async (id: string, paramKey: string) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar el parámetro ${paramKey}? Esto podría afectar el funcionamiento del sistema.`)) return;
+    if (!window.confirm(t('admin_params.confirm_delete', { paramKey }))) return;
     try {
       const token = localStorage.getItem('rusertech_token');
       const res = await fetch(`http://localhost:3000/api/v1/admin/parameters/${id}`, {
@@ -119,15 +121,15 @@ export const AdminSystemParameters: React.FC = () => {
         <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Settings className="w-5 h-5 text-accentBlue" /> Parámetros Globales del Sistema
+              <Settings className="w-5 h-5 text-accentBlue" /> {t('admin_params.title')}
             </h2>
-            <p className="text-xs text-textMuted mt-1">Configura las constantes y valores por defecto de la plataforma (Telemetría, AVL, Interfaz, etc.)</p>
+            <p className="text-xs text-textMuted mt-1">{t('admin_params.subtitle')}</p>
           </div>
           <button
             onClick={openNewModal}
             className="bg-accentBlue hover:bg-blue-600 text-white px-4 py-2 rounded font-bold flex items-center text-sm shadow-card transition-colors"
           >
-            <Plus className="w-4 h-4 mr-2" /> Nuevo Parámetro
+            <Plus className="w-4 h-4 mr-2" /> {t('admin_params.new_param')}
           </button>
         </div>
 
@@ -135,23 +137,23 @@ export const AdminSystemParameters: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4">Clave (Key)</th>
-                <th className="px-6 py-4">Valor</th>
-                <th className="px-6 py-4">Tipo</th>
-                <th className="px-6 py-4">Sobrescritura por Cliente</th>
-                <th className="px-6 py-4 text-right">Acciones</th>
+                <th className="px-6 py-4">{t('admin_params.col_key')}</th>
+                <th className="px-6 py-4">{t('admin_params.col_value')}</th>
+                <th className="px-6 py-4">{t('admin_params.col_type')}</th>
+                <th className="px-6 py-4">{t('admin_params.col_override')}</th>
+                <th className="px-6 py-4 text-right">{t('admin_params.col_actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-textMuted">Cargando parámetros...</td>
+                  <td colSpan={5} className="p-8 text-center text-textMuted">{t('common.loading')}</td>
                 </tr>
               ) : parameters.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-textMuted flex flex-col items-center">
                     <ShieldAlert className="w-8 h-8 mb-2 opacity-50" />
-                    No hay parámetros globales configurados.
+                    {t('admin_params.no_data')}
                   </td>
                 </tr>
               ) : parameters.map(p => (
@@ -179,15 +181,15 @@ export const AdminSystemParameters: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-xs uppercase font-bold px-2 py-1 rounded border ${p.is_editable_by_account_owner ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
-                      {p.is_editable_by_account_owner ? 'Permitido' : 'Denegado'}
+                      {p.is_editable_by_account_owner ? t('common.allowed') : t('common.denied')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEditModal(p)} className="p-2 bg-bgStart hover:bg-accentBlue/20 text-textMuted hover:text-accentBlue rounded transition-colors" title="Editar">
+                      <button onClick={() => openEditModal(p)} className="p-2 bg-bgStart hover:bg-accentBlue/20 text-textMuted hover:text-accentBlue rounded transition-colors" title={t('common.edit')}>
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(p.id, p.parameter_key)} className="p-2 bg-bgStart hover:bg-red-500/20 text-textMuted hover:text-red-500 rounded transition-colors" title="Eliminar">
+                      <button onClick={() => handleDelete(p.id, p.parameter_key)} className="p-2 bg-bgStart hover:bg-red-500/20 text-textMuted hover:text-red-500 rounded transition-colors" title={t('common.delete')}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -205,7 +207,7 @@ export const AdminSystemParameters: React.FC = () => {
             <div className="p-5 border-b border-borderDefault bg-bgStart flex justify-between items-center">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 {editingParam ? <Edit2 className="w-5 h-5 text-accentBlue" /> : <Plus className="w-5 h-5 text-accentBlue" />}
-                {editingParam ? 'Editar Parámetro' : 'Nuevo Parámetro Global'}
+                {editingParam ? t('admin_params.edit_title') : t('admin_params.new_title')}
               </h2>
               <button onClick={() => setShowModal(false)} className="p-2 text-textMuted hover:text-white rounded">
                 <X className="w-5 h-5" />
@@ -214,7 +216,7 @@ export const AdminSystemParameters: React.FC = () => {
             
             <form onSubmit={handleSave} className="p-6 flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Clave del Parámetro (Key)</label>
+                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_params.form_key')}</label>
                 <input 
                   required 
                   type="text" 
@@ -228,7 +230,7 @@ export const AdminSystemParameters: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Tipo de Dato</label>
+                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_params.form_type')}</label>
                   <select 
                     value={dataType} 
                     onChange={e => setDataType(e.target.value)} 
@@ -241,7 +243,7 @@ export const AdminSystemParameters: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Sobrescritura</label>
+                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_params.form_override')}</label>
                   <label className="flex items-center gap-2 p-2 border border-borderDefault bg-bgStart rounded cursor-pointer hover:border-accentBlue transition-colors">
                     <input 
                       type="checkbox" 
@@ -249,13 +251,13 @@ export const AdminSystemParameters: React.FC = () => {
                       onChange={e => setIsEditable(e.target.checked)}
                       className="rounded border-borderDefault text-accentBlue focus:ring-accentBlue bg-bgSurface"
                     />
-                    <span className="text-sm font-bold text-white">Permitir a Clientes</span>
+                    <span className="text-sm font-bold text-white">{t('admin_params.form_allow_clients')}</span>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Valor del Parámetro</label>
+                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_params.form_value')}</label>
                 {dataType === 'boolean' ? (
                   <select 
                     value={value} 

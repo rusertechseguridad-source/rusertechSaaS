@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Search, Edit2, Shield, Check, X, Minus, Pause, Play, Save, Key, RefreshCw, Eye, EyeOff, Copy, ArrowUpDown } from 'lucide-react';
 import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
+import { translateRole } from '../../utils/labels';
 
 export const AdminGlobalUsers: React.FC = () => {
   const { t } = useTranslation();
@@ -217,7 +218,7 @@ export const AdminGlobalUsers: React.FC = () => {
             >
               <option value="">{t('admin.all_roles')}</option>
               {roles.map(r => (
-                <option key={r.code} value={r.code}>{r.name}</option>
+                <option key={r.code} value={r.code}>{translateRole(r.name)}</option>
               ))}
             </select>
           </div>
@@ -271,7 +272,7 @@ export const AdminGlobalUsers: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="px-2.5 py-1 rounded text-xs font-bold bg-accentBlue/10 text-accentBlue border border-accentBlue/20 uppercase">
-                      {u.role?.name || u.role_code}
+                      {translateRole(u.role?.name || u.role_code)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -341,7 +342,7 @@ export const AdminGlobalUsers: React.FC = () => {
                     className="w-full p-2.5 bg-bgStart border border-borderDefault rounded-lg text-white text-sm"
                   >
                     {roles.map(r => (
-                      <option key={r.code} value={r.code}>{r.name} ({r.code})</option>
+                      <option key={r.code} value={r.code}>{translateRole(r.name)} ({r.code})</option>
                     ))}
                   </select>
                   <p className="text-xs text-textMuted mt-2">{t('admin.base_role_help')}</p>

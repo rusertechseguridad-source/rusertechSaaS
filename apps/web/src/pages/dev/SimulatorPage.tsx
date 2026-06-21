@@ -14,7 +14,7 @@ export const SimulatorPage: React.FC = () => {
         </h1>
         <p className="text-textMuted mt-2">Generador de eventos GPS y telemetría para pruebas y desarrollo.</p>
       </div>
-      <RequirePermission permission="dev:simulator">
+      <RequirePermission permission="view_simulator">
         <div className="flex-1 bg-bgSurface rounded-xl overflow-hidden shadow-card border border-borderDefault p-4">
           <SimulatorPanel />
         </div>
