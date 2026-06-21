@@ -6,13 +6,14 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
 import { SensorConfigModal } from '../sensors/SensorConfigModal';
 import { TripModal } from './TripModal';
+import { LinkVehicleModal } from './LinkVehicleModal';
 import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 export const TripDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getTrip, updateTrip } = useTripsStore();
+  const { getTrip, updateTrip, getLinkedVehicles, unlinkVehicle } = useTripsStore();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -25,6 +26,9 @@ export const TripDetailsPage: React.FC = () => {
   const [operatorLogs, setOperatorLogs] = useState<any[]>([]);
   const [newLogText, setNewLogText] = useState('');
   const [loadingLogs, setLoadingLogs] = useState(false);
+
+  const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
+  const [showLinkModal, setShowLinkModal] = useState(false);
 
   // Sort / type state for events and logs
   const [eventSort, setEventSort] = useState<'newest' | 'oldest'>('newest');
@@ -79,8 +83,30 @@ export const TripDetailsPage: React.FC = () => {
       
       // Load logs asynchronously
       loadLogs(tripId);
+      // Load linked vehicles asynchronously
+      loadLinkedVehicles(tripId);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLinkedVehicles = async (tripId: string) => {
+    try {
+      const data = await getLinkedVehicles(tripId);
+      setLinkedVehicles(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUnlinkVehicle = async (vehicleId: string) => {
+    if (!trip || !window.confirm('¿Está seguro que desea desenlazar este vehículo del viaje?')) return;
+    try {
+      await unlinkVehicle(trip.id, vehicleId);
+      loadLinkedVehicles(trip.id);
+    } catch (e) {
+      console.error(e);
+      alert('Error al desenlazar el vehículo');
     }
   };
 
@@ -625,6 +651,52 @@ export const TripDetailsPage: React.FC = () => {
               </div>
             );
           })()}
+
+          {/* Vehículos Enlazados */}
+          <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0 mt-3">
+            <div className="flex justify-between items-center mb-2 border-b border-borderDefault pb-1.5">
+              <h3 className="text-xs font-bold text-accentBlue uppercase tracking-wider flex items-center gap-2">
+                <LinkIcon className="w-3 h-3 text-accentBlue" />
+                Vehículos Enlazados
+              </h3>
+              <button
+                onClick={() => setShowLinkModal(true)}
+                className="text-[10px] bg-accentBlue/10 hover:bg-accentBlue/20 text-accentBlue font-bold px-2 py-1 rounded transition-colors"
+                title="Enlazar nuevo vehículo"
+              >
+                + Enlazar
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {linkedVehicles.length === 0 ? (
+                <div className="text-center text-textMuted text-xs py-2">
+                  No hay vehículos enlazados a este viaje.
+                </div>
+              ) : (
+                linkedVehicles.map(lv => (
+                  <div key={lv.id} className="bg-bgStart border border-borderDefault/50 rounded p-2 flex items-center justify-between group">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-bgSurfaceHigh p-1.5 rounded text-textMuted">
+                        <Truck className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white leading-tight">{lv.vehicle?.plate}</div>
+                        <div className="text-[9px] text-textSecondary uppercase tracking-wider">{lv.link_type}</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleUnlinkVehicle(lv.vehicle_id)}
+                      className="text-textMuted hover:text-statusDanger transition-colors p-1 opacity-0 group-hover:opacity-100"
+                      title="Desenlazar vehículo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* COLUMNA DERECHA: EVENTOS Y MAPA */}
@@ -908,6 +980,7 @@ export const TripDetailsPage: React.FC = () => {
         tripToEdit={trip}
         onSaved={() => loadTrip(trip.id)}
       />
+      {showLinkModal && <LinkVehicleModal tripId={trip.id} onClose={() => setShowLinkModal(false)} onSuccess={() => { setShowLinkModal(false); loadLinkedVehicles(trip.id); }} />}
     </div>
   );
 };

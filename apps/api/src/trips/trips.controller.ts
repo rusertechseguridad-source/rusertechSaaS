@@ -54,4 +54,20 @@ export class TripsController {
   addLog(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
     return this.tripsService.addLog(id, data.text, user);
   }
+  @Get(':id/linked-vehicles')
+  getLinkedVehicles(@Param('id') id: string) {
+    return this.tripsService.getLinkedVehicles(id);
+  }
+
+  @Post(':id/linked-vehicles')
+  @RequirePermissions('trips:manage')
+  linkVehicle(@Param('id') id: string, @Body() data: any) {
+    return this.tripsService.linkVehicle(id, data.vehicle_id, data.link_type, data.notes);
+  }
+
+  @Delete(':id/linked-vehicles/:vehicleId')
+  @RequirePermissions('trips:manage')
+  unlinkVehicle(@Param('id') id: string, @Param('vehicleId') vehicleId: string) {
+    return this.tripsService.unlinkVehicle(id, vehicleId);
+  }
 }

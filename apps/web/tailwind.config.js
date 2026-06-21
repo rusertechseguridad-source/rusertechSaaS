@@ -20,9 +20,9 @@ export default {
         accentBlue: '#2AB3FF',
 
         // Texto
-        textPrimary: '#E5E7EB',
-        textSecondary: '#9CA3AF',
-        textMuted: '#6B7280',
+        textPrimary: '#FFFFFF',
+        textSecondary: 'rgba(255, 255, 255, 0.85)',
+        textMuted: 'rgba(255, 255, 255, 0.7)',
         textOnAccent: '#1F2A5A',
 
         // Símbolo del ícono

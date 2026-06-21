@@ -40,47 +40,40 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
 
 export function translateAlertType(rawType: string | undefined | null): string {
   if (!rawType) return '—';
-  const key = rawType.toUpperCase().trim();
-  return ALERT_TYPE_LABELS[key] ?? rawType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  
+  // If the translation exists in i18n, return it. Otherwise return a formatted raw string.
+  const translated = i18n.t(`labels.alert_types.${rawType}`, { defaultValue: '' });
+  if (translated) return translated;
+  
+  return rawType
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 // ─── System Parameter Keys ────────────────────────────────────────────────────
-const PARAMETER_LABELS: Record<string, string> = {
-  ALERT_EMAIL_SENDER:          'Remitente de Alertas por Email',
-  DEFAULT_LANGUAGE:            'Idioma por Defecto',
-  DEFAULT_TIMEZONE:            'Zona Horaria por Defecto',
-  DISTANCE_UNIT:               'Unidad de Distancia',
-  SPEED_UNIT:                  'Unidad de Velocidad',
-  VOLUME_UNIT:                 'Unidad de Volumen',
-  GPS_DRIFT_FILTER_METERS:     'Filtro de Deriva GPS (metros)',
-  IDLING_TIMEOUT_MIN:          'Tiempo de Inactividad (minutos)',
-  MAP_DEFAULT_CENTER:          'Centro Inicial del Mapa',
-  MAP_DEFAULT_ZOOM:            'Zoom Inicial del Mapa',
-  MIN_GPS_REPORT_INTERVAL_SEC: 'Intervalo Mínimo de Reporte GPS (seg)',
-  OFFLINE_DEVICE_TIMEOUT_MIN:  'Tiempo para Dispositivo Offline (min)',
-  OVERSPEED_TOLERANCE_KPH:     'Tolerancia de Velocidad (km/h)',
-  SESSION_TIMEOUT_MINUTES:     'Tiempo de Sesión (minutos)',
-  TELEMETRY_RETENTION_DAYS:    'Retención de Telemetría (días)',
-};
 
 export function translateParameterKey(rawKey: string | undefined | null): string {
-  if (!rawKey) return '—';
-  const key = rawKey.toUpperCase().trim();
-  return PARAMETER_LABELS[key] ?? rawKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  if (!rawKey) return 'Desconocido';
+  
+  const translated = i18n.t(`labels.params.${rawKey}`, { defaultValue: '' });
+  if (translated) return translated;
+
+  return rawKey
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 // ─── Role names ───────────────────────────────────────────────────────────────
-const ROLE_LABELS: Record<string, string> = {
-  rusertech_admin: 'Administrador Rusertech',
-  admin_master:    'Administrador Master',
-  account_owner:   'Dueño de Cuenta',
-  manager:         'Gerente / Jefe de Flota',
-  operator:        'Operador de Monitoreo',
-  viewer:          'Auditor (Solo Lectura)',
-  driver:          'Conductor',
-};
 
 export function translateRole(rawRole: string | undefined | null): string {
   if (!rawRole) return '—';
-  return ROLE_LABELS[rawRole] ?? rawRole.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const roleStr = rawRole.toLowerCase();
+  if (roleStr.includes('admin')) return 'Administrador';
+  if (roleStr.includes('manager')) return 'Gerente / Manager';
+  if (roleStr.includes('operator')) return 'Operador';
+  if (roleStr.includes('viewer')) return 'Auditor (Solo Lectura)';
+  if (roleStr.includes('owner')) return 'Dueño de Cuenta';
+  return rawRole.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

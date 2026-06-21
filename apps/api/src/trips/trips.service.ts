@@ -327,4 +327,54 @@ export class TripsService {
       }
     });
   }
+
+  // --- LINKED VEHICLES ---
+
+  async getLinkedVehicles(tripId: string) {
+    return this.prisma.tripLinkedVehicle.findMany({
+      where: { trip_id: tripId },
+      include: {
+        vehicle: true,
+      },
+      orderBy: { linked_at: 'asc' }
+    });
+  }
+
+  async linkVehicle(tripId: string, vehicleId: string, linkType: string = 'support', notes?: string) {
+    const existing = await this.prisma.tripLinkedVehicle.findFirst({
+      where: { trip_id: tripId, vehicle_id: vehicleId }
+    });
+
+    if (existing) {
+      throw new BadRequestException('El vehículo ya está enlazado a este viaje.');
+    }
+
+    // Get vehicle to link its device if it has one
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId }
+    });
+
+    return this.prisma.tripLinkedVehicle.create({
+      data: {
+        trip_id: tripId,
+        vehicle_id: vehicleId,
+        device_id: vehicle?.device_id || null,
+        link_type: linkType,
+        notes: notes || null
+      },
+      include: {
+        vehicle: true
+      }
+    });
+  }
+
+  async unlinkVehicle(tripId: string, vehicleId: string) {
+    await this.prisma.tripLinkedVehicle.deleteMany({
+      where: {
+        trip_id: tripId,
+        vehicle_id: vehicleId
+      }
+    });
+    return { success: true };
+  }
 }

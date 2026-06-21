@@ -179,6 +179,7 @@ model Vehicle {
   image_side_url            String?     @db.VarChar(500)
   carbon_logs               CarbonLog[]
   event_logs                EventLog[]
+  linked_to_trips           TripLinkedVehicle[]
   trips                     Trip[]
   avl_user                  AvlUser?    @relation(fields: [avl_user_id], references: [id])
   carrier                   Carrier?    @relation(fields: [carrier_id], references: [id])
@@ -262,6 +263,7 @@ model Device {
   avl_user        AvlUser?   @relation(fields: [avl_user_id], references: [id])
   operation       Operation? @relation(fields: [operation_id], references: [id])
   tenant          Tenant     @relation(fields: [tenant_id], references: [id])
+  linked_to_trips TripLinkedVehicle[]
   trips           Trip[]
 
   @@unique([tenant_id, imei])
@@ -365,6 +367,7 @@ model Trip {
   trip_events             TripEvent[]
   trip_risk_history       TripRiskHistory[]
   trip_risk_levels        TripRiskLevel?
+  linked_vehicles         TripLinkedVehicle[]
   created_by              User                 @relation(fields: [created_by_user_id], references: [id])
   destination_location    SavedLocation?       @relation("TripDestinationLocation", fields: [destination_location_id], references: [id])
   device                  Device?              @relation(fields: [device_id], references: [id])
@@ -377,6 +380,22 @@ model Trip {
   carrier                 Carrier?             @relation(fields: [carrier_id], references: [id])
 
   @@map("trips")
+}
+
+model TripLinkedVehicle {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  trip_id    String   @db.Uuid
+  vehicle_id String   @db.Uuid
+  device_id  String?  @db.Uuid
+  link_type  String   @default("support") @db.VarChar(30)
+  notes      String?  @db.VarChar(500)
+  linked_at  DateTime @default(now()) @db.Timestamptz(6)
+  
+  trip       Trip     @relation(fields: [trip_id], references: [id])
+  vehicle    Vehicle  @relation(fields: [vehicle_id], references: [id])
+  device     Device?  @relation(fields: [device_id], references: [id])
+
+  @@map("trip_linked_vehicles")
 }
 
 model TripEvent {

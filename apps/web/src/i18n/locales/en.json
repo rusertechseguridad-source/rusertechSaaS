@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "map": "Global Map",
+    "alerts": "Alerts",
+    "trips": "Trips",
+    "vehicles": "Vehicles",
+    "devices": "Devices",
+    "carriers": "Carriers",
+    "drivers": "Drivers",
+    "locations": "Locations",
+    "routes": "Routes",
+    "avl": "AVL",
+    "sensors": "Climate Sensors",
+    "analytics": "Analytics",
+    "carbon": "Emissions",
+    "simulator": "Simulator",
+    "settings": "Settings",
+    "admin": "Administration",
+    "logout": "Log Out"
+  },
+  "labels": {
+    "alert_types": {
+      "GEOFENCE_EXIT": "Geofence Exit",
+      "GEOFENCE_ENTER": "Geofence Enter",
+      "OVERSPEED": "Overspeed",
+      "PANIC_BUTTON": "Panic Button",
+      "DEVICE_OFFLINE": "Device Offline",
+      "SENSOR_TEMPERATURE_CRITICAL": "Critical Temperature",
+      "SENSOR_HUMIDITY_CRITICAL": "Critical Humidity"
+    },
+    "params": {
+      "MAP_DEFAULT_CENTER": "Map Default Center",
+      "MAP_DEFAULT_ZOOM": "Map Default Zoom",
+      "MIN_GPS_REPORT_INTERVAL_SEC": "Min GPS Report Interval (sec)",
+      "OFFLINE_DEVICE_TIMEOUT_MIN": "Offline Device Timeout (min)",
+      "OVERSPEED_TOLERANCE_KPH": "Overspeed Tolerance (km/h)",
+      "SESSION_TIMEOUT_MINUTES": "Session Timeout (min)",
+      "TELEMETRY_RETENTION_DAYS": "Telemetry Retention (days)",
+      "LINKED_VEHICLE_SEPARATION_ALERT_METERS": "Linked Vehicle Alert Distance (m)"
+    }
+  }
+}

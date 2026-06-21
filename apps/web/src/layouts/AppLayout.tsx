@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
 import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings } from 'lucide-react';
@@ -11,6 +12,7 @@ export const AppLayout: React.FC = () => {
   const isManagerOrOwner = userRole === 'account_owner' || userRole === 'manager' || user?.permissions?.includes('manage_settings');
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   const [hasAlerts, setHasAlerts] = useState(false);
 
   useEffect(() => {
@@ -71,22 +73,22 @@ export const AppLayout: React.FC = () => {
             {/* Nav links */}
             <div className="flex gap-0.5 flex-wrap flex-1 min-w-0">
               {[
-                { path: '/map', label: 'Mapa Global', icon: Map, perm: 'view_map' },
-                { path: '/alerts', label: 'Alertas', icon: Bell, perm: 'view_alerts' },
-                { path: '/trips', label: 'Viajes', icon: Route, perm: 'view_trips' },
-                { path: '/vehicles', label: 'Vehículos', icon: Truck, perm: 'view_vehicles' },
-                { path: '/devices', label: 'Dispositivos', icon: Smartphone, perm: 'view_devices' },
-                { path: '/carriers', label: 'Transportistas', icon: Building2, perm: 'view_carriers' },
-                { path: '/drivers', label: 'Conductores', icon: Users, perm: 'view_drivers' },
-                { path: '/locations', label: 'Ubicaciones', icon: MapPin, perm: 'view_locations' },
-                { path: '/routes', label: 'Recorridos', icon: Navigation, perm: 'view_locations' },
-                { path: '/avl', label: 'AVL', icon: Radio, perm: 'view_avl' },
-                { path: '/sensors', label: 'Sensores Clima', icon: Thermometer, perm: 'view_sensors' },
-                { path: '/analytics', label: 'Analytics', icon: PieChart, perm: 'view_analytics' },
-                { path: '/carbon', label: 'Emisiones', icon: Leaf, perm: 'view_carbon' },
-                { path: '/simulator', label: 'Simulador', icon: Zap, perm: 'view_simulator' },
-                ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: 'Configuración', icon: Settings, perm: 'view_settings' }] : []),
-                ...(isAdmin ? [{ path: '/admin', label: 'Administración', icon: Shield, perm: 'admin_global' }] : []),
+                { path: '/map', label: t('nav.map'), icon: Map, perm: 'view_map' },
+                { path: '/alerts', label: t('nav.alerts'), icon: Bell, perm: 'view_alerts' },
+                { path: '/trips', label: t('nav.trips'), icon: Route, perm: 'view_trips' },
+                { path: '/vehicles', label: t('nav.vehicles'), icon: Truck, perm: 'view_vehicles' },
+                { path: '/devices', label: t('nav.devices'), icon: Smartphone, perm: 'view_devices' },
+                { path: '/carriers', label: t('nav.carriers'), icon: Building2, perm: 'view_carriers' },
+                { path: '/drivers', label: t('nav.drivers'), icon: Users, perm: 'view_drivers' },
+                { path: '/locations', label: t('nav.locations'), icon: MapPin, perm: 'view_locations' },
+                { path: '/routes', label: t('nav.routes'), icon: Navigation, perm: 'view_locations' },
+                { path: '/avl', label: t('nav.avl'), icon: Radio, perm: 'view_avl' },
+                { path: '/sensors', label: t('nav.sensors'), icon: Thermometer, perm: 'view_sensors' },
+                { path: '/analytics', label: t('nav.analytics'), icon: PieChart, perm: 'view_analytics' },
+                { path: '/carbon', label: t('nav.carbon'), icon: Leaf, perm: 'view_carbon' },
+                { path: '/simulator', label: t('nav.simulator'), icon: Zap, perm: 'view_simulator' },
+                ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: t('nav.settings'), icon: Settings, perm: 'view_settings' }] : []),
+                ...(isAdmin ? [{ path: '/admin', label: t('nav.admin'), icon: Shield, perm: 'admin_global' }] : []),
               ].filter(item => {
                 if (userRole === 'super_admin') return true;
                 if (!user?.permissions) return false;
@@ -131,10 +133,20 @@ export const AppLayout: React.FC = () => {
               <span className="text-xs text-white/50 hidden lg:block truncate max-w-[140px]">
                 {user?.email}
               </span>
+              
+              {/* Language Switcher */}
+              <button
+                onClick={() => i18n.changeLanguage(i18n.language.startsWith('es') ? 'en' : 'es')}
+                className="flex items-center justify-center w-7 h-7 text-[10px] font-bold text-white/60 hover:text-white border border-white/20 hover:border-white/50 rounded transition-colors"
+                title="Cambiar idioma / Change language"
+              >
+                {i18n.language.startsWith('es') ? 'EN' : 'ES'}
+              </button>
+
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-1.5 text-white/40 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
-                title="Cerrar sesión"
+                title={t('nav.logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>

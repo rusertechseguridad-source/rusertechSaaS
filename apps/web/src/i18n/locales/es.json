@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "map": "Mapa Global",
+    "alerts": "Alertas",
+    "trips": "Viajes",
+    "vehicles": "Vehículos",
+    "devices": "Dispositivos",
+    "carriers": "Transportistas",
+    "drivers": "Conductores",
+    "locations": "Ubicaciones",
+    "routes": "Recorridos",
+    "avl": "AVL",
+    "sensors": "Sensores Clima",
+    "analytics": "Analytics",
+    "carbon": "Emisiones",
+    "simulator": "Simulador",
+    "settings": "Configuración",
+    "admin": "Administración",
+    "logout": "Cerrar sesión"
+  },
+  "labels": {
+    "alert_types": {
+      "GEOFENCE_EXIT": "Salida de Geocerca",
+      "GEOFENCE_ENTER": "Ingreso a Geocerca",
+      "OVERSPEED": "Exceso de Velocidad",
+      "PANIC_BUTTON": "Botón de Pánico",
+      "DEVICE_OFFLINE": "Dispositivo Offline",
+      "SENSOR_TEMPERATURE_CRITICAL": "Temperatura Crítica",
+      "SENSOR_HUMIDITY_CRITICAL": "Humedad Crítica"
+    },
+    "params": {
+      "MAP_DEFAULT_CENTER": "Centro Inicial del Mapa",
+      "MAP_DEFAULT_ZOOM": "Zoom Inicial del Mapa",
+      "MIN_GPS_REPORT_INTERVAL_SEC": "Intervalo Mínimo de Reporte GPS (seg)",
+      "OFFLINE_DEVICE_TIMEOUT_MIN": "Tiempo para Dispositivo Offline (min)",
+      "OVERSPEED_TOLERANCE_KPH": "Tolerancia de Velocidad (km/h)",
+      "SESSION_TIMEOUT_MINUTES": "Tiempo de Sesión (minutos)",
+      "TELEMETRY_RETENTION_DAYS": "Retención de Telemetría (días)",
+      "LINKED_VEHICLE_SEPARATION_ALERT_METERS": "Distancia Alerta Enlace (metros)"
+    }
+  }
+}

@@ -32,6 +32,9 @@ interface TripsState {
   updateTrip: (id: string, data: Partial<Trip>) => Promise<void>;
   deleteTrip: (id: string) => Promise<void>;
   getTrip: (id: string) => Promise<Trip | null>;
+  getLinkedVehicles: (tripId: string) => Promise<any[]>;
+  linkVehicle: (tripId: string, data: any) => Promise<any>;
+  unlinkVehicle: (tripId: string, vehicleId: string) => Promise<void>;
 }
 
 export const useTripsStore = create<TripsState>((set, get) => ({
@@ -103,11 +106,55 @@ export const useTripsStore = create<TripsState>((set, get) => ({
       const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
-      if (!res.ok) throw new Error('Error al obtener detalle del viaje');
+      if (!res.ok) return null;
       return await res.json();
     } catch (e) {
       console.error(e);
       return null;
+    }
+  },
+  getLinkedVehicles: async (tripId: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al obtener vehículos enlazados');
+      return await res.json();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+  linkVehicle: async (tripId: string, data: any) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al enlazar vehículo');
+      }
+      return await res.json();
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    }
+  },
+  unlinkVehicle: async (tripId: string, vehicleId: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles/${vehicleId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al desenlazar vehículo');
+    } catch (e: any) {
+      console.error(e);
+      throw e;
     }
   }
 }));
