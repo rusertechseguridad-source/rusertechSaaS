@@ -92,7 +92,8 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     fetchProfile();
-    if (user?.role === 'account_owner' || user?.role === 'manager') {
+    const role = user?.role || user?.role_code;
+    if (role === 'account_owner' || role === 'manager' || role === 'rusertech_admin' || role === 'admin_master_rusertech') {
       fetchUsers();
       fetchConfigs();
     }
