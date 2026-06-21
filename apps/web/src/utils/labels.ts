@@ -39,10 +39,12 @@ export function translateParameterKey(rawKey: string | undefined | null): string
 export function translateRole(rawRole: string | undefined | null): string {
   if (!rawRole) return '—';
   const roleStr = rawRole.toLowerCase();
-  if (roleStr.includes('admin')) return 'Administrador';
-  if (roleStr.includes('manager')) return 'Gerente / Manager';
-  if (roleStr.includes('operator')) return 'Operador';
-  if (roleStr.includes('viewer')) return 'Auditor (Solo Lectura)';
-  if (roleStr.includes('owner')) return 'Dueño de Cuenta';
+  
+  if (roleStr.includes('admin')) return i18n.t('labels.roles.admin');
+  if (roleStr.includes('manager')) return i18n.t('labels.roles.manager');
+  if (roleStr.includes('operator')) return i18n.t('labels.roles.operator');
+  if (roleStr.includes('viewer')) return i18n.t('labels.roles.viewer');
+  if (roleStr.includes('owner')) return i18n.t('labels.roles.owner');
+  
   return rawRole.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
