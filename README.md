@@ -11,7 +11,7 @@ Actualmente, el proyecto ha completado las fases de infraestructura base, sitio 
 - **Infraestructura Core:** Backend NestJS, Frontend React+Vite, Base de datos PostgreSQL (Supabase) + Prisma.
 - **Mapa Global:** Mapa en tiempo real (MapLibre GL JS) con seguimiento de viajes, vehículos y eventos.
 - **Módulos Administrativos:** Gestión de Alertas, Viajes, Vehículos, Dispositivos, Locaciones, Sensores, etc.
-- **Internacionalización (i18n):** Plataforma 100% bilingüe (Español / Inglés) con cambio en tiempo real.
+- **Internacionalización (i18n):** Plataforma 100% bilingüe (Español / Inglés) con cambio en tiempo real, incluyendo módulos de administración global (Super Admin) y configuración de empresa.
 - **Seguridad y Accesos (RBAC + Entity-Based):**
   - Roles de usuario (Owner, Manager, Operator, Viewer).
   - Control de accesos granular por entidades: Los usuarios *Viewers* pueden ser restringidos a visualizar únicamente patentes (vehículos) y centros logísticos específicos. El backend asegura y filtra nativamente los registros a través de JWT y Prisma.
