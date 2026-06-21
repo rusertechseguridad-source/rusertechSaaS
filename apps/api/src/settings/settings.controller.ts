@@ -5,7 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('api/v1/settings')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
@@ -53,28 +53,6 @@ export class SettingsController {
     return this.settingsService.toggleUserStatus(tenantId, userId, isActive);
   }
 
-  // --- PARAMETERS ---
-  @Get('parameters')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
-  async getParameters(@Req() req: Request) {
-    const { tenantId } = (req as any).user;
-    return this.settingsService.getParameters(tenantId);
-  }
-
-  @Put('parameters')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
-  async updateParameter(@Req() req: Request, @Body() body: { key: string, value: string }) {
-    const { tenantId, sub } = (req as any).user;
-    return this.settingsService.updateParameter(tenantId, body.key, body.value, sub);
-  }
-
-  @Post('parameters/restore')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
-  async restoreParameterDefault(@Req() req: Request, @Body() body: { key: string }) {
-    const { tenantId, sub } = (req as any).user;
-    return this.settingsService.restoreParameterDefault(tenantId, body.key, sub);
-  }
-
   // --- SETTINGS JSON (Notifications & Carbon) ---
   @Get('notifications')
   @Roles('account_owner', 'manager', 'rusertech_admin')
@@ -108,8 +86,11 @@ export class SettingsController {
   @Get('parameters')
   @UseGuards(JwtAuthGuard)
   async getTenantParameters(@Req() req: Request) {
-    const { tenantId } = (req as any).user;
-    return this.settingsService.getTenantParameters(tenantId);
+    const { tenantId, id, role_code } = (req as any).user;
+    console.log(`[SettingsController] getTenantParameters called for user ${id}, role ${role_code}, tenant ${tenantId}`);
+    const params = await this.settingsService.getTenantParameters(tenantId);
+    console.log(`[SettingsController] Returning ${params.length} parameters`);
+    return params;
   }
 
   @Put('parameters')
