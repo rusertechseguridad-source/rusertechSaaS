@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Edit2, Shield, Check, X, Minus, Pause, Play, Save, Key, RefreshCw, Eye, EyeOff, Copy } from 'lucide-react';
+import { Users, Search, Edit2, Shield, Check, X, Minus, Pause, Play, Save, Key, RefreshCw, Eye, EyeOff, Copy, ArrowUpDown } from 'lucide-react';
 import { PERMISSION_LIST } from '../../constants/permissions';
 
 export const AdminGlobalUsers: React.FC = () => {
@@ -9,6 +9,11 @@ export const AdminGlobalUsers: React.FC = () => {
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
+  const [roleFilter, setRoleFilter] = useState('');
+  
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<string>('full_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Edit State
   const [editRoleCode, setEditRoleCode] = useState('');
@@ -141,11 +146,42 @@ export const AdminGlobalUsers: React.FC = () => {
     alert('¡Copiado al portapapeles!');
   };
 
-  const filtered = users.filter(u => 
-    u.email.toLowerCase().includes(search.toLowerCase()) || 
-    (u.full_name && u.full_name.toLowerCase().includes(search.toLowerCase())) ||
-    (u.tenant?.name && u.tenant.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = users.filter(u => {
+    const matchesSearch = u.email.toLowerCase().includes(search.toLowerCase()) || 
+      (u.full_name && u.full_name.toLowerCase().includes(search.toLowerCase())) ||
+      (u.tenant?.name && u.tenant.name.toLowerCase().includes(search.toLowerCase()));
+    const matchesRole = roleFilter === '' || u.role_code === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const sortedUsers = [...filtered].sort((a, b) => {
+    let valA = '';
+    let valB = '';
+    
+    if (sortColumn === 'full_name') {
+      valA = a.full_name || a.email || '';
+      valB = b.full_name || b.email || '';
+    } else if (sortColumn === 'tenant') {
+      valA = a.tenant?.name || '';
+      valB = b.tenant?.name || '';
+    } else if (sortColumn === 'role') {
+      valA = a.role?.name || a.role_code || '';
+      valB = b.role?.name || b.role_code || '';
+    }
+    
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -161,6 +197,19 @@ export const AdminGlobalUsers: React.FC = () => {
               className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
             />
           </div>
+          
+          <div className="flex-1 max-w-xs">
+            <select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="w-full px-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
+            >
+              <option value="">Todos los Roles</option>
+              {roles.map(r => (
+                <option key={r.code} value={r.code}>{r.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
 
@@ -168,9 +217,15 @@ export const AdminGlobalUsers: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4">Usuario</th>
-                <th className="px-6 py-4">Empresa (Tenant)</th>
-                <th className="px-6 py-4">Rol Base</th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('full_name')}>
+                  <div className="flex items-center gap-2">Usuario <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('tenant')}>
+                  <div className="flex items-center gap-2">Empresa (Tenant) <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('role')}>
+                  <div className="flex items-center gap-2">Rol Base <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
                 <th className="px-6 py-4">Permisos Override</th>
                 <th className="px-6 py-4 text-right">Acciones</th>
               </tr>
@@ -180,7 +235,7 @@ export const AdminGlobalUsers: React.FC = () => {
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-textMuted">Cargando usuarios globales...</td>
                 </tr>
-              ) : filtered.map(u => (
+              ) : sortedUsers.map(u => (
                 <tr key={u.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
@@ -286,7 +341,7 @@ export const AdminGlobalUsers: React.FC = () => {
                     <Key className="w-4 h-4 text-yellow-500" />
                     <label className="text-sm font-bold text-yellow-400 uppercase">Gestión de Credenciales</label>
                   </div>
-                  <p className="text-xs text-textMuted mb-3">La clave no se puede visualizar por seguridad. Puedes revocarla y generar una nueva clave temporal.</p>
+                  <p className="text-xs text-white/80 mb-3">La clave actual no se puede visualizar por seguridad (está encriptada). Si el usuario la olvidó, puedes revocarla y generar una nueva clave temporal aquí.</p>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleResetPassword(editingUser.id, editingUser.email)}

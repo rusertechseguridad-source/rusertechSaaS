@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Search, Building, Users, Play, Pause, Activity, Shield, Edit2, X, Check } from 'lucide-react';
+import { ShieldCheck, Plus, Search, Building, Users, Play, Pause, Activity, Shield, Edit2, X, Check, ArrowUpDown } from 'lucide-react';
 import { AdminGlobalUsers } from './AdminGlobalUsers';
 import { AdminRolesPermissions } from './AdminRolesPermissions';
 
@@ -9,6 +9,13 @@ export const AdminPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'roles'>('tenants');
+
+  // Sorting
+  const [sortColumn, setSortColumn] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  const [userSortColumn, setUserSortColumn] = useState<string>('full_name');
+  const [userSortDirection, setUserSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Form
   const [name, setName] = useState('');
@@ -155,6 +162,70 @@ export const AdminPage: React.FC = () => {
 
   const filtered = tenants.filter(t => t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase()));
 
+  const sortedTenants = [...filtered].sort((a, b) => {
+    let valA = '';
+    let valB = '';
+    
+    if (sortColumn === 'name') {
+      valA = a.name.toLowerCase();
+      valB = b.name.toLowerCase();
+    } else if (sortColumn === 'status') {
+      valA = a.status;
+      valB = b.status;
+    } else if (sortColumn === 'plan') {
+      valA = a.plan;
+      valB = b.plan;
+    } else if (sortColumn === 'users') {
+      valA = a.user_count?.toString() || '0';
+      valB = b.user_count?.toString() || '0';
+    } else if (sortColumn === 'vehicles') {
+      valA = a.vehicle_count?.toString() || '0';
+      valB = b.vehicle_count?.toString() || '0';
+    }
+    
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedTenantUsers = [...editingTenantUsers].sort((a, b) => {
+    let valA = '';
+    let valB = '';
+    
+    if (userSortColumn === 'full_name') {
+      valA = a.full_name || a.email || '';
+      valB = b.full_name || b.email || '';
+    } else if (userSortColumn === 'role') {
+      valA = a.role_code || '';
+      valB = b.role_code || '';
+    } else if (userSortColumn === 'status') {
+      valA = a.status || '';
+      valB = b.status || '';
+    }
+    
+    if (valA < valB) return userSortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return userSortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleUserSort = (column: string) => {
+    if (userSortColumn === column) {
+      setUserSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setUserSortColumn(column);
+      setUserSortDirection('asc');
+    }
+  };
+
   return (
     <div className="p-8 h-full w-full flex flex-col">
       <div className="flex justify-between items-center mb-6 shrink-0">
@@ -217,11 +288,21 @@ export const AdminPage: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4">Empresa / Slug</th>
-                <th className="px-6 py-4">Estado</th>
-                <th className="px-6 py-4">Plan</th>
-                <th className="px-6 py-4">Usuarios</th>
-                <th className="px-6 py-4">Vehículos</th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>
+                  <div className="flex items-center gap-2">Empresa / Slug <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('status')}>
+                  <div className="flex items-center gap-2">Estado <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('plan')}>
+                  <div className="flex items-center gap-2">Plan <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('users')}>
+                  <div className="flex items-center gap-2">Usuarios <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('vehicles')}>
+                  <div className="flex items-center gap-2">Vehículos <ArrowUpDown className="w-3 h-3" /></div>
+                </th>
                 <th className="px-6 py-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -230,7 +311,7 @@ export const AdminPage: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-textMuted">Cargando...</td>
                 </tr>
-              ) : filtered.map(t => (
+              ) : sortedTenants.map(t => (
                 <tr key={t.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -397,14 +478,20 @@ export const AdminPage: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-bgSurface text-textMuted font-bold uppercase sticky top-0">
                       <tr>
-                        <th className="px-4 py-2">Nombre / Email</th>
-                        <th className="px-4 py-2">Rol</th>
-                        <th className="px-4 py-2">Estado</th>
+                        <th className="px-4 py-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleUserSort('full_name')}>
+                          <div className="flex items-center gap-2">Nombre / Email <ArrowUpDown className="w-3 h-3" /></div>
+                        </th>
+                        <th className="px-4 py-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleUserSort('role')}>
+                          <div className="flex items-center gap-2">Rol <ArrowUpDown className="w-3 h-3" /></div>
+                        </th>
+                        <th className="px-4 py-2 cursor-pointer hover:text-white transition-colors" onClick={() => handleUserSort('status')}>
+                          <div className="flex items-center gap-2">Estado <ArrowUpDown className="w-3 h-3" /></div>
+                        </th>
                         <th className="px-4 py-2 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {editingTenantUsers.map(u => (
+                      {sortedTenantUsers.map(u => (
                         <tr key={u.id} className="border-t border-borderDefault hover:bg-bgSurface transition-colors">
                           <td className="px-4 py-2">
                             <div className="font-bold text-white">{u.full_name || 'Sin nombre'}</div>
