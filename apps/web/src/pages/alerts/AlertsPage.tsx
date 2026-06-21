@@ -3,6 +3,7 @@ import { AlertTriangle, MapPin, Truck, ExternalLink, RefreshCw, AlertCircle, Che
 import { Link } from 'react-router-dom';
 import { useAlertsStore } from '../../store/alertsStore';
 import { exportToCsv } from '../../utils/export';
+import { translateAlertType } from '../../utils/labels';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
@@ -170,23 +171,8 @@ export const AlertsPage: React.FC = () => {
     setTenantSettings(await res.json());
   };
 
-  // Helper to translate event types
-  const translateEvent = (eventType: string) => {
-    const types: Record<string, string> = {
-      'SPEED_VIOLATION': 'EXCESO DE VELOCIDAD',
-      'POSITION': 'POSICIÓN',
-      'HARSH_ACCELERATION': 'ACELERACIÓN BRUSCA',
-      'HARSH_BRAKING': 'FRENADA BRUSCA',
-      'HARSH_CORNERING': 'GIRO BRUSCO',
-      'JAMMING': 'INTERFERENCIA DE SEÑAL',
-      'GEOFENCE_ENTER': 'ENTRADA A GEOFENCE',
-      'GEOFENCE_EXIT': 'SALIDA DE GEOFENCE',
-      'POWER_CUT': 'CORTE DE CORRIENTE',
-      'TEMPERATURE_HIGH': 'TEMPERATURA ALTA',
-      'TEMPERATURE_LOW': 'TEMPERATURA BAJA'
-    };
-    return types[eventType.toUpperCase()] || eventType.replace(/_/g, ' ').toUpperCase();
-  };
+  // Helper to translate event types — uses central label dictionary
+  const translateEvent = (eventType: string) => translateAlertType(eventType);
 
   const getEventColor = (eventType: string) => {
     const configuredSeverityId = tenantSettings?.alert_colors?.[eventType];
@@ -396,7 +382,7 @@ export const AlertsPage: React.FC = () => {
             <div className="absolute top-4 left-4 z-10 bg-bgSurfaceHigh/90 backdrop-blur-sm border border-borderDefault p-3 rounded-xl shadow-lg max-w-sm">
               <div className="font-bold text-white text-sm uppercase flex items-center gap-2 mb-1">
                 <AlertCircle className="w-4 h-4 text-red-500" />
-                {selectedAlert.event_type.replace(/_/g, ' ')}
+                {translateAlertType(selectedAlert.event_type)}
               </div>
               <div className="text-xs text-textSecondary mb-2">
                 {selectedAlert.address || 'Ubicación desconocida'}

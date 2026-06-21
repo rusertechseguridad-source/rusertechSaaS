@@ -89,8 +89,8 @@ export const AppLayout: React.FC = () => {
                   { path: '/analytics', label: 'Analytics', icon: PieChart, perm: 'view_analytics' },
                   { path: '/carbon', label: 'Emisiones', icon: Leaf, perm: 'view_carbon' },
                   { path: '/simulator', label: 'Simulador', icon: Zap, perm: 'view_simulator' },
-                  ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: 'Config', icon: Settings, perm: 'view_settings' }] : []),
-                  ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: Shield, perm: 'admin_global' }] : []),
+                  ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: 'Configuración', icon: Settings, perm: 'view_settings' }] : []),
+                  ...(isAdmin ? [{ path: '/admin', label: 'Administración', icon: Shield, perm: 'admin_global' }] : []),
                 ].filter(item => {
                   if (userRole === 'super_admin') return true;
                   // Si no hay permisos listados en el usuario, mostramos igual por seguridad temporal o lo bloqueamos

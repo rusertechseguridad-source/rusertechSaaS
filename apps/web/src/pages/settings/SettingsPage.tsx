@@ -3,6 +3,7 @@ import { Settings, Building, Users, Sliders, Bell, Leaf, MapPin, ExternalLink, U
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
+import { translateParameterKey } from '../../utils/labels';
 
 export const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -486,8 +487,8 @@ export const SettingsPage: React.FC = () => {
                 {parameters.map((p) => (
                   <div key={p.parameter_key} className="flex items-center justify-between bg-bgStart border border-borderDefault p-4 rounded-xl">
                     <div className="flex-1">
-                      <div className="font-bold text-white mb-1 flex items-center gap-2">
-                        {p.parameter_key}
+                      <div className="font-bold text-white mb-0.5 flex items-center gap-2">
+                        {translateParameterKey(p.parameter_key)}
                         {!p.has_override && <span className="text-accentBlue text-lg leading-none" title="Valor por defecto">*</span>}
                         {p.description && (
                           <div title={p.description} className="cursor-help text-textMuted hover:text-white transition-colors">
@@ -495,6 +496,7 @@ export const SettingsPage: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      <code className="text-[10px] text-accentBlue/50 font-mono">{p.parameter_key}</code>
                     </div>
                     <div className="w-64 flex items-center gap-3">
                       <input 
