@@ -74,7 +74,7 @@ export const AppLayout: React.FC = () => {
             </div>
 
             {/* Center: Nav links perfectly centered */}
-            <div className="flex-auto flex justify-center items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
+            <div className="flex-auto flex justify-center items-center gap-2 min-w-0 overflow-x-auto no-scrollbar px-2">
               {[
                 { path: '/map', label: t('nav.map'), icon: Map, perm: 'view_map' },
                 { path: '/alerts', label: t('nav.alerts'), icon: Bell, perm: 'view_alerts' },
@@ -104,7 +104,7 @@ export const AppLayout: React.FC = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex flex-col items-center justify-center gap-1 px-1 py-1.5 rounded-lg transition-all duration-150 group relative flex-shrink-0 w-[74px] ${
+                    className={`flex flex-col items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-150 group relative flex-shrink-0 min-w-[78px] max-w-[86px] ${
                       isAlerts
                         ? 'bg-red-600/40 text-white border border-red-500 shadow-[0_0_14px_rgba(255,0,0,0.7)] animate-pulse'
                         : isActive
