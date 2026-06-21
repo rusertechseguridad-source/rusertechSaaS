@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User } from 'lucide-react';
+import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User, Sliders, Bell } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
@@ -293,67 +293,67 @@ export const SettingsPage: React.FC = () => {
         <div className="w-64 shrink-0 flex flex-col gap-2">
           <button 
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
               activeTab === 'profile' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
             }`}
           >
-            <Building className="w-5 h-5" /> Mi Empresa
+            <Building className="w-5 h-5" /> {t('settings.tab_my_company')}
           </button>
           {((user?.role || user?.role_code) === 'account_owner' || (user?.role || user?.role_code) === 'manager' || (user?.role || user?.role_code) === 'rusertech_admin') && (
             <>
               <button 
                 onClick={() => setActiveTab('users')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
                   activeTab === 'users' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
                 }`}
               >
-                <Users className="w-5 h-5" /> Usuarios
+                <Users className="w-5 h-5" /> {t('settings.tab_users_local')}
               </button>
 
               <button 
                 onClick={() => navigate('/avl')}
-                className="flex items-center justify-between px-4 py-3 rounded-lg font-bold transition-all bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault"
+                className="flex items-center justify-between px-4 py-3 rounded-lg font-bold transition-all text-left w-full bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault"
               >
                 <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5" /> Prestadores / AVL
+                  <MapPin className="w-5 h-5" /> {t('settings.tab_providers')}
                 </div>
                 <ExternalLink className="w-4 h-4 opacity-50" />
               </button>
 
               <button 
                 onClick={() => setActiveTab('parameters')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
                   activeTab === 'parameters' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
                 }`}
               >
-                <Sliders className="w-5 h-5" /> Parámetros del Sistema
+                <Sliders className="w-5 h-5" /> {t('settings.tab_parameters')}
               </button>
 
               <button 
                 onClick={() => setActiveTab('notifications')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
                   activeTab === 'notifications' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
                 }`}
               >
-                <Bell className="w-5 h-5" /> Notificaciones
+                <Bell className="w-5 h-5" /> {t('settings.tab_notifications')}
               </button>
 
               <button 
                 onClick={() => setActiveTab('carbon')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
                   activeTab === 'carbon' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
                 }`}
               >
-                <Leaf className="w-5 h-5" /> Huella de Carbono
+                <Leaf className="w-5 h-5" /> {t('settings.tab_carbon')}
               </button>
 
               <button 
                 onClick={() => setActiveTab('forwarding')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
                   activeTab === 'forwarding' ? 'bg-accentBlue/20 text-accentBlue border border-accentBlue/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
                 }`}
               >
-                <MapPin className="w-5 h-5" /> Reenvío (Forwarding)
+                <MapPin className="w-5 h-5" /> {t('settings.tab_forwarding')}
               </button>
             </>
           )}
@@ -364,7 +364,7 @@ export const SettingsPage: React.FC = () => {
           
           {activeTab === 'profile' && (
             <div className="max-w-xl">
-              <h2 className="text-xl font-bold text-white mb-6 border-b border-borderDefault pb-4">Datos de la Empresa</h2>
+              <h2 className="text-xl font-bold text-white mb-6 border-b border-borderDefault pb-4">{t('settings.my_company')}</h2>
               <form onSubmit={handleUpdateProfile} className="space-y-6">
                 <div>
                   <label className="block text-xs font-bold text-textSecondary mb-2 uppercase tracking-wider">Nombre de la Empresa</label>
@@ -389,7 +389,7 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'users' && (
             <div>
               <div className="flex items-center justify-between mb-6 border-b border-borderDefault pb-4">
-                <h2 className="text-xl font-bold text-white">Gestión de Usuarios</h2>
+                <h2 className="text-xl font-bold text-white">{t('settings.tab_users')}</h2>
               </div>
               
               <div className="grid grid-cols-3 gap-6">
@@ -398,9 +398,9 @@ export const SettingsPage: React.FC = () => {
                   <table className="w-full text-left">
                     <thead className="bg-bgStart border-b border-borderDefault text-xs font-bold text-textMuted uppercase tracking-wider">
                       <tr>
-                        <th className="px-6 py-4">Usuario</th>
-                        <th className="px-6 py-4">Rol</th>
-                        <th className="px-6 py-4 text-right">Estado</th>
+                        <th className="px-6 py-4">{t('settings.users_user')}</th>
+                        <th className="px-6 py-4">{t('settings.users_role')}</th>
+                        <th className="px-6 py-4 text-right">{t('settings.users_status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -417,10 +417,10 @@ export const SettingsPage: React.FC = () => {
                               disabled={u.email === user?.email || !canManageUsers}
                               className="bg-bgStart border border-borderDefault text-white text-xs rounded p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <option value="account_owner">Propietario</option>
-                              <option value="manager">Manager</option>
-                              <option value="operator">Operador</option>
-                              <option value="viewer">Visualizador</option>
+                              <option value="account_owner">{t('settings.users_role_owner')}</option>
+                              <option value="manager">{t('settings.users_role_manager')}</option>
+                              <option value="operator">{t('settings.users_role_operator')}</option>
+                              <option value="viewer">{t('settings.users_role_viewer')}</option>
                             </select>
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -436,7 +436,7 @@ export const SettingsPage: React.FC = () => {
                                     }}
                                     disabled={u.email === user?.email}
                                     className="p-1.5 text-accentBlue hover:bg-accentBlue/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Editar Usuario"
+                                    title={t('settings.users_edit')}
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
@@ -447,13 +447,13 @@ export const SettingsPage: React.FC = () => {
                                       u.status === 'active' ? 'bg-orange-500/10 text-orange-500 border-orange-500/30 hover:bg-orange-500/20' : 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                                   >
-                                    {u.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                    {u.status === 'active' ? t('settings.users_suspend') : t('settings.users_reactivate')}
                                   </button>
                                   <button
                                     onClick={() => deleteUser(u.id)}
                                     disabled={u.email === user?.email}
                                     className="p-1.5 text-red-500 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Eliminar Usuario"
+                                    title={t('settings.users_delete')}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -463,7 +463,7 @@ export const SettingsPage: React.FC = () => {
                                 <span className={`px-2 py-1 rounded text-[10px] font-bold ${
                                   u.status === 'active' ? 'text-green-500' : 'text-orange-500'
                                 }`}>
-                                  {u.status === 'active' ? 'ACTIVO' : 'SUSPENDIDO'}
+                                  {u.status === 'active' ? t('settings.users_active') : t('settings.users_suspended')}
                                 </span>
                               )}
                             </div>
@@ -479,27 +479,27 @@ export const SettingsPage: React.FC = () => {
                   <div className="col-span-1 bg-bgStart border border-borderDefault rounded-xl p-5 h-fit">
                     <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                       <User className="w-4 h-4 text-accentBlue" />
-                      Invitar Usuario
+                      {t('settings.users_invite')}
                     </h3>
                     <form onSubmit={handleInvite} className="flex flex-col gap-4">
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">Nombre Completo</label>
+                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">{t('settings.users_full_name')}</label>
                         <input required type="text" value={inviteName} onChange={e => setInviteName(e.target.value)} className="w-full p-2 text-sm bg-bgSurface border border-borderDefault rounded text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">Correo Electrónico</label>
+                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">{t('settings.users_email')}</label>
                         <input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className="w-full p-2 text-sm bg-bgSurface border border-borderDefault rounded text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">Rol</label>
+                        <label className="block text-[10px] uppercase font-bold text-textMuted mb-1">{t('settings.users_role')}</label>
                         <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="w-full p-2 text-sm bg-bgSurface border border-borderDefault rounded text-white">
-                          <option value="manager">Manager</option>
-                          <option value="operator">Operador</option>
-                          <option value="viewer">Visualizador</option>
+                          <option value="manager">{t('settings.users_role_manager')}</option>
+                          <option value="operator">{t('settings.users_role_operator')}</option>
+                          <option value="viewer">{t('settings.users_role_viewer')}</option>
                         </select>
                       </div>
                       <button type="submit" className="mt-2 w-full py-2 bg-white text-black font-bold text-sm rounded transition-colors hover:bg-gray-200">
-                        Enviar Invitación
+                        {t('settings.users_invite_btn')}
                       </button>
                     </form>
                   </div>
@@ -511,8 +511,15 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'parameters' && (
             <div>
               <div className="flex items-center justify-between mb-6 border-b border-borderDefault pb-4">
-                <h2 className="text-xl font-bold text-white">Parámetros del Sistema</h2>
-                <p className="text-textMuted text-sm">Cambios aplican de inmediato en el motor. Valores con <span className="text-accentBlue">*</span> son heredados globales.</p>
+                <h2 className="text-xl font-bold text-white">{t('settings.tab_parameters')}</h2>
+                <p className="text-textMuted text-sm">
+                  {t('settings.params_desc').split('*').map((part, i, arr) => (
+                    <React.Fragment key={i}>
+                      {part}
+                      {i < arr.length - 1 && <span className="text-accentBlue">*</span>}
+                    </React.Fragment>
+                  ))}
+                </p>
               </div>
               <div className="space-y-6 max-w-4xl">
                 {parameters.map((p) => (
@@ -546,16 +553,16 @@ export const SettingsPage: React.FC = () => {
                         <button 
                           onClick={() => restoreParameter(p.parameter_key)}
                           className="text-xs text-textSecondary hover:text-accentBlue underline"
-                          title="Restaurar al valor global por defecto"
+                          title={t('settings.parameters_restore')}
                         >
-                          Restaurar
+                          {t('settings.parameters_restore')}
                         </button>
                       )}
                     </div>
                   </div>
                 ))}
                 {parameters.length === 0 && (
-                  <div className="text-center p-8 text-textMuted">No hay parámetros configurables disponibles.</div>
+                  <div className="text-center p-8 text-textMuted">{t('settings.params_empty')}</div>
                 )}
               </div>
             </div>
@@ -569,7 +576,7 @@ export const SettingsPage: React.FC = () => {
 
           {activeTab === 'carbon' && (
             <div className="max-w-xl">
-              <h2 className="text-xl font-bold text-white mb-6 border-b border-borderDefault pb-4">Integración de Huella de Carbono</h2>
+              <h2 className="text-xl font-bold text-white mb-6 border-b border-borderDefault pb-4">{t('settings.carbon_footprint')}</h2>
               <form onSubmit={saveCarbonConfig} className="space-y-6">
                 <div className="bg-bgStart p-5 border border-borderDefault rounded-xl space-y-4">
                   <h3 className="font-bold text-white flex items-center gap-2">
@@ -584,7 +591,7 @@ export const SettingsPage: React.FC = () => {
                       onChange={e => setClimatiqConfig({...climatiqConfig, enabled: e.target.checked})}
                       className="w-5 h-5 accent-green-500"
                     />
-                    <label htmlFor="climatiq-enabled" className="text-white font-bold cursor-pointer">Activar cálculos de emisiones por consumo</label>
+                    <label htmlFor="climatiq-enabled" className="text-white font-bold cursor-pointer">{t('settings.carbon_enable')}</label>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-textSecondary mb-2 uppercase mt-4">API Key (Climatiq)</label>
@@ -597,7 +604,7 @@ export const SettingsPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                <button type="submit" className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors">Guardar Integración</button>
+                <button type="submit" className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors">{t('settings.carbon_save')}</button>
               </form>
             </div>
           )}
@@ -605,7 +612,7 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'forwarding' && (
             <div>
               <div className="flex items-center justify-between mb-6 border-b border-borderDefault pb-4">
-                <h2 className="text-xl font-bold text-white">Reenvío de Posiciones (Forwarding)</h2>
+                <h2 className="text-xl font-bold text-white">{t('settings.tab_forwarding')}</h2>
               </div>
               
               <div className="grid grid-cols-3 gap-6">

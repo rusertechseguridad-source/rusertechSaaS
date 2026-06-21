@@ -3,6 +3,7 @@ import {
   Bell, Plus, Trash2, ToggleLeft, ToggleRight, Mail, MessageSquare,
   Webhook, Smartphone, X, Check, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const CHANNEL_TYPE_ICONS: Record<string, React.ReactNode> = {
   email:     <Mail className="w-4 h-4" />,
@@ -39,6 +40,7 @@ interface Channel {
 const defaultForm = { name: '', channel_type: 'email', target: '', events: [] as string[], config: {} };
 
 export const NotificationChannelsTab: React.FC = () => {
+  const { t } = useTranslation();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -116,31 +118,31 @@ export const NotificationChannelsTab: React.FC = () => {
     if (res.ok) fetchChannels();
   };
 
-  const deleteChannel = async (id: string) => {
-    if (!confirm('¿Eliminar este canal de notificación?')) return;
-    const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/notifications/channels/${id}`, {
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t('settings_notifications.confirm_delete'))) return;
+    try {
+      const token = localStorage.getItem('rusertech_token');
+      const res = await fetch(`http://localhost:3000/api/v1/notifications/channels/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) fetchChannels();
+    } catch(err) { console.error(err); }
   };
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex justify-between items-center shrink-0">
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Bell className="w-5 h-5 text-accentBlue" /> Canales de Notificación
-          </h3>
-          <p className="text-sm text-textMuted mt-1">
-            Crea múltiples canales para alertas, reportes, vencimientos y eventos del sistema.
-          </p>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Bell className="w-5 h-5 text-accentBlue" /> {t('settings_notifications.title')}
+          </h2>
+          <p className="text-xs text-textMuted mt-1">{t('settings_notifications.subtitle')}</p>
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors"
+          className="bg-accentBlue hover:bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm flex items-center transition-colors"
         >
-          <Plus className="w-4 h-4" /> Nuevo Canal
+          <Plus className="w-4 h-4 mr-2" /> {t('settings_notifications.new_channel')}
         </button>
       </div>
 
@@ -149,8 +151,7 @@ export const NotificationChannelsTab: React.FC = () => {
       ) : channels.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-textMuted bg-bgStart rounded-xl border border-borderDefault border-dashed p-12">
           <Bell className="w-12 h-12 opacity-20 mb-4" />
-          <p className="font-bold">Sin canales de notificación</p>
-          <p className="text-sm mt-1">Crea tu primer canal para recibir alertas por email, WhatsApp o webhooks.</p>
+          <p className="font-bold">{t('settings_notifications.no_channels')}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3 overflow-y-auto flex-1">
@@ -190,7 +191,7 @@ export const NotificationChannelsTab: React.FC = () => {
                 <button onClick={() => openEdit(ch)} className="p-1.5 text-textMuted hover:text-accentBlue rounded transition-colors" title="Editar">
                   <Bell className="w-4 h-4" />
                 </button>
-                <button onClick={() => deleteChannel(ch.id)} className="p-1.5 text-textMuted hover:text-statusDanger rounded transition-colors" title="Eliminar">
+                <button onClick={() => handleDelete(ch.id)} className="p-1.5 text-textMuted hover:text-statusDanger rounded transition-colors" title="Eliminar">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -203,63 +204,55 @@ export const NotificationChannelsTab: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-[100] flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-2xl shadow-card overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-borderDefault bg-bgStart flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="p-4 border-b border-borderDefault bg-bgStart flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Bell className="w-5 h-5 text-accentBlue" />
-                {editingChannel ? 'Editar Canal' : 'Nuevo Canal de Notificación'}
+                {editingChannel ? t('common.edit') : t('settings_notifications.new_channel')}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 text-textMuted hover:text-white rounded">
+              <button onClick={() => setShowModal(false)} className="text-textMuted hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
-              {/* Nombre */}
-              <div>
-                <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Nombre del Canal</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ej: Alertas Críticas WhatsApp, Reportes Email Gerencia"
-                  className="w-full p-2.5 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
-                />
-              </div>
-
-              {/* Tipo + Destino */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-2">
                 <div>
-                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">Tipo de Canal</label>
-                  <select
-                    value={form.channel_type}
-                    onChange={e => setForm(f => ({ ...f, channel_type: e.target.value }))}
-                    className="w-full p-2.5 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
-                  >
-                    <option value="email">📧 Email</option>
-                    <option value="sms">📱 SMS</option>
-                    <option value="whatsapp">💬 WhatsApp</option>
-                    <option value="webhook">🔗 Webhook</option>
-                    <option value="push">🔔 Push Notification</option>
-                  </select>
+                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('settings_notifications.form_name')}</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder={t('settings_notifications.form_desc')}
+                    className="w-full px-3 py-2 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">
-                    {form.channel_type === 'webhook' ? 'URL del Endpoint' : form.channel_type === 'email' ? 'Dirección de Email' : 'Número de Teléfono'}
-                  </label>
+                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('settings_notifications.form_type')}</label>
+                  <select
+                    value={form.channel_type}
+                    onChange={e => setForm(f => ({ ...f, channel_type: e.target.value, target: '' }))}
+                    className="w-full px-3 py-2 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
+                  >
+                    {Object.entries(CHANNEL_TYPE_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('settings_notifications.form_dest')}</label>
                   <input
                     type="text"
                     value={form.target}
                     onChange={e => setForm(f => ({ ...f, target: e.target.value }))}
-                    placeholder={form.channel_type === 'webhook' ? 'https://mi-sistema.com/hook' : form.channel_type === 'email' ? 'notificaciones@empresa.com' : '+549XXXXXXXXXX'}
-                    className="w-full p-2.5 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
+                    placeholder={form.channel_type === 'email' ? 'ej: admin@empresa.com' : form.channel_type === 'webhook' ? 'https://...' : '+5491100000000'}
+                    className="w-full px-3 py-2 bg-bgStart border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue font-mono"
                   />
                 </div>
               </div>
 
-              {/* Eventos */}
               <div>
                 <label className="block text-xs font-bold text-textSecondary mb-3 uppercase">
-                  Eventos que Disparan esta Notificación
+                  {t('settings_notifications.form_events')}
                   <span className="ml-2 text-accentBlue">({form.events.length} seleccionados)</span>
                 </label>
                 <div className="flex flex-col gap-2">
@@ -305,14 +298,14 @@ export const NotificationChannelsTab: React.FC = () => {
 
             <div className="p-4 border-t border-borderDefault bg-bgStart flex justify-end gap-3 shrink-0">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">
-                Cancelar
+                {t('settings_notifications.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? 'Guardando...' : <><Check className="w-4 h-4" /> {editingChannel ? 'Actualizar Canal' : 'Crear Canal'}</>}
+                {saving ? t('common.loading') : <><Check className="w-4 h-4" /> {t('settings_notifications.save')}</>}
               </button>
             </div>
           </div>
