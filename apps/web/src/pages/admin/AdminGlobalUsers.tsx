@@ -28,10 +28,19 @@ export const AdminGlobalUsers: React.FC = () => {
         fetch('http://localhost:3000/api/v1/admin/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('http://localhost:3000/api/v1/admin/roles', { headers: { Authorization: `Bearer ${token}` } })
       ]);
-      
       if (uRes.ok && rRes.ok) {
         setUsers(await uRes.json());
-        setRoles(await rRes.json());
+        
+        let fetchedRoles = await rRes.json();
+        const roleOrder = ['rusertech_admin', 'account_owner', 'manager', 'operator', 'viewer', 'driver'];
+        fetchedRoles.sort((a: any, b: any) => {
+          let idxA = roleOrder.indexOf(a.code);
+          let idxB = roleOrder.indexOf(b.code);
+          if (idxA === -1) idxA = 999;
+          if (idxB === -1) idxB = 999;
+          return idxA - idxB;
+        });
+        setRoles(fetchedRoles);
       }
     } catch (err) {
       console.error(err);
