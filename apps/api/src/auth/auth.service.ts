@@ -21,13 +21,18 @@ export class AuthService {
   }
 
   async login(user: any) {
+    const basePermissions = user.role?.permissions || [];
+    const granted = user.granted_permissions || [];
+    const revoked = user.revoked_permissions || [];
+    const finalPermissions = Array.from(new Set([...basePermissions, ...granted])).filter(p => !revoked.includes(p));
+
     // Generar claims para el JWT
     const payload = { 
       email: user.email, 
       sub: user.id, 
       tenantId: user.tenant_id,
       role: user.role_code,
-      permissions: user.role?.permissions || []
+      permissions: finalPermissions
     };
     
     return {
@@ -38,7 +43,7 @@ export class AuthService {
         full_name: user.full_name,
         tenant_id: user.tenant_id,
         role: user.role_code,
-        permissions: user.role?.permissions || []
+        permissions: finalPermissions
       }
     };
   }
