@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CarbonService } from '../carbon/carbon.service';
 
@@ -31,9 +31,21 @@ export class TripsService {
     return dto;
   }
 
-  async findAll(tenantId: string) {
+  async findAll(user: any) {
+    let restrictions = undefined;
+    if (user?.role === 'viewer') {
+      const fullUser = await this.prisma.user.findUnique({ where: { id: user.id }, select: { entity_restrictions: true } });
+      const er = fullUser?.entity_restrictions as any;
+      if (er && Array.isArray(er.vehicles) && er.vehicles.length > 0) {
+        restrictions = { vehicle_id: { in: er.vehicles } };
+      }
+    }
+
     const trips = await this.prisma.trip.findMany({
-      where: { tenant_id: tenantId },
+      where: { 
+        tenant_id: user.tenantId,
+        ...restrictions
+      },
       include: {
         vehicle: {
           include: { avl_user: true, carrier: true }
@@ -358,7 +370,6 @@ export class TripsService {
       data: {
         trip_id: tripId,
         vehicle_id: vehicleId,
-        device_id: vehicle?.device_id || null,
         link_type: linkType,
         notes: notes || null
       },

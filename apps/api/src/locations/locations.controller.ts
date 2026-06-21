@@ -12,7 +12,7 @@ export class LocationsController {
 
   @Get()
   findAll(@CurrentUser() user: any) {
-    return this.service.findAll(user.tenantId);
+    return this.service.findAll(user);
   }
 
   @Get(':id')

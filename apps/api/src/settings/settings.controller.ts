@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Patch, Post, Body, Param, UseGuards, Request, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Post, Delete, Body, Param, UseGuards, Request, Req, ForbiddenException } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -39,7 +39,7 @@ export class SettingsController {
   }
 
   @Put('users/:id')
-  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: { role_code?: string, full_name?: string }) {
+  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: { role_code?: string, full_name?: string, entity_restrictions?: any }) {
     if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
       throw new ForbiddenException('Solo el propietario puede editar usuarios.');
     }
@@ -51,6 +51,16 @@ export class SettingsController {
   async toggleUserStatus(@Req() req: Request, @Param('id') userId: string, @Body('is_active') isActive: boolean) {
     const { tenantId } = (req as any).user;
     return this.settingsService.toggleUserStatus(tenantId, userId, isActive);
+  }
+
+  @Delete('users/:id')
+  @Roles('account_owner', 'rusertech_admin')
+  async deleteUser(@Req() req: Request, @Param('id') userId: string) {
+    const { tenantId, id: requesterId } = (req as any).user;
+    if (requesterId === userId) {
+      throw new ForbiddenException('No puedes eliminar tu propio usuario.');
+    }
+    return this.settingsService.deleteUser(tenantId, userId);
   }
 
   // --- SETTINGS JSON (Notifications & Carbon) ---

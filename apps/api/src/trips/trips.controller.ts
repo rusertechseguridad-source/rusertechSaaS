@@ -12,7 +12,7 @@ export class TripsController {
 
   @Get()
   findAll(@CurrentUser() user: any) {
-    return this.tripsService.findAll(user.tenantId);
+    return this.tripsService.findAll(user);
   }
 
   @Get(':id')

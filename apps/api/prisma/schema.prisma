@@ -10,60 +10,60 @@ datasource db {
 }
 
 model Tenant {
-  id                   String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name                 String               @db.VarChar(200)
-  slug                 String               @unique @db.VarChar(100)
-  plan                 String               @default("starter") @db.VarChar(50)
-  status               String               @default("active") @db.VarChar(20)
-  settings_json        Json                 @default("{}")
-  created_at           DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime             @default(now()) @db.Timestamptz(6)
-  avl_users            AvlUser[]
-  carbon_logs          CarbonLog[]
-  carbon_settings      CarbonSetting?
-  carriers             Carrier[]
-  control_zones        ControlZone[]
-  devices              Device[]
-  drivers              Driver[]
-  event_logs           EventLog[]
-  event_rules          EventRule[]
-  geofences            Geofence[]
-  no_signal_zones      NoSignalZone[]
-  operations           Operation[]
-  parameter_settings   ParameterSetting[]
-  position_forwarders  PositionForwarder[]
-  routes               Route[]
-  saved_locations      SavedLocation[]
-  sensor_configs       SensorConfig[]
-  trip_command_history TripCommandHistory[]
-  trip_deviations      TripDeviation[]
-  trip_events          TripEvent[]
-  trip_risk_history    TripRiskHistory[]
-  trip_risk_levels     TripRiskLevel[]
-  trips                Trip[]
-  users                User[]
-  vehicles             Vehicle[]
+  id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                  String                @db.VarChar(200)
+  slug                  String                @unique @db.VarChar(100)
+  plan                  String                @default("starter") @db.VarChar(50)
+  status                String                @default("active") @db.VarChar(20)
+  settings_json         Json                  @default("{}")
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime              @default(now()) @db.Timestamptz(6)
+  avl_users             AvlUser[]
+  carbon_logs           CarbonLog[]
+  carbon_settings       CarbonSetting?
+  carriers              Carrier[]
+  control_zones         ControlZone[]
+  devices               Device[]
+  drivers               Driver[]
+  event_logs            EventLog[]
+  event_rules           EventRule[]
+  geofences             Geofence[]
+  no_signal_zones       NoSignalZone[]
+  operations            Operation[]
+  parameter_settings    ParameterSetting[]
+  position_forwarders   PositionForwarder[]
+  routes                Route[]
+  saved_locations       SavedLocation[]
+  sensor_configs        SensorConfig[]
+  trip_command_history  TripCommandHistory[]
+  trip_deviations       TripDeviation[]
+  trip_events           TripEvent[]
+  trip_risk_history     TripRiskHistory[]
+  trip_risk_levels      TripRiskLevel[]
+  trips                 Trip[]
+  users                 User[]
+  vehicles              Vehicle[]
   notification_channels NotificationChannel[]
+  vehicle_groups        VehicleGroup[]
 
   @@map("tenants")
 }
 
 model NotificationChannel {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id   String   @db.Uuid
-  name        String   @db.VarChar(200)
-  channel_type String  @db.VarChar(30)   // email | sms | whatsapp | webhook | push
-  target      String   @db.VarChar(500)  // dirección destino (email, número, URL)
-  events      String[] @default([])       // ["alert.critical", "trip.ended", ...]
-  is_active   Boolean  @default(true)
-  config      Json     @default("{}")     // headers, tokens adicionales
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @db.Timestamptz(6)
-  tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  name         String   @db.VarChar(200)
+  channel_type String   @db.VarChar(30) // email | sms | whatsapp | webhook | push
+  target       String   @db.VarChar(500) // dirección destino (email, número, URL)
+  events       String[] @default([]) // ["alert.critical", "trip.ended", ...]
+  is_active    Boolean  @default(true)
+  config       Json     @default("{}") // headers, tokens adicionales
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  tenant       Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@map("notification_channels")
 }
-
 
 model Role {
   id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -87,6 +87,7 @@ model User {
   status                     String               @default("active") @db.VarChar(20)
   granted_permissions        String[]             @default([])
   revoked_permissions        String[]             @default([])
+  entity_restrictions        Json                 @default("{}")
   last_login_at              DateTime?            @db.Timestamptz(6)
   created_at                 DateTime             @default(now()) @db.Timestamptz(6)
   control_zones_created      ControlZone[]
@@ -104,6 +105,9 @@ model User {
   child_users                User[]               @relation("UserToUser")
   role                       Role                 @relation(fields: [role_code], references: [code])
   tenant                     Tenant               @relation(fields: [tenant_id], references: [id])
+  accessible_vehicles        UserVehicleAccess[]
+  accessible_carriers        UserCarrierAccess[]
+  accessible_groups          UserGroupAccess[]
 
   @@map("users")
 }
@@ -154,36 +158,39 @@ model AvlEventDictionary {
 }
 
 model Vehicle {
-  id                        String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id                 String      @db.Uuid
-  plate                     String      @db.VarChar(20)
-  alias                     String?     @db.VarChar(100)
-  brand                     String?     @db.VarChar(100)
-  model                     String?     @db.VarChar(200)
-  year                      Int?        @db.SmallInt
-  vehicle_type              String      @default("truck") @db.VarChar(50)
-  fuel_type                 String      @default("diesel") @db.VarChar(30)
-  fuel_efficiency_lper100km Decimal?    @db.Decimal(6, 2)
-  hub_asset_id              String?     @db.VarChar(100)
-  avl_user_id               String?     @db.Uuid
-  is_blocked                Boolean     @default(false)
+  id                        String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id                 String              @db.Uuid
+  plate                     String              @db.VarChar(20)
+  alias                     String?             @db.VarChar(100)
+  brand                     String?             @db.VarChar(100)
+  model                     String?             @db.VarChar(200)
+  year                      Int?                @db.SmallInt
+  vehicle_type              String              @default("truck") @db.VarChar(50)
+  fuel_type                 String              @default("diesel") @db.VarChar(30)
+  fuel_efficiency_lper100km Decimal?            @db.Decimal(6, 2)
+  hub_asset_id              String?             @db.VarChar(100)
+  avl_user_id               String?             @db.Uuid
+  is_blocked                Boolean             @default(false)
   block_reason              String?
-  metadata_json             Json        @default("{}")
-  status                    String      @default("active") @db.VarChar(20)
-  created_at                DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime    @default(now()) @db.Timestamptz(6)
-  dictionary_category       String?     @db.VarChar(100)
-  carrier_id                String?     @db.Uuid
-  image_front_url           String?     @db.VarChar(500)
-  image_rear_url            String?     @db.VarChar(500)
-  image_side_url            String?     @db.VarChar(500)
+  metadata_json             Json                @default("{}")
+  status                    String              @default("active") @db.VarChar(20)
+  created_at                DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime            @default(now()) @db.Timestamptz(6)
+  dictionary_category       String?             @db.VarChar(100)
+  carrier_id                String?             @db.Uuid
+  image_front_url           String?             @db.VarChar(500)
+  image_rear_url            String?             @db.VarChar(500)
+  image_side_url            String?             @db.VarChar(500)
+  group_id                  String?             @db.Uuid
   carbon_logs               CarbonLog[]
   event_logs                EventLog[]
   linked_to_trips           TripLinkedVehicle[]
   trips                     Trip[]
-  avl_user                  AvlUser?    @relation(fields: [avl_user_id], references: [id])
-  carrier                   Carrier?    @relation(fields: [carrier_id], references: [id])
-  tenant                    Tenant      @relation(fields: [tenant_id], references: [id])
+  avl_user                  AvlUser?            @relation(fields: [avl_user_id], references: [id])
+  carrier                   Carrier?            @relation(fields: [carrier_id], references: [id])
+  group                     VehicleGroup?       @relation(fields: [group_id], references: [id])
+  tenant                    Tenant              @relation(fields: [tenant_id], references: [id])
+  user_access               UserVehicleAccess[]
 
   @@unique([tenant_id, plate])
   @@map("vehicles")
@@ -210,22 +217,23 @@ model Driver {
 }
 
 model Carrier {
-  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id        String    @db.Uuid
-  name             String    @db.VarChar(200)
-  tax_id           String?   @db.VarChar(50)
-  contact_email    String?   @db.VarChar(254)
-  contact_phone    String?   @db.VarChar(50)
-  status           String    @default("active") @db.VarChar(20)
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
-  address          String?   @db.VarChar(300)
-  google_maps_link String?   @db.VarChar(500)
+  id               String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id        String              @db.Uuid
+  name             String              @db.VarChar(200)
+  tax_id           String?             @db.VarChar(50)
+  contact_email    String?             @db.VarChar(254)
+  contact_phone    String?             @db.VarChar(50)
+  status           String              @default("active") @db.VarChar(20)
+  created_at       DateTime            @default(now()) @db.Timestamptz(6)
+  address          String?             @db.VarChar(300)
+  google_maps_link String?             @db.VarChar(500)
   operating_bases  String?
-  contact_name     String?   @db.VarChar(200)
-  tenant           Tenant    @relation(fields: [tenant_id], references: [id])
+  contact_name     String?             @db.VarChar(200)
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id])
   drivers          Driver[]
   vehicles         Vehicle[]
   trips            Trip[]
+  user_access      UserCarrierAccess[]
 
   @@map("carriers")
 }
@@ -247,22 +255,22 @@ model Operation {
 }
 
 model Device {
-  id              String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id       String     @db.Uuid
-  imei            String?    @db.VarChar(50)
-  device_code     String?    @db.VarChar(100)
-  name            String     @db.VarChar(200)
-  device_type     String     @default("PORTABLE_GPS") @db.VarChar(50)
-  status          String     @default("ACTIVE") @db.VarChar(20)
-  battery_level   Int?       @db.SmallInt
-  signal_strength Int?       @db.SmallInt
-  operation_id    String?    @db.Uuid
-  created_at      DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime   @default(now()) @db.Timestamptz(6)
-  avl_user_id     String?    @db.Uuid
-  avl_user        AvlUser?   @relation(fields: [avl_user_id], references: [id])
-  operation       Operation? @relation(fields: [operation_id], references: [id])
-  tenant          Tenant     @relation(fields: [tenant_id], references: [id])
+  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id       String              @db.Uuid
+  imei            String?             @db.VarChar(50)
+  device_code     String?             @db.VarChar(100)
+  name            String              @db.VarChar(200)
+  device_type     String              @default("PORTABLE_GPS") @db.VarChar(50)
+  status          String              @default("ACTIVE") @db.VarChar(20)
+  battery_level   Int?                @db.SmallInt
+  signal_strength Int?                @db.SmallInt
+  operation_id    String?             @db.Uuid
+  created_at      DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime            @default(now()) @db.Timestamptz(6)
+  avl_user_id     String?             @db.Uuid
+  avl_user        AvlUser?            @relation(fields: [avl_user_id], references: [id])
+  operation       Operation?          @relation(fields: [operation_id], references: [id])
+  tenant          Tenant              @relation(fields: [tenant_id], references: [id])
   linked_to_trips TripLinkedVehicle[]
   trips           Trip[]
 
@@ -390,10 +398,10 @@ model TripLinkedVehicle {
   link_type  String   @default("support") @db.VarChar(30)
   notes      String?  @db.VarChar(500)
   linked_at  DateTime @default(now()) @db.Timestamptz(6)
-  
-  trip       Trip     @relation(fields: [trip_id], references: [id])
-  vehicle    Vehicle  @relation(fields: [vehicle_id], references: [id])
-  device     Device?  @relation(fields: [device_id], references: [id])
+
+  trip    Trip    @relation(fields: [trip_id], references: [id])
+  vehicle Vehicle @relation(fields: [vehicle_id], references: [id])
+  device  Device? @relation(fields: [device_id], references: [id])
 
   @@map("trip_linked_vehicles")
 }
@@ -748,26 +756,26 @@ model OutboxMessage {
 }
 
 model PositionForwarder {
-  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id         String   @db.Uuid
-  name              String   @db.VarChar(100)
-  target_url        String   @db.VarChar(500)
-  auth_type         String   @default("none") @db.VarChar(20)
-  auth_credentials  Json?
-  payload_format    String   @default("rusertech_v1") @db.VarChar(50)
-  is_active         Boolean  @default(true)
-  
-  circuit_open      Boolean  @default(false)
-  circuit_opened_at DateTime? @db.Timestamptz(6)
-  consecutive_failures Int    @default(0)
-  total_sent        Int      @default(0)
-  total_failed      Int      @default(0)
-  last_error        String?  @db.Text
-  
-  created_at        DateTime @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+  id               String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id        String  @db.Uuid
+  name             String  @db.VarChar(100)
+  target_url       String  @db.VarChar(500)
+  auth_type        String  @default("none") @db.VarChar(20)
+  auth_credentials Json?
+  payload_format   String  @default("rusertech_v1") @db.VarChar(50)
+  is_active        Boolean @default(true)
 
-  tenant            Tenant   @relation(fields: [tenant_id], references: [id])
+  circuit_open         Boolean   @default(false)
+  circuit_opened_at    DateTime? @db.Timestamptz(6)
+  consecutive_failures Int       @default(0)
+  total_sent           Int       @default(0)
+  total_failed         Int       @default(0)
+  last_error           String?   @db.Text
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("position_forwarders")
 }
@@ -779,4 +787,51 @@ model spatial_ref_sys {
   auth_srid Int?
   srtext    String? @db.VarChar(2048)
   proj4text String? @db.VarChar(2048)
+}
+
+model VehicleGroup {
+  id          String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id   String            @db.Uuid
+  name        String            @db.VarChar(200)
+  description String?
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime          @default(now()) @db.Timestamptz(6)
+  tenant      Tenant            @relation(fields: [tenant_id], references: [id])
+  vehicles    Vehicle[]
+  user_access UserGroupAccess[]
+
+  @@map("vehicle_groups")
+}
+
+model UserVehicleAccess {
+  user_id     String   @db.Uuid
+  vehicle_id  String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz(6)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  vehicle     Vehicle  @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, vehicle_id])
+  @@map("user_vehicle_access")
+}
+
+model UserCarrierAccess {
+  user_id     String   @db.Uuid
+  carrier_id  String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz(6)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  carrier     Carrier  @relation(fields: [carrier_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, carrier_id])
+  @@map("user_carrier_access")
+}
+
+model UserGroupAccess {
+  user_id     String       @db.Uuid
+  group_id    String       @db.Uuid
+  assigned_at DateTime     @default(now()) @db.Timestamptz(6)
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group       VehicleGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, group_id])
+  @@map("user_group_access")
 }

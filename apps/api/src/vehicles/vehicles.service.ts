@@ -7,10 +7,21 @@ import { v4 as uuidv4 } from 'uuid';
 export class VehiclesService {
   constructor(private prisma: PrismaService, private redis: RedisService) {}
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(user?: any, skip?: number, take?: number) {
+    // Determine restrictions
+    let restrictions = undefined;
+    if (user?.role === 'viewer') {
+      const fullUser = await this.prisma.user.findUnique({ where: { id: user.id }, select: { entity_restrictions: true } });
+      const er = fullUser?.entity_restrictions as any;
+      if (er && Array.isArray(er.vehicles) && er.vehicles.length > 0) {
+        restrictions = { id: { in: er.vehicles } };
+      }
+    }
+
     return this.prisma.extended.vehicle.findMany({
       skip,
       take,
+      where: restrictions,
       include: {
         avl_user: { select: { name: true, user_avl_code: true } }
       },

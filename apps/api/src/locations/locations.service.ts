@@ -5,8 +5,18 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LocationsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
+  async findAll(user: any) {
+    let restrictions = undefined;
+    if (user?.role === 'viewer') {
+      const fullUser = await this.prisma.user.findUnique({ where: { id: user.id }, select: { entity_restrictions: true } });
+      const er = fullUser?.entity_restrictions as any;
+      if (er && Array.isArray(er.locations) && er.locations.length > 0) {
+        restrictions = { id: { in: er.locations } };
+      }
+    }
+
     return this.prisma.extended.savedLocation.findMany({
+      where: restrictions,
       include: {
         operation: { select: { name: true } },
       },

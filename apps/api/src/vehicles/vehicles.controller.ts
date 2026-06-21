@@ -11,8 +11,8 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Get()
-  findAll(@Query('skip') skip?: string, @Query('take') take?: string) {
-    return this.vehiclesService.findAll(skip ? parseInt(skip) : undefined, take ? parseInt(take) : undefined);
+  findAll(@Query('skip') skip?: string, @Query('take') take?: string, @CurrentUser() user?: any) {
+    return this.vehiclesService.findAll(user, skip ? parseInt(skip) : undefined, take ? parseInt(take) : undefined);
   }
 
   @Get('live')

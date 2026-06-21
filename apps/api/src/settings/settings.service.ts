@@ -28,7 +28,7 @@ export class SettingsService {
   async getUsers(tenantId: string) {
     return this.prisma.user.findMany({
       where: { tenant_id: tenantId },
-      select: { id: true, email: true, full_name: true, role_code: true, status: true }
+      select: { id: true, email: true, full_name: true, role_code: true, status: true, entity_restrictions: true }
     });
   }
 
@@ -78,11 +78,11 @@ export class SettingsService {
     return { ...safeUser, emailSent: true };
   }
 
-  async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string }) {
+  async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string, entity_restrictions?: any }) {
     return this.prisma.user.update({
       where: { id: userId, tenant_id: tenantId },
       data,
-      select: { id: true, email: true, full_name: true, role_code: true }
+      select: { id: true, email: true, full_name: true, role_code: true, entity_restrictions: true }
     });
   }
 
@@ -91,6 +91,12 @@ export class SettingsService {
       where: { id: userId, tenant_id: tenantId },
       data: { status: isActive ? 'active' : 'suspended' },
       select: { id: true, email: true, status: true }
+    });
+  }
+
+  async deleteUser(tenantId: string, userId: string) {
+    return this.prisma.user.delete({
+      where: { id: userId, tenant_id: tenantId }
     });
   }
 
