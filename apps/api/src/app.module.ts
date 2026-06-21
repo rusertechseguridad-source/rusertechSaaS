@@ -26,6 +26,10 @@ import { DevicesModule } from './devices/devices.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { CarbonModule } from './carbon/carbon.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AdminModule } from './admin/admin.module';
+import { SettingsModule } from './settings/settings.module';
+import { ForwardingModule } from './forwarding/forwarding.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -62,6 +66,10 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AlertsModule,
     CarbonModule,
     AnalyticsModule,
+    AdminModule,
+    SettingsModule,
+    ForwardingModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

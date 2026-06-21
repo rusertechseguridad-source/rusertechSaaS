@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
 import { GeocodingService } from './geocoding.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class TelemetryService {
@@ -11,6 +13,7 @@ export class TelemetryService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly geocoding: GeocodingService,
+    @InjectQueue('forwarding.send') private forwardingQueue: Queue,
   ) {}
 
   async processIngest(payload: any, avlUserId: string, tenantId: string) {
@@ -159,6 +162,15 @@ export class TelemetryService {
         await this.redis.set(`vehicle:position:${vehicleId}`, positionData, 3600);
       }
     }).catch(err => this.logger.error('Async Geocoding failed', err));
+
+    // Fire and forget: Forwarding
+    this.prisma.positionForwarder.findMany({
+      where: { tenant_id: tenantId, is_active: true, circuit_open: false }
+    }).then(forwarders => {
+      for (const f of forwarders) {
+        this.forwardingQueue.add('send', { forwarderId: f.id, positionData }, { removeOnComplete: true, removeOnFail: 100 });
+      }
+    }).catch(err => this.logger.error('Async Forwarding failed', err));
 
     return { status: "accepted" };
   }
