@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, Edit2, Trash2, Check, X, ShieldAlert } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, Check, X, ShieldAlert, HelpCircle } from 'lucide-react';
 
 export const AdminSystemParameters: React.FC = () => {
   const [parameters, setParameters] = useState<any[]>([]);
@@ -156,8 +156,14 @@ export const AdminSystemParameters: React.FC = () => {
               ) : parameters.map(p => (
                 <tr key={p.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-mono text-sm font-bold text-accentBlue">{p.parameter_key}</div>
-                    {p.description && <div className="text-xs text-textMuted mt-1">{p.description}</div>}
+                    <div className="font-mono text-sm font-bold text-accentBlue flex items-center gap-2">
+                      {p.parameter_key}
+                      {p.description && (
+                        <div title={p.description} className="cursor-help text-textMuted hover:text-white transition-colors">
+                          <HelpCircle className="w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <code className="bg-bgStart px-2 py-1 rounded text-yellow-400 text-sm font-bold border border-yellow-400/20">

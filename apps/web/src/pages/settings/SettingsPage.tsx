@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Building, Users, Sliders, Bell, Leaf, MapPin, ExternalLink, User, Edit2, X, Check } from 'lucide-react';
+import { Settings, Building, Users, Sliders, Bell, Leaf, MapPin, ExternalLink, User, Edit2, X, Check, HelpCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
@@ -488,8 +488,12 @@ export const SettingsPage: React.FC = () => {
                       <div className="font-bold text-white mb-1 flex items-center gap-2">
                         {p.parameter_key}
                         {!p.has_override && <span className="text-accentBlue text-lg leading-none" title="Valor por defecto">*</span>}
+                        {p.description && (
+                          <div title={p.description} className="cursor-help text-textMuted hover:text-white transition-colors">
+                            <HelpCircle className="w-4 h-4" />
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-textMuted">{p.description || 'Sin descripción'}</div>
                     </div>
                     <div className="w-64 flex items-center gap-3">
                       <input 

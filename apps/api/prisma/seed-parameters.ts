@@ -25,8 +25,6 @@ const PARAMETERS = [
   
   // Límites y Tolerancias de Seguridad / Riesgos
   { key: 'OVERSPEED_TOLERANCE_KPH', value: '5', type: 'number', editable: true, desc: 'Tolerancia en km/h sobre el límite de velocidad' },
-  { key: 'HARSH_BRAKING_THRESHOLD_G', value: '0.4', type: 'number', editable: false, desc: 'Fuerza G para detectar frenada brusca' },
-  { key: 'HARSH_ACCEL_THRESHOLD_G', value: '0.35', type: 'number', editable: false, desc: 'Fuerza G para detectar aceleración brusca' },
   { key: 'IDLING_TIMEOUT_MIN', value: '10', type: 'number', editable: true, desc: 'Minutos con motor encendido sin movimiento para generar alerta' },
   
   // Notificaciones y Correos
