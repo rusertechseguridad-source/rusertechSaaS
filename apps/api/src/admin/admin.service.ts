@@ -210,4 +210,50 @@ export class AdminService {
     console.log(`Por favor cámbiala al ingresar.`);
     console.log(`==================================\n\n`);
   }
+
+  // --- GLOBAL PARAMETERS ---
+  async getGlobalParameters() {
+    return this.prisma.parameterSetting.findMany({
+      where: { tenant_id: null },
+      orderBy: { parameter_key: 'asc' }
+    });
+  }
+
+  async createGlobalParameter(data: any, userId: string) {
+    // Verificamos si existe
+    const exists = await this.prisma.parameterSetting.findFirst({
+      where: { tenant_id: null, parameter_key: data.parameter_key }
+    });
+    if (exists) throw new ConflictException('Global parameter already exists');
+
+    return this.prisma.parameterSetting.create({
+      data: {
+        parameter_key: data.parameter_key,
+        parameter_value: data.parameter_value,
+        data_type: data.data_type,
+        description: data.description,
+        is_editable_by_account_owner: data.is_editable_by_account_owner,
+        updated_by: userId
+      }
+    });
+  }
+
+  async updateGlobalParameter(id: string, data: any, userId: string) {
+    return this.prisma.parameterSetting.update({
+      where: { id },
+      data: {
+        parameter_value: data.parameter_value,
+        data_type: data.data_type,
+        description: data.description,
+        is_editable_by_account_owner: data.is_editable_by_account_owner,
+        updated_by: userId
+      }
+    });
+  }
+
+  async deleteGlobalParameter(id: string) {
+    return this.prisma.parameterSetting.delete({
+      where: { id }
+    });
+  }
 }

@@ -487,7 +487,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="flex-1">
                       <div className="font-bold text-white mb-1 flex items-center gap-2">
                         {p.parameter_key}
-                        {!p.tenant_id && <span className="text-accentBlue text-lg leading-none" title="Valor por defecto">*</span>}
+                        {!p.has_override && <span className="text-accentBlue text-lg leading-none" title="Valor por defecto">*</span>}
                       </div>
                       <div className="text-xs text-textMuted">{p.description || 'Sin descripción'}</div>
                     </div>
@@ -504,7 +504,7 @@ export const SettingsPage: React.FC = () => {
                         onBlur={() => saveParameter(p.parameter_key, p.parameter_value)}
                         className="flex-1 bg-bgSurface border border-borderDefault text-white text-sm rounded p-2 focus:border-accentBlue focus:outline-none"
                       />
-                      {p.tenant_id && (
+                      {p.has_override && (
                         <button 
                           onClick={() => restoreParameter(p.parameter_key)}
                           className="text-xs text-textSecondary hover:text-accentBlue underline"

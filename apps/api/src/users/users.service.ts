@@ -17,9 +17,35 @@ export class UsersService {
   }
 
   // Ejemplo de búsqueda con RLS activado (para CRUD regular)
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<User & { role?: any } | null> {
     return this.prisma.extended.user.findUnique({
       where: { id },
+      include: { role: true }
     });
+  }
+
+  async getUserWithPermissions(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { role: true }
+    });
+    
+    if (!user) return null;
+
+    let perms = new Set<string>();
+    if (user.role?.permissions) {
+      user.role.permissions.forEach((p: string) => perms.add(p));
+    }
+    if (user.granted_permissions) {
+      user.granted_permissions.forEach(p => perms.add(p));
+    }
+    if (user.revoked_permissions) {
+      user.revoked_permissions.forEach(p => perms.delete(p));
+    }
+
+    return {
+      ...user,
+      permissions: Array.from(perms)
+    };
   }
 }

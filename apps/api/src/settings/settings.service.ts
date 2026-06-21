@@ -157,4 +157,86 @@ export class SettingsService {
       data: { settings_json: settings }
     });
   }
+
+  // --- PARAMETERS ---
+  async getTenantParameters(tenantId: string) {
+    // 1. Obtener parámetros globales (tenant_id = null)
+    const globals = await this.prisma.parameterSetting.findMany({
+      where: { tenant_id: null },
+      orderBy: { parameter_key: 'asc' }
+    });
+
+    // 2. Obtener overrides del tenant
+    const overrides = await this.prisma.parameterSetting.findMany({
+      where: { tenant_id: tenantId }
+    });
+
+    // 3. Merge
+    const overrideMap = new Map(overrides.map(o => [o.parameter_key, o]));
+    
+    return globals.map(g => {
+      const tenantOverride = overrideMap.get(g.parameter_key);
+      return {
+        ...g,
+        // Si hay override, pisamos el valor
+        parameter_value: tenantOverride ? tenantOverride.parameter_value : g.parameter_value,
+        has_override: !!tenantOverride
+      };
+    });
+  }
+
+  async updateTenantParameter(tenantId: string, parameterKey: string, value: string, userId: string) {
+    // Validar si el global existe y es editable
+    const globalParam = await this.prisma.parameterSetting.findFirst({
+      where: { tenant_id: null, parameter_key: parameterKey }
+    });
+
+    if (!globalParam) {
+      throw new BadRequestException('Parameter does not exist');
+    }
+
+    if (!globalParam.is_editable_by_account_owner) {
+      throw new BadRequestException('This parameter is locked by system administrator');
+    }
+
+    // Buscar si ya hay un override
+    const existingOverride = await this.prisma.parameterSetting.findFirst({
+      where: { tenant_id: tenantId, parameter_key: parameterKey }
+    });
+
+    if (existingOverride) {
+      return this.prisma.parameterSetting.update({
+        where: { id: existingOverride.id },
+        data: {
+          parameter_value: value,
+          updated_by: userId
+        }
+      });
+    } else {
+      return this.prisma.parameterSetting.create({
+        data: {
+          tenant_id: tenantId,
+          parameter_key: parameterKey,
+          parameter_value: value,
+          data_type: globalParam.data_type,
+          description: globalParam.description,
+          is_editable_by_account_owner: true, // Always true for overrides
+          updated_by: userId
+        }
+      });
+    }
+  }
+
+  async restoreTenantParameter(tenantId: string, parameterKey: string) {
+    const existingOverride = await this.prisma.parameterSetting.findFirst({
+      where: { tenant_id: tenantId, parameter_key: parameterKey }
+    });
+
+    if (existingOverride) {
+      return this.prisma.parameterSetting.delete({
+        where: { id: existingOverride.id }
+      });
+    }
+    return { success: true };
+  }
 }

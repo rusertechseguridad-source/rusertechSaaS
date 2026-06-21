@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Search, Building, Users, Play, Pause, Activity, Shield, Edit2, X, Check, ArrowUpDown } from 'lucide-react';
+import { ShieldCheck, Plus, Search, Building, Users, Play, Pause, Activity, Shield, Edit2, X, Check, ArrowUpDown, Settings } from 'lucide-react';
 import { AdminGlobalUsers } from './AdminGlobalUsers';
 import { AdminRolesPermissions } from './AdminRolesPermissions';
+import { AdminSystemParameters } from './AdminSystemParameters';
 
 export const AdminPage: React.FC = () => {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'roles'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'roles' | 'parameters'>('tenants');
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<string>('name');
@@ -267,6 +268,12 @@ export const AdminPage: React.FC = () => {
         >
           <Shield className="w-4 h-4 inline mr-2" /> Roles y Permisos
         </button>
+        <button 
+          onClick={() => setActiveTab('parameters')}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'parameters' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
+        >
+          <Settings className="w-4 h-4 inline mr-2" /> Parámetros
+        </button>
       </div>
 
       {activeTab === 'tenants' && (
@@ -378,6 +385,7 @@ export const AdminPage: React.FC = () => {
 
       {activeTab === 'users' && <AdminGlobalUsers />}
       {activeTab === 'roles' && <AdminRolesPermissions />}
+      {activeTab === 'parameters' && <AdminSystemParameters />}
 
       {showModal && (
         <div className="fixed inset-0 bg-bgOverlay z-[100] flex items-center justify-center p-4">

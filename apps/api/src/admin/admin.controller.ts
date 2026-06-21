@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -91,5 +91,30 @@ export class AdminController {
   updateRole(@Request() req: any, @Param('id') id: string, @Body() body: any) {
     this.checkSuperAdmin(req);
     return this.adminService.updateRole(id, body);
+  }
+
+  // --- PARAMETERS ---
+  @Get('parameters')
+  getGlobalParameters(@Request() req: any) {
+    this.checkSuperAdmin(req);
+    return this.adminService.getGlobalParameters();
+  }
+
+  @Post('parameters')
+  createGlobalParameter(@Request() req: any, @Body() body: any) {
+    this.checkSuperAdmin(req);
+    return this.adminService.createGlobalParameter(body, req.user.id);
+  }
+
+  @Put('parameters/:id')
+  updateGlobalParameter(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    this.checkSuperAdmin(req);
+    return this.adminService.updateGlobalParameter(id, body, req.user.id);
+  }
+
+  @Delete('parameters/:id')
+  deleteGlobalParameter(@Request() req: any, @Param('id') id: string) {
+    this.checkSuperAdmin(req);
+    return this.adminService.deleteGlobalParameter(id);
   }
 }

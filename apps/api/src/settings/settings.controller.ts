@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Patch, Post, Body, Param, UseGuards, Request, Req, ForbiddenException } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('api/v1/settings')
@@ -101,5 +102,29 @@ export class SettingsController {
   async updateCarbonConfig(@Req() req: Request, @Body() body: any) {
     const { tenantId } = (req as any).user;
     return this.settingsService.updateCarbonConfig(tenantId, body);
+  }
+
+  // --- PARAMETERS ---
+  @Get('parameters')
+  @UseGuards(JwtAuthGuard)
+  async getTenantParameters(@Req() req: Request) {
+    const { tenantId } = (req as any).user;
+    return this.settingsService.getTenantParameters(tenantId);
+  }
+
+  @Put('parameters')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('account_owner', 'rusertech_admin')
+  async updateTenantParameter(@Req() req: Request, @Body() body: { key: string, value: string }) {
+    const user = (req as any).user;
+    return this.settingsService.updateTenantParameter(user.tenantId, body.key, body.value, user.id);
+  }
+
+  @Post('parameters/restore')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('account_owner', 'rusertech_admin')
+  async restoreTenantParameter(@Req() req: Request, @Body() body: { key: string }) {
+    const user = (req as any).user;
+    return this.settingsService.restoreTenantParameter(user.tenantId, body.key);
   }
 }
