@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async getProfile(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -33,12 +37,11 @@ export class SettingsService {
     if (existing) {
       throw new BadRequestException('El correo ya está registrado.');
     }
-    
-    // In a real scenario, this generates a token and sends an email.
-    // For now, we set a default password for the invited user.
-    const tempPassword = 'TempPassword123!';
+
+    // Generate a readable temporary password
+    const tempPassword = `Temp-${Math.random().toString(36).slice(2, 8).toUpperCase()}!`;
     const hash = await bcrypt.hash(tempPassword, 10);
-    
+
     const user = await this.prisma.user.create({
       data: {
         tenant_id: tenantId,
@@ -49,10 +52,30 @@ export class SettingsService {
         status: 'active'
       }
     });
-    
-    // Return the user (excluding password)
+
+    // Fetch tenant name for the email
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true }
+    });
+
+    // Send invitation email (non-blocking — failure won't roll back user creation)
+    try {
+      await this.mailService.sendInvitation({
+        to: data.email,
+        fullName: data.full_name,
+        tempPassword,
+        tenantName: tenant?.name || 'Rusertech',
+      });
+    } catch (mailError) {
+      console.error('[SettingsService] Invitation email failed:', mailError);
+      // User was still created — return a flag so the frontend can show a warning
+      const { password_hash, ...safeUser } = user;
+      return { ...safeUser, emailSent: false };
+    }
+
     const { password_hash, ...safeUser } = user;
-    return safeUser;
+    return { ...safeUser, emailSent: true };
   }
 
   async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string }) {

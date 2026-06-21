@@ -172,24 +172,46 @@ export const TripDetailsPage: React.FC = () => {
     exportToCsv(`bitacora_${trip?.id || 'export'}`, header, rows);
   };
 
-  // Initialize map ONCE on mount — use setTimeout to ensure DOM container has dimensions
+  // Initialize map ONCE — use ResizeObserver so we only init when the container
+  // actually has real pixel dimensions (avoids the 0×0 race condition with setTimeout)
   useEffect(() => {
-    if (!mapContainer.current) return;
+    const container = mapContainer.current;
+    if (!container) return;
 
     const initMap = () => {
       if (map.current) return; // already initialized
+      if (!mapContainer.current) return;
       map.current = new maplibregl.Map({
-        container: mapContainer.current!,
+        container: mapContainer.current,
         style: 'https://tiles.openfreemap.org/styles/dark',
         center: [-58.3816, -34.6037],
         zoom: 10
       });
     };
 
-    const timer = setTimeout(initMap, 100);
+    // Fire immediately if container already has dimensions, otherwise wait
+    if (container.clientHeight > 0) {
+      initMap();
+    } else {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect.height > 0) {
+            observer.disconnect();
+            initMap();
+            break;
+          }
+        }
+      });
+      observer.observe(container);
+
+      return () => {
+        observer.disconnect();
+        map.current?.remove();
+        map.current = null;
+      };
+    }
 
     return () => {
-      clearTimeout(timer);
       map.current?.remove();
       map.current = null;
     };
