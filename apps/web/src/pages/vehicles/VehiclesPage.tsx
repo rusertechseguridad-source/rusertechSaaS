@@ -3,8 +3,10 @@ import { useVehiclesStore } from '../../store/vehiclesStore';
 import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit, Trash2, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
+import { useTranslation } from 'react-i18next';
 
 export const VehiclesPage: React.FC = () => {
+  const { t } = useTranslation();
   const { vehicles, fetchVehicles, toggleBlock, deleteVehicle, createVehicle, updateVehicle, loading } = useVehiclesStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -123,10 +125,10 @@ export const VehiclesPage: React.FC = () => {
       v.alias || '',
       v.brand || '',
       v.model || '',
-      v.vehicle_type || '',
-      v.status === 'active' ? 'Activo' : 'Inactivo'
+      t(`vehicles.types.${v.vehicle_type}`),
+      v.status === 'active' ? t('vehicles.status.active') : t('vehicles.status.blocked')
     ]);
-    exportToCsv('Vehiculos', headers, rows);
+    exportToCsv(t('vehicles.title'), headers, rows);
   };
 
   const handleExportDetail = () => {
@@ -231,11 +233,11 @@ export const VehiclesPage: React.FC = () => {
           style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
         >
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
-          Gestión de Flota
+          {t('vehicles.title')}
         </h1>
         <RequirePermission permission="vehicles:manage">
           <button onClick={openCreateModal} className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20">
-            <Plus className="w-5 h-5 mr-2" /> Nuevo Vehículo
+            <Plus className="w-5 h-5 mr-2" /> {t('vehicles.new_vehicle')}
           </button>
         </RequirePermission>
       </div>
@@ -243,7 +245,7 @@ export const VehiclesPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
           <div>
-            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Flota</div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('vehicles.total_fleet')}</div>
             <div className="text-3xl font-display font-black text-white">{totalVehicles}</div>
           </div>
           <div className="w-12 h-12 rounded-full bg-accentBlue/10 flex items-center justify-center border border-accentBlue/20">
@@ -252,7 +254,7 @@ export const VehiclesPage: React.FC = () => {
         </div>
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
           <div>
-            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Vehículos Activos</div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('vehicles.active_vehicles')}</div>
             <div className="text-3xl font-display font-black text-white">{activeVehicles}</div>
           </div>
           <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
@@ -261,7 +263,7 @@ export const VehiclesPage: React.FC = () => {
         </div>
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
           <div>
-            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Vehículos Bloqueados</div>
+            <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('vehicles.blocked_vehicles')}</div>
             <div className="text-3xl font-display font-black text-white">{blockedVehicles}</div>
           </div>
           <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
@@ -276,37 +278,37 @@ export const VehiclesPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
             <input
               type="text"
-              placeholder="Buscar por patente o alias..."
+              placeholder={t('vehicles.search_placeholder')}
               className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentGreen focus:outline-none"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-textSecondary text-sm">{filtered.length} vehículos encontrados</span>
+            <span className="text-textSecondary text-sm">{filtered.length} {t('vehicles.vehicles_found')}</span>
             <button 
               onClick={handleExport}
               className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
             >
               <Download size={16} className="text-accentBlue" />
-              Exportar CSV
+              {t('vehicles.export_csv')}
             </button>
           </div>
         </div>
 
         <div className="overflow-y-auto flex-1">
           {loading ? (
-            <div className="p-12 text-center text-textMuted">Cargando flota...</div>
+            <div className="p-12 text-center text-textMuted">{t('vehicles.loading')}</div>
           ) : (
             <table className="w-full text-left text-sm text-textSecondary">
               <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4">Vehículo</th>
-                  <th className="px-6 py-4">Transportista</th>
-                  <th className="px-6 py-4">Proveedor GPS</th>
-                  <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4">{t('vehicles.table.vehicle')}</th>
+                  <th className="px-6 py-4">{t('vehicles.table.carrier')}</th>
+                  <th className="px-6 py-4">{t('vehicles.table.provider')}</th>
+                  <th className="px-6 py-4">{t('vehicles.table.status')}</th>
                   <th className="px-6 py-4 text-right">
-                    <RequirePermission permission="vehicles:manage">Acciones</RequirePermission>
+                    <RequirePermission permission="vehicles:manage">{t('vehicles.table.actions')}</RequirePermission>
                   </th>
                 </tr>
               </thead>
@@ -315,13 +317,13 @@ export const VehiclesPage: React.FC = () => {
                   <tr key={v.id} className="hover:bg-bgSurfaceHigh/40 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-bold text-white text-base">{v.plate}</div>
-                      <div className="text-textMuted">{v.alias || 'Sin alias'} • {v.brand || ''} {v.model || ''}</div>
+                      <div className="text-textMuted">{v.alias || t('vehicles.status.no_alias')} • {v.brand || ''} {v.model || ''}</div>
                     </td>
                     <td className="px-6 py-4">
                       {(v as any).carrier ? (
                         <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{(v as any).carrier.name}</span>
                       ) : (
-                        <span className="text-textMuted italic">Independiente</span>
+                        <span className="text-textMuted italic">{t('vehicles.status.independent')}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -334,17 +336,17 @@ export const VehiclesPage: React.FC = () => {
                           )}
                         </div>
                       ) : (
-                        <span className="text-textMuted italic">Sin proveedor</span>
+                        <span className="text-textMuted italic">{t('vehicles.status.no_provider')}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {v.is_blocked ? (
                         <div className="inline-flex items-center text-statusDanger bg-statusDanger/10 px-3 py-1 rounded-full text-xs font-bold border border-statusDanger/20">
-                          <ShieldAlert className="w-3 h-3 mr-1" /> BLOQUEADO
+                          <ShieldAlert className="w-3 h-3 mr-1" /> {t('vehicles.status.blocked')}
                         </div>
                       ) : (
                         <div className="inline-flex items-center text-statusOnline bg-statusOnline/10 px-3 py-1 rounded-full text-xs font-bold border border-statusOnline/20">
-                          <ShieldCheck className="w-3 h-3 mr-1" /> ACTIVO
+                          <ShieldCheck className="w-3 h-3 mr-1" /> {t('vehicles.status.active')}
                         </div>
                       )}
                       {v.is_blocked && v.block_reason && (
@@ -385,7 +387,7 @@ export const VehiclesPage: React.FC = () => {
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-textMuted">
-                      No se encontraron vehículos.
+                      {t('vehicles.no_vehicles')}
                     </td>
                   </tr>
                 )}
@@ -399,7 +401,7 @@ export const VehiclesPage: React.FC = () => {
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
             <div className="p-6 border-b border-borderDefault shrink-0 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Vehículo' : 'Nuevo Vehículo'}</h2>
+              <h2 className="text-2xl font-bold text-white">{editingId ? t('vehicles.modal.edit_title') : t('vehicles.modal.new_title')}</h2>
               {editingId && (
                 <button 
                   type="button"
@@ -414,54 +416,54 @@ export const VehiclesPage: React.FC = () => {
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Patente *</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.plate')}</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white uppercase focus:border-accentGreen focus:outline-none" value={plate} onChange={e => setPlate(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Alias / Nombre Interno</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.alias')}</label>
                   <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={alias} onChange={e => setAlias(e.target.value)} />
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Marca</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.brand')}</label>
                     <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={brand} onChange={e => setBrand(e.target.value)} />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Modelo</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.model')}</label>
                     <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={model} onChange={e => setModel(e.target.value)} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Tipo de Vehículo</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.type')}</label>
                   <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
-                    <option value="truck">Camión</option>
-                    <option value="semi">Semi-Remolque</option>
-                    <option value="van">Furgón</option>
-                    <option value="car">Auto</option>
-                    <option value="pickup">Camioneta</option>
-                    <option value="bus">Bus</option>
-                    <option value="motorcycle">Motocicleta</option>
+                    <option value="truck">{t('vehicles.types.truck')}</option>
+                    <option value="semi">{t('vehicles.types.semi')}</option>
+                    <option value="van">{t('vehicles.types.van')}</option>
+                    <option value="car">{t('vehicles.types.car')}</option>
+                    <option value="pickup">{t('vehicles.types.pickup')}</option>
+                    <option value="bus">{t('vehicles.types.bus')}</option>
+                    <option value="motorcycle">{t('vehicles.types.motorcycle')}</option>
                   </select>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1" title="Requerido por Climatiq API">Combustible *</label>
+                    <label className="block text-sm text-textSecondary mb-1" title={t('vehicles.modal.fuel_title')}>{t('vehicles.modal.fuel')}</label>
                     <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={fuelType} onChange={e => setFuelType(e.target.value)}>
-                      <option value="diesel">Diesel</option>
-                      <option value="gasoline">Gasolina / Nafta</option>
-                      <option value="hybrid">Híbrido</option>
-                      <option value="electric">Eléctrico</option>
+                      <option value="diesel">{t('vehicles.fuels.diesel')}</option>
+                      <option value="gasoline">{t('vehicles.fuels.gasoline')}</option>
+                      <option value="hybrid">{t('vehicles.fuels.hybrid')}</option>
+                      <option value="electric">{t('vehicles.fuels.electric')}</option>
                     </select>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1" title="Si se omite, se usa el valor promedio de la industria.">Rendimiento (L/100km)</label>
-                    <input type="number" step="0.1" placeholder="Ej: 30.5" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={fuelEfficiency} onChange={e => setFuelEfficiency(e.target.value)} />
+                    <label className="block text-sm text-textSecondary mb-1" title={t('vehicles.modal.efficiency_title')}>{t('vehicles.modal.efficiency')}</label>
+                    <input type="number" step="0.1" placeholder={t('vehicles.modal.efficiency_placeholder')} className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={fuelEfficiency} onChange={e => setFuelEfficiency(e.target.value)} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Transportista</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.carrier')}</label>
                   <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={carrierId} onChange={e => setCarrierId(e.target.value)}>
-                    <option value="">— Ninguno (Independiente) —</option>
+                    <option value="">{t('vehicles.modal.none_independent')}</option>
                     {carriers.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -470,20 +472,20 @@ export const VehiclesPage: React.FC = () => {
 
 
                 <div className="border-t border-borderDefault pt-4 mt-4">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Imágenes del Vehículo</h3>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">{t('vehicles.modal.images')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs text-textSecondary mb-1">Frente</label>
+                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.front')}</label>
                       <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageFrontUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
                       {imageFrontUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageFrontUrl} alt="Frente" className="w-full h-full object-cover" /></div>}
                     </div>
                     <div>
-                      <label className="block text-xs text-textSecondary mb-1">Trasero</label>
+                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.rear')}</label>
                       <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageRearUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
                       {imageRearUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageRearUrl} alt="Trasero" className="w-full h-full object-cover" /></div>}
                     </div>
                     <div>
-                      <label className="block text-xs text-textSecondary mb-1">Lateral</label>
+                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.side')}</label>
                       <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageSideUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
                       {imageSideUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageSideUrl} alt="Lateral" className="w-full h-full object-cover" /></div>}
                     </div>
@@ -491,43 +493,43 @@ export const VehiclesPage: React.FC = () => {
                 </div>
 
                 <div className="border-t border-borderDefault pt-4 mt-4">
-                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Proveedor GPS (HUB)</h3>
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">{t('vehicles.modal.provider')}</h3>
                   <div>
-                    <label className="block text-sm text-textSecondary mb-1">Proveedor AVL</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.avl_provider')}</label>
                     <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={avlUserId} onChange={e => setAvlUserId(e.target.value)}>
-                      <option value="">— Ninguno —</option>
+                      <option value="">{t('vehicles.modal.none')}</option>
                       {avlUsers.map(a => (
                         <option key={a.id} value={a.id}>{a.name} ({a.user_avl_code})</option>
                       ))}
                     </select>
                   </div>
                   <div className="mt-3">
-                    <label className="block text-sm text-textSecondary mb-1">Asset ID (identificador del equipo GPS)</label>
-                    <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white font-mono focus:border-accentGreen focus:outline-none" placeholder="Ej: ASSET_123, IMEI, etc." value={hubAssetId} onChange={e => setHubAssetId(e.target.value)} />
+                    <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.asset_id')}</label>
+                    <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white font-mono focus:border-accentGreen focus:outline-none" placeholder={t('vehicles.modal.asset_placeholder')} value={hubAssetId} onChange={e => setHubAssetId(e.target.value)} />
                   </div>
                   {avlUserId && (
                     <div className="mt-3 border border-borderDefault/50 p-3 rounded bg-bgStart/30">
-                      <label className="block text-sm text-textSecondary mb-1">Diccionario de Eventos a usar</label>
+                      <label className="block text-sm text-textSecondary mb-1">{t('vehicles.modal.dictionary')}</label>
                       <select 
                         className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" 
                         value={dictionaryCategory} 
                         onChange={e => setDictionaryCategory(e.target.value)}
                       >
-                        <option value="">— Predeterminado (Cualquiera) —</option>
+                        <option value="">{t('vehicles.modal.default_dict')}</option>
                         {availableCategories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
                       <p className="text-xs text-textMuted mt-1">
-                        Si el proveedor tiene múltiples diccionarios, selecciona la categoría para este vehículo.
+                        {t('vehicles.modal.dict_desc')}
                       </p>
                     </div>
                   )}
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">Guardar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">{t('vehicles.modal.cancel')}</button>
+                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">{t('vehicles.modal.save')}</button>
               </div>
             </form>
           </div>

@@ -5,8 +5,10 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { CarrierModal } from './CarrierModal';
 import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const CarriersPage: React.FC = () => {
+  const { t } = useTranslation();
   const [carriers, setCarriers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export const CarriersPage: React.FC = () => {
       const res = await fetch('http://localhost:3000/api/v1/carriers', {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
-      if (!res.ok) throw new Error('Error al cargar transportistas');
+      if (!res.ok) throw new Error(t('carriers.error_loading'));
       setCarriers(await res.json());
     } catch (err: any) {
       setError(err.message);
@@ -29,7 +31,7 @@ export const CarriersPage: React.FC = () => {
   };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
-    if (!confirm(`¿Estás seguro de ${currentStatus === 'active' ? 'suspender' : 'reactivar'} este transportista?`)) return;
+    if (!confirm(currentStatus === 'active' ? t('carriers.confirm.suspend') : t('carriers.confirm.reactivate'))) return;
     
     try {
       const res = await fetch(`http://localhost:3000/api/v1/carriers/${id}`, {
@@ -48,7 +50,7 @@ export const CarriersPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    const headers = ['Nombre', 'CUIT/RUT', 'Email Contacto', 'Teléfono', 'Dirección', 'Vehículos', 'Choferes', 'Estado'];
+    const headers = [t('carriers.table.carrier'), 'CUIT/RUT', t('carriers.table.contact'), 'Teléfono', 'Dirección', t('carriers.table.vehicles'), t('carriers.table.drivers'), t('carriers.table.status')];
     const rows = carriers.map(c => [
       c.name,
       c.tax_id || '',
@@ -57,16 +59,16 @@ export const CarriersPage: React.FC = () => {
       c.address || '',
       c._count?.vehicles || 0,
       c._count?.drivers || 0,
-      c.status === 'active' ? 'Activo' : 'Suspendido'
+      c.status === 'active' ? t('carriers.status.active') : t('carriers.status.suspended')
     ]);
-    exportToCsv('Transportistas', headers, rows);
+    exportToCsv(t('carriers.title'), headers, rows);
   };
 
   useEffect(() => {
     fetchCarriers();
   }, []);
 
-  if (loading) return <div className="p-8 text-center text-textMuted">Cargando Transportistas...</div>;
+  if (loading) return <div className="p-8 text-center text-textMuted">{t('carriers.loading')}</div>;
   if (error) return <div className="p-8 text-center text-statusDanger">{error}</div>;
 
   return (
@@ -78,16 +80,16 @@ export const CarriersPage: React.FC = () => {
             style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
           >
             <Truck className="w-8 h-8 mr-3 text-accentGreen" />
-            Transportistas
+            {t('carriers.title')}
           </h1>
-          <p className="text-textMuted mt-2">Gestiona las empresas de transporte asociadas.</p>
+          <p className="text-textMuted mt-2">{t('carriers.subtitle')}</p>
         </div>
         <RequirePermission permission="carriers:edit">
           <button 
             onClick={() => { setCarrierToEdit(null); setShowModal(true); }}
             className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
           >
-            + Nuevo Transportista
+            + {t('carriers.new_carrier')}
           </button>
         </RequirePermission>
       </div>
@@ -113,7 +115,7 @@ export const CarriersPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Transportistas</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('carriers.total_carriers')}</div>
                   <div className="text-3xl font-display font-black text-white">{totalCarriers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-accentGreen/10 flex items-center justify-center border border-accentGreen/20">
@@ -122,7 +124,7 @@ export const CarriersPage: React.FC = () => {
               </div>
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Activos</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('carriers.active')}</div>
                   <div className="text-3xl font-display font-black text-white">{activeCarriers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
@@ -131,7 +133,7 @@ export const CarriersPage: React.FC = () => {
               </div>
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Suspendidos</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('carriers.suspended')}</div>
                   <div className="text-3xl font-display font-black text-white">{suspendedCarriers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
@@ -146,38 +148,38 @@ export const CarriersPage: React.FC = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Buscar por nombre o CUIT/RUT..."
+                    placeholder={t('carriers.search_placeholder')}
                     className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentGreen focus:outline-none"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-textSecondary text-sm">{filtered.length} transportistas encontrados</span>
+                  <span className="text-textSecondary text-sm">{filtered.length} {t('carriers.found')}</span>
                   <button 
                     onClick={handleExport}
                     className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
                   >
                     <Download size={16} className="text-accentBlue" />
-                    Exportar CSV
+                    {t('carriers.export_csv')}
                   </button>
                 </div>
               </div>
 
               <div className="overflow-y-auto flex-1">
                 {filtered.length === 0 ? (
-                  <div className="p-12 text-center text-textMuted">No hay transportistas que coincidan con la búsqueda.</div>
+                  <div className="p-12 text-center text-textMuted">{t('carriers.no_carriers')}</div>
                 ) : (
                   <table className="w-full text-left text-sm text-textSecondary">
                     <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-4">Transportista</th>
-                        <th className="px-6 py-4">Contacto</th>
-                        <th className="px-6 py-4">Vehículos</th>
-                        <th className="px-6 py-4">Choferes</th>
-                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4">{t('carriers.table.carrier')}</th>
+                        <th className="px-6 py-4">{t('carriers.table.contact')}</th>
+                        <th className="px-6 py-4">{t('carriers.table.vehicles')}</th>
+                        <th className="px-6 py-4">{t('carriers.table.drivers')}</th>
+                        <th className="px-6 py-4">{t('carriers.table.status')}</th>
                         <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="carriers:edit">Acciones</RequirePermission>
+                          <RequirePermission permission="carriers:edit">{t('carriers.table.actions')}</RequirePermission>
                         </th>
                       </tr>
                     </thead>
@@ -200,11 +202,11 @@ export const CarriersPage: React.FC = () => {
                           <td className="px-6 py-4">
                             {carrier.status === 'active' ? (
                               <div className="inline-flex items-center text-statusOnline bg-statusOnline/10 px-3 py-1 rounded-full text-xs font-bold border border-statusOnline/20">
-                                ACTIVO
+                                {t('carriers.status.active')}
                               </div>
                             ) : (
                               <div className="inline-flex items-center text-statusDanger bg-statusDanger/10 px-3 py-1 rounded-full text-xs font-bold border border-statusDanger/20">
-                                SUSPENDIDO
+                                {t('carriers.status.suspended')}
                               </div>
                             )}
                           </td>
@@ -215,13 +217,13 @@ export const CarriersPage: React.FC = () => {
                                   onClick={() => { setCarrierToEdit(carrier); setShowModal(true); }}
                                   className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
                                 >
-                                  EDITAR
+                                  {t('carriers.actions.edit')}
                                 </button>
                                 <button 
                                   onClick={() => toggleStatus(carrier.id, carrier.status)}
                                   className={`text-xs underline font-bold ${carrier.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
                                 >
-                                  {carrier.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                  {carrier.status === 'active' ? t('carriers.actions.suspend') : t('carriers.actions.reactivate')}
                                 </button>
                               </div>
                             </RequirePermission>

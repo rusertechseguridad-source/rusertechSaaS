@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Activity, AlertTriangle, Truck, Download } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 
 export const AnalyticsDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState('month');
   const [fleetData, setFleetData] = useState<any>(null);
@@ -43,7 +45,7 @@ export const AnalyticsDashboard: React.FC = () => {
       tooltip: { trigger: 'item' },
       series: [
         {
-          name: 'Viajes',
+          name: t('analytics.trip'),
           type: 'pie',
           radius: ['40%', '70%'],
           itemStyle: {
@@ -104,7 +106,7 @@ export const AnalyticsDashboard: React.FC = () => {
           style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)' }}
         >
           <PieChart className="w-8 h-8 mr-3 text-accentBlue" />
-          Analytics & Reportes
+          {t('analytics.title')}
         </h1>
         <div className="flex gap-4 items-center">
           <select 
@@ -112,14 +114,14 @@ export const AnalyticsDashboard: React.FC = () => {
             value={period}
             onChange={e => setPeriod(e.target.value)}
           >
-            <option value="day">Últimas 24hs</option>
-            <option value="week">Última Semana</option>
-            <option value="month">Último Mes</option>
-            <option value="year">Último Año</option>
+            <option value="day">{t('analytics.period_24h')}</option>
+            <option value="week">{t('analytics.period_week')}</option>
+            <option value="month">{t('analytics.period_month')}</option>
+            <option value="year">{t('analytics.period_year')}</option>
           </select>
           <button className="flex items-center gap-2 px-4 py-2 bg-accentBlue hover:bg-accentBlue/90 text-white font-bold rounded shadow-lg shadow-accentBlue/20 transition-all">
             <Download size={18} />
-            Exportar Dashboard
+            {t('analytics.export_dashboard')}
           </button>
         </div>
       </div>
@@ -127,7 +129,7 @@ export const AnalyticsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 shrink-0">
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card flex flex-col relative overflow-hidden">
           <Truck className="absolute top-4 right-4 w-16 h-16 text-textMuted opacity-20" />
-          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">Total Viajes</div>
+          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">{t('analytics.total_trips')}</div>
           <div className="text-4xl font-display font-black text-white z-10">
             {fleetData?.totalTrips || 0}
           </div>
@@ -135,30 +137,30 @@ export const AnalyticsDashboard: React.FC = () => {
 
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card flex flex-col relative overflow-hidden">
           <Activity className="absolute top-4 right-4 w-16 h-16 text-accentGreen opacity-10" />
-          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">Completados vs Cancelados</div>
+          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">{t('analytics.completed_vs_canceled')}</div>
           <div className="flex gap-4 items-end mt-2 z-10">
             <div>
               <span className="text-2xl font-bold text-accentGreen">{fleetData?.completedTrips || 0}</span>
-              <span className="text-xs text-textSecondary ml-1">ok</span>
+              <span className="text-xs text-textSecondary ml-1">{t('analytics.completed')}</span>
             </div>
             <div>
               <span className="text-2xl font-bold text-statusDanger">{fleetData?.canceledTrips || 0}</span>
-              <span className="text-xs text-textSecondary ml-1">canc.</span>
+              <span className="text-xs text-textSecondary ml-1">{t('analytics.canceled')}</span>
             </div>
           </div>
         </div>
 
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card flex flex-col relative overflow-hidden">
           <PieChart className="absolute top-4 right-4 w-16 h-16 text-accentBlue opacity-10" />
-          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">Distancia Recorrida</div>
+          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">{t('analytics.distance_traveled')}</div>
           <div className="text-4xl font-display font-black text-white z-10">
-            {fleetData?.totalKm || 0} <span className="text-sm text-textMuted font-normal">km</span>
+            {fleetData?.totalKm || 0} <span className="text-sm text-textMuted font-normal">{t('analytics.km')}</span>
           </div>
         </div>
 
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card flex flex-col relative overflow-hidden">
           <AlertTriangle className="absolute top-4 right-4 w-16 h-16 text-statusWarning opacity-10" />
-          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">Alertas Generadas</div>
+          <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-2 z-10">{t('analytics.alerts_generated')}</div>
           <div className="text-4xl font-display font-black text-white z-10">
             {alertsData?.total || 0}
           </div>
@@ -169,14 +171,14 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="bg-bgSurface border border-borderDefault rounded-xl shadow-card flex flex-col">
           <div className="p-4 border-b border-borderDefault shrink-0">
             <h2 className="text-sm font-bold text-textSecondary uppercase tracking-wider">
-              Distribución de Viajes
+              {t('analytics.trips_distribution')}
             </h2>
           </div>
           <div className="flex-1 p-4 min-h-[300px]">
              {tripsData?.statusDistribution?.length > 0 ? (
                <ReactECharts option={getTripsChartOptions()} style={{ height: '100%', width: '100%' }} />
              ) : (
-               <div className="w-full h-full flex items-center justify-center text-textMuted">Sin datos de viajes</div>
+               <div className="w-full h-full flex items-center justify-center text-textMuted">{t('analytics.no_trips_data')}</div>
              )}
           </div>
         </div>
@@ -184,14 +186,14 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="bg-bgSurface border border-borderDefault rounded-xl shadow-card flex flex-col">
           <div className="p-4 border-b border-borderDefault shrink-0">
             <h2 className="text-sm font-bold text-textSecondary uppercase tracking-wider">
-              Alertas por Severidad
+              {t('analytics.alerts_by_severity')}
             </h2>
           </div>
           <div className="flex-1 p-4 min-h-[300px]">
              {alertsData?.bySeverity?.length > 0 ? (
                <ReactECharts option={getAlertsChartOptions()} style={{ height: '100%', width: '100%' }} />
              ) : (
-               <div className="w-full h-full flex items-center justify-center text-textMuted">Sin alertas registradas</div>
+               <div className="w-full h-full flex items-center justify-center text-textMuted">{t('analytics.no_alerts_data')}</div>
              )}
           </div>
         </div>

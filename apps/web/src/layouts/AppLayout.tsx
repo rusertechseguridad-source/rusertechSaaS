@@ -48,30 +48,33 @@ export const AppLayout: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-bgStart/98 border-b border-borderDefault backdrop-blur-md sticky top-0 z-40 shadow-[0_2px_20px_rgba(0,0,0,0.4)]">
         <div className="w-full px-3 sm:px-5">
-          <div className="flex items-center justify-between h-14">
-            {/* Brand */}
-            <a href="/map" className="flex items-center gap-3 mr-5 shrink-0 group">
-              <div
-                className="relative flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300 group-hover:shadow-[0_0_16px_rgba(42,179,255,0.7)]"
-                style={{ boxShadow: '0 0 12px rgba(42,179,255,0.4)' }}
-              >
-                <img src="/logo_forma.png" alt="Rusertech Logo" className="w-full h-full object-cover rounded-lg" />
-              </div>
-              <div className="flex flex-col leading-none">
-                <span
-                  className="text-[1.15rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wide"
-                  style={{ textShadow: '0 0 10px rgba(42,179,255,0.2)' }}
+          <div className="flex items-center justify-between h-[64px] w-full">
+            
+            {/* Left: Brand (flex-1 forces left side to equal right side for perfect center) */}
+            <div className="flex-1 flex items-center justify-start min-w-0">
+              <a href="/map" className="flex items-center gap-4 shrink-0 group">
+                <div
+                  className="relative flex items-center justify-center w-14 h-14 rounded-lg transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(42,179,255,0.8)]"
+                  style={{ boxShadow: '0 0 15px rgba(42,179,255,0.5)' }}
                 >
-                  Rusertech
-                </span>
-                <span className="text-[9px] font-medium text-white/50 tracking-widest hidden sm:block mt-0.5">
-                  Seguridad &amp; Logística
-                </span>
-              </div>
-            </a>
+                  <img src="/logo_forma.png" alt="Rusertech Logo" className="w-full h-full object-cover rounded-lg" />
+                </div>
+                <div className="flex flex-col leading-none mt-0.5">
+                  <span
+                    className="text-[1.65rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wide"
+                    style={{ textShadow: '0 0 12px rgba(42,179,255,0.3)' }}
+                  >
+                    Rusertech
+                  </span>
+                  <span className="text-xs font-bold text-white/70 tracking-widest hidden xl:block mt-1">
+                    Seguridad &amp; Logística
+                  </span>
+                </div>
+              </a>
+            </div>
 
-            {/* Nav links */}
-            <div className="flex gap-0.5 flex-wrap flex-1 min-w-0">
+            {/* Center: Nav links perfectly centered */}
+            <div className="flex-auto flex justify-center items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
               {[
                 { path: '/map', label: t('nav.map'), icon: Map, perm: 'view_map' },
                 { path: '/alerts', label: t('nav.alerts'), icon: Bell, perm: 'view_alerts' },
@@ -101,26 +104,26 @@ export const AppLayout: React.FC = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all duration-150 group relative ${
+                    className={`flex flex-col items-center justify-center gap-1 px-1 py-1.5 rounded-lg transition-all duration-150 group relative flex-shrink-0 w-[74px] ${
                       isAlerts
                         ? 'bg-red-600/40 text-white border border-red-500 shadow-[0_0_14px_rgba(255,0,0,0.7)] animate-pulse'
                         : isActive
                           ? 'bg-accentGreen/10 text-white border border-accentGreen/40 shadow-[0_0_8px_rgba(0,200,100,0.15)]'
-                          : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10'
+                          : 'text-white hover:bg-white/10 border border-transparent hover:border-white/20'
                     }`}
                   >
                     <item.icon
-                      className={`w-4 h-4 transition-colors ${
+                      className={`w-[18px] h-[18px] transition-transform group-hover:scale-110 ${
                         isAlerts
                           ? 'text-red-400 drop-shadow-[0_0_8px_rgba(255,0,0,1)]'
                           : isActive
                             ? 'text-accentGreen drop-shadow-[0_0_4px_rgba(0,200,100,0.6)]'
-                            : 'text-white/50 group-hover:text-white'
+                            : 'text-white drop-shadow-[0_0_2px_rgba(255,255,255,0.8)] group-hover:drop-shadow-[0_0_6px_rgba(255,255,255,1)]'
                       }`}
                     />
-                    <span className={`text-[10px] font-semibold tracking-wide whitespace-nowrap ${
-                      isAlerts ? 'text-white' : isActive ? 'text-white' : 'text-white/60 group-hover:text-white'
-                    }`}>
+                    <span className={`text-[9px] font-bold tracking-wide text-center leading-tight drop-shadow-md ${
+                      isAlerts ? 'text-white' : isActive ? 'text-white' : 'text-white group-hover:text-white'
+                    }`} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.label}
                     </span>
                   </Link>
@@ -128,29 +131,30 @@ export const AppLayout: React.FC = () => {
               })}
             </div>
 
-            {/* User info + logout */}
-            <div className="flex items-center gap-3 shrink-0 ml-3">
-              <span className="text-xs text-white/50 hidden lg:block truncate max-w-[140px]">
+            {/* Right: User info + Language + Logout (flex-1 keeps symmetry) */}
+            <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
+              <span className="text-xs font-bold text-white hidden lg:block truncate max-w-[140px] drop-shadow-md">
                 {user?.email}
               </span>
               
               {/* Language Switcher */}
               <button
                 onClick={() => i18n.changeLanguage(i18n.language.startsWith('es') ? 'en' : 'es')}
-                className="flex items-center justify-center w-7 h-7 text-[10px] font-bold text-white/60 hover:text-white border border-white/20 hover:border-white/50 rounded transition-colors"
-                title="Cambiar idioma / Change language"
+                className="flex items-center justify-center w-6 h-6 text-[9px] font-black text-white bg-white/10 hover:bg-accentBlue/20 hover:text-accentMint border border-white/20 rounded-md transition-colors shadow-sm shrink-0"
+                title={t('nav.change_language')}
               >
                 {i18n.language.startsWith('es') ? 'EN' : 'ES'}
               </button>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 text-white/40 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
+                className="flex items-center justify-center gap-1.5 text-white hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 shrink-0"
                 title={t('nav.logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
+            
           </div>
         </div>
       </nav>

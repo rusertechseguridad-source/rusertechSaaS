@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Leaf, Activity, Download, Settings, BarChart2 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 
 export const CarbonDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<any>(null);
   const [data, setData] = useState<any>(null);
@@ -48,7 +50,7 @@ export const CarbonDashboard: React.FC = () => {
 
   const handleToggleClimatiq = async (checked: boolean) => {
     if (checked && !apiKey) {
-      const key = prompt('Ingrese la API Key de Climatiq para habilitar el servicio:');
+      const key = prompt(t('carbon.prompt_api_key'));
       if (!key) return;
       setApiKey(key);
       await saveSettings(true, key);
@@ -122,7 +124,7 @@ export const CarbonDashboard: React.FC = () => {
           style={{ textShadow: '0 0 10px rgba(52,211,153,0.3)' }}
         >
           <Leaf className="w-8 h-8 mr-3 text-accentGreen" />
-          Huella de Carbono
+          {t('carbon.title')}
         </h1>
         <div className="flex gap-4 items-center">
           <select 
@@ -130,16 +132,16 @@ export const CarbonDashboard: React.FC = () => {
             value={period}
             onChange={e => setPeriod(e.target.value)}
           >
-            <option value="day">Últimas 24hs</option>
-            <option value="week">Última Semana</option>
-            <option value="month">Último Mes</option>
-            <option value="year">Último Año</option>
+            <option value="day">{t('carbon.period_24h')}</option>
+            <option value="week">{t('carbon.period_week')}</option>
+            <option value="month">{t('carbon.period_month')}</option>
+            <option value="year">{t('carbon.period_year')}</option>
           </select>
 
           <RequirePermission permission="admin:settings">
             <div className="bg-bgSurface border border-borderDefault rounded-xl px-4 py-2 flex items-center gap-3">
               <span className="text-sm font-bold text-textSecondary uppercase tracking-wider">
-                Motor Climatiq API
+                {t('carbon.climatiq_engine')}
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -161,27 +163,27 @@ export const CarbonDashboard: React.FC = () => {
             <Leaf className="w-24 h-24 text-accentGreen" />
           </div>
           <div className="text-textMuted text-sm font-bold uppercase tracking-wider mb-2 relative z-10">
-            Emisiones Totales CO2 (kg)
+            {t('carbon.total_emissions')}
           </div>
           <div className="text-5xl font-display font-black text-white relative z-10">
             {data ? parseFloat(data.totalCo2).toLocaleString('es-AR') : '0'}
           </div>
           <div className="text-accentGreen text-xs mt-2 relative z-10 font-bold">
-            Basado en la telemetría del período seleccionado
+            {t('carbon.based_on_telemetry')}
           </div>
         </div>
 
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card col-span-2">
           <h3 className="text-sm font-bold text-textSecondary uppercase tracking-wider mb-4 flex items-center gap-2">
             <BarChart2 className="w-4 h-4" />
-            Tendencia de Emisiones
+            {t('carbon.emissions_trend')}
           </h3>
           <div className="h-48">
             {data?.trend && data.trend.length > 0 ? (
               <ReactECharts option={getChartOptions()} style={{ height: '100%', width: '100%' }} />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-textMuted">
-                No hay datos de tendencia para este período
+                {t('carbon.no_trend_data')}
               </div>
             )}
           </div>
@@ -192,21 +194,21 @@ export const CarbonDashboard: React.FC = () => {
         <div className="p-4 border-b border-borderDefault flex justify-between items-center shrink-0">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-accentGreen" />
-            Ranking por Vehículo
+            {t('carbon.vehicle_ranking')}
           </h2>
           <button className="flex items-center gap-2 px-3 py-1.5 bg-bgSurfaceHigh hover:bg-bgSurface text-textPrimary text-sm font-medium rounded-md border border-borderDefault transition-colors">
             <Download size={16} className="text-accentGreen" />
-            Exportar Reporte
+            {t('carbon.export_report')}
           </button>
         </div>
         <div className="p-4 flex-1 overflow-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-borderDefault text-textMuted text-xs uppercase tracking-wider">
-                <th className="p-3">Vehículo</th>
-                <th className="p-3">Distancia (km)</th>
-                <th className="p-3">Combustible Est. (L)</th>
-                <th className="p-3">Impacto CO2 (kg)</th>
+                <th className="p-3">{t('carbon.table.vehicle')}</th>
+                <th className="p-3">{t('carbon.table.distance')}</th>
+                <th className="p-3">{t('carbon.table.fuel_est')}</th>
+                <th className="p-3">{t('carbon.table.co2_impact')}</th>
               </tr>
             </thead>
             <tbody>
@@ -221,7 +223,7 @@ export const CarbonDashboard: React.FC = () => {
               {(!data?.vehicleRanking || data.vehicleRanking.length === 0) && (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-textMuted">
-                    No hay registros de emisiones para este período.
+                    {t('carbon.no_records')}
                   </td>
                 </tr>
               )}

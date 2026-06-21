@@ -5,8 +5,10 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useTranslation } from 'react-i18next';
 
 export const LocationsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, toggleActive, loading } = useLocationsStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -167,16 +169,16 @@ export const LocationsPage: React.FC = () => {
     const headers = ['Nombre', 'Tipo', 'Dirección', 'Latitud', 'Longitud', 'Radio (m)', 'Operación', 'Parada Autorizada', 'Estado'];
     const rows = filtered.map(l => [
       l.name,
-      l.location_type || 'generic',
+      l.location_type ? t(`locations.types.${l.location_type}`) : t('locations.types.generic'),
       l.address || '',
       l.latitude,
       l.longitude,
       l.radius_meters || 100,
       l.operation?.name || '',
       l.is_authorized_stop ? 'Sí' : 'No',
-      l.is_active ? 'Activa' : 'Inactiva'
+      l.is_active ? t('locations.status.active') : t('locations.status.inactive')
     ]);
-    exportToCsv('Ubicaciones', headers, rows);
+    exportToCsv(t('locations.title'), headers, rows);
   };
 
   const handleExportDetail = () => {
@@ -194,14 +196,14 @@ export const LocationsPage: React.FC = () => {
           style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
         >
           <MapPin className="w-8 h-8 mr-3 text-accentMint" />
-          Ubicaciones / POIs
+          {t('locations.title')}
         </h1>
         <RequirePermission permission="locations:edit">
           <button
             onClick={openCreateModal}
             className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
           >
-            <Plus className="w-5 h-5 mr-2" /> Nueva Ubicación
+            <Plus className="w-5 h-5 mr-2" /> {t('locations.new_location')}
           </button>
         </RequirePermission>
       </div>
@@ -214,29 +216,29 @@ export const LocationsPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
               <input
                 type="text"
-                placeholder="Buscar ubicación..."
+                placeholder={t('locations.search_placeholder')}
                 className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentGreen focus:outline-none"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-textSecondary text-sm">{filtered.length} ubicaciones encontradas</span>
+              <span className="text-textSecondary text-sm">{filtered.length} {t('locations.found')}</span>
               <button 
                 onClick={handleExport}
                 className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
               >
                 <Download size={14} className="text-accentBlue" />
-                Exportar CSV
+                {t('locations.export_csv')}
               </button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2">
             {loading ? (
-              <div className="text-center text-textMuted p-8">Cargando ubicaciones...</div>
+              <div className="text-center text-textMuted p-8">{t('locations.loading')}</div>
             ) : filtered.length === 0 ? (
-              <div className="text-center text-textMuted p-8">No hay ubicaciones registradas</div>
+              <div className="text-center text-textMuted p-8">{t('locations.no_locations')}</div>
             ) : (
               <div className="space-y-2">
                 {filtered.map(loc => (
@@ -259,13 +261,13 @@ export const LocationsPage: React.FC = () => {
                         <h3 className="font-bold text-white flex items-center gap-2">
                           {loc.name}
                           {loc.is_authorized_stop && (
-                            <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold" title="Parada Autorizada">P.A.</span>
+                            <span className="bg-accentBlue/20 text-accentBlue border border-accentBlue/50 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold" title={t('locations.badges.authorized_stop_title')}>{t('locations.badges.authorized_stop')}</span>
                           )}
                           <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${loc.is_active ? 'bg-statusSuccess/10 text-statusSuccess border border-statusSuccess/20' : 'bg-statusDanger/10 text-statusDanger border border-statusDanger/20'}`}>
-                            {loc.is_active ? 'Activo' : 'Suspendido'}
+                            {loc.is_active ? t('locations.status.active') : t('locations.status.suspended')}
                           </span>
                         </h3>
-                        <div className="text-xs text-textMuted mt-1 uppercase tracking-wider">{loc.location_type}</div>
+                        <div className="text-xs text-textMuted mt-1 uppercase tracking-wider">{loc.location_type ? t(`locations.types.${loc.location_type}`) : t('locations.types.generic')}</div>
                         {loc.operation && (
                           <div className="text-xs text-accentMint font-medium mt-0.5">👤 {loc.operation.name}</div>
                         )}
@@ -303,11 +305,11 @@ export const LocationsPage: React.FC = () => {
                       <div className="mt-4 pt-4 border-t border-accentGreen/20 animate-fade-in text-sm">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <div className="text-textMuted text-[10px] uppercase">Latitud</div>
+                            <div className="text-textMuted text-[10px] uppercase">{t('locations.details.latitude')}</div>
                             <div className="font-mono text-white">{loc.latitude}</div>
                           </div>
                           <div>
-                            <div className="text-textMuted text-[10px] uppercase">Longitud</div>
+                            <div className="text-textMuted text-[10px] uppercase">{t('locations.details.longitude')}</div>
                             <div className="font-mono text-white">
                               {loc.longitude}
                               <a 
@@ -316,18 +318,18 @@ export const LocationsPage: React.FC = () => {
                                 rel="noreferrer"
                                 className="ml-2 text-accentBlue hover:underline text-xs"
                               >
-                                Ver en Maps
+                                {t('locations.details.view_maps')}
                               </a>
                             </div>
                           </div>
                           <div>
-                            <div className="text-textMuted text-[10px] uppercase">Radio</div>
+                            <div className="text-textMuted text-[10px] uppercase">{t('locations.details.radius')}</div>
                             <div className="font-mono text-white">{loc.radius_meters} m</div>
                           </div>
                           <div>
-                            <div className="text-textMuted text-[10px] uppercase">Estado</div>
+                            <div className="text-textMuted text-[10px] uppercase">{t('locations.details.status')}</div>
                             <div className={`font-bold ${loc.is_active !== false ? 'text-statusOnline' : 'text-statusDanger'}`}>
-                              {loc.is_active !== false ? 'Activo' : 'Inactivo'}
+                              {loc.is_active !== false ? t('locations.status.active') : t('locations.status.inactive')}
                             </div>
                           </div>
                         </div>
@@ -349,7 +351,7 @@ export const LocationsPage: React.FC = () => {
           {!selectedLocation && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-textMuted pointer-events-none z-10 bg-bgStart/60 backdrop-blur-sm transition-all duration-500">
               <MapPin className="w-16 h-16 mb-4 opacity-30 animate-pulse" />
-              <p className="text-lg font-medium text-white/50">Seleccione una ubicación en la lista</p>
+              <p className="text-lg font-medium text-white/50">{t('locations.select_instruction')}</p>
             </div>
           )}
 
@@ -366,8 +368,8 @@ export const LocationsPage: React.FC = () => {
             }}
           >
             {[
-              { label: 'Oscuro', value: 'https://tiles.openfreemap.org/styles/dark' },
-              { label: 'Claro', value: 'https://tiles.openfreemap.org/styles/liberty' },
+              { label: t('locations.map_styles.dark'), value: 'https://tiles.openfreemap.org/styles/dark' },
+              { label: t('locations.map_styles.light'), value: 'https://tiles.openfreemap.org/styles/liberty' },
             ].map((opt) => (
               <button
                 key={opt.label}
@@ -390,7 +392,7 @@ export const LocationsPage: React.FC = () => {
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '85vh' }}>
             <div className="p-6 border-b border-borderDefault shrink-0 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">{editingId ? 'Editar Ubicación' : 'Nueva Ubicación'}</h2>
+              <h2 className="text-2xl font-bold text-white">{editingId ? t('locations.modal.edit_title') : t('locations.modal.new_title')}</h2>
               {editingId && (
                 <button 
                   type="button"
@@ -405,34 +407,34 @@ export const LocationsPage: React.FC = () => {
             <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Nombre *</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.name')}</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={name} onChange={e => setName(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Tipo</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.type')}</label>
                   <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={locationType} onChange={e => setLocationType(e.target.value)}>
-                    <option value="generic">Genérico</option>
-                    <option value="origen">Origen</option>
-                    <option value="destino">Destino</option>
-                    <option value="deposito">Depósito</option>
-                    <option value="planta">Planta</option>
-                    <option value="cliente">Cliente</option>
-                    <option value="puerto">Puerto</option>
-                    <option value="aduana">Aduana</option>
-                    <option value="peaje">Peaje</option>
+                    <option value="generic">{t('locations.types.generic')}</option>
+                    <option value="origen">{t('locations.types.origen')}</option>
+                    <option value="destino">{t('locations.types.destino')}</option>
+                    <option value="deposito">{t('locations.types.deposito')}</option>
+                    <option value="planta">{t('locations.types.planta')}</option>
+                    <option value="cliente">{t('locations.types.cliente')}</option>
+                    <option value="puerto">{t('locations.types.puerto')}</option>
+                    <option value="aduana">{t('locations.types.aduana')}</option>
+                    <option value="peaje">{t('locations.types.peaje')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Dirección</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.address')}</label>
                   <input type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
                 
                 <div className="border-t border-borderDefault pt-4 mt-2">
-                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Asignación Operativa</h3>
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">{t('locations.modal.assignment')}</h3>
                   <div className="mb-3">
-                    <label className="block text-sm text-textSecondary mb-1">Cliente / Operación</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.operation')}</label>
                     <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={operationId} onChange={e => setOperationId(e.target.value)}>
-                      <option value="">— Ninguno (Uso Interno) —</option>
+                      <option value="">{t('locations.modal.none_internal')}</option>
                       {operations.map(op => (
                         <option key={op.id} value={op.id}>{op.name}</option>
                       ))}
@@ -441,36 +443,36 @@ export const LocationsPage: React.FC = () => {
                   <div>
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input type="checkbox" checked={isAuthorizedStop} onChange={e => setIsAuthorizedStop(e.target.checked)} className="rounded text-accentGreen bg-bgStart border-borderDefault focus:ring-accentGreen h-4 w-4" />
-                      <span className="text-sm text-white font-medium">Parada Autorizada (P.A.)</span>
+                      <span className="text-sm text-white font-medium">{t('locations.modal.authorized_stop')}</span>
                     </label>
                     <p className="text-xs text-textMuted mt-1 ml-6">
-                      Indica si el vehículo tiene permitido detenerse en esta ubicación durante el viaje.
+                      {t('locations.modal.authorized_stop_desc')}
                     </p>
                   </div>
                 </div>
 
                 <div className="border-t border-borderDefault pt-4 flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Latitud *</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.latitude')}</label>
                     <input required type="number" step="any" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={lat} onChange={e => setLat(e.target.value)} />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-textSecondary mb-1">Longitud *</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.longitude')}</label>
                     <input required type="number" step="any" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={lng} onChange={e => setLng(e.target.value)} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Radio de Llegada (metros)</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.radius')}</label>
                   <input required type="number" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={radius} onChange={e => setRadius(parseInt(e.target.value) || 100)} />
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Notas</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.notes')}</label>
                   <textarea className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none h-20 resize-none" value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">Guardar</button>
+                <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">{t('locations.modal.cancel')}</button>
+                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">{t('locations.modal.save')}</button>
               </div>
             </form>
           </div>

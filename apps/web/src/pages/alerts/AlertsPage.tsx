@@ -7,8 +7,10 @@ import { translateAlertType } from '../../utils/labels';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
+import { useTranslation } from 'react-i18next';
 
 export const AlertsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { alerts, loading, fetchAlerts: storeFetch, resolveAlert } = useAlertsStore();
 
   const [search, setSearch] = useState('');
@@ -279,10 +281,10 @@ export const AlertsPage: React.FC = () => {
           .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
             <div style="font-family:sans-serif;font-size:12px;color:#333;line-height:1.4;min-width:180px;">
               <strong style="font-size:13px;color:#d32f2f;display:block;margin-bottom:4px;">${translateEvent(alert.event_type)}</strong>
-              <b>Vehículo:</b> ${alert.vehicle?.plate || 'Desc.'}<br/>
-              <b>Chofer:</b> ${(alert as any).trip?.driver?.full_name || 'Sin Chofer'}<br/>
-              <b>Hora:</b> ${new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}<br/>
-              <div style="margin-top:8px;">${alert.address || 'Ubicación desconocida'}</div>
+              <b>${t('alerts.table.vehicle')}:</b> ${alert.vehicle?.plate || 'Desc.'}<br/>
+              <b>${t('alerts.table.driver')}:</b> ${(alert as any).trip?.driver?.full_name || 'Sin Chofer'}<br/>
+              <b>${t('alerts.table.time')}:</b> ${new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}<br/>
+              <div style="margin-top:8px;">${alert.address || t('alerts.unknown_location')}</div>
             </div>
           `))
           .addTo(map.current!);
@@ -308,14 +310,14 @@ export const AlertsPage: React.FC = () => {
   }, [selectedAlert]);
 
   const handleExport = () => {
-    const headers = ['Fecha/Hora', 'Evento', 'Vehículo', 'Chofer', 'Viaje', 'Ubicación', 'Latitud', 'Longitud'];
+    const headers = [t('alerts.table.time'), t('alerts.table.event'), t('alerts.table.vehicle'), t('alerts.table.driver'), t('alerts.table.trip'), t('alerts.table.location'), 'Latitud', 'Longitud'];
     const rows = filtered.map(a => [
       new Date(a.triggered_at).toLocaleString(),
       translateEvent(a.event_type),
       a.vehicle?.plate || 'Desconocido',
       (a.vehicle as any)?.driver ? `${(a.vehicle as any).driver.first_name} ${(a.vehicle as any).driver.last_name}` : 'Sin Chofer',
       a.trip?.name || 'Viaje libre',
-      a.address || 'Ubicación desconocida',
+      a.address || t('alerts.unknown_location'),
       a.latitude || '',
       a.longitude || ''
     ]);
@@ -345,25 +347,25 @@ export const AlertsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-400 tracking-wider flex items-center" style={{ textShadow: '0 0 10px rgba(239,68,68,0.3)' }}>
             <AlertTriangle className="w-8 h-8 mr-3 text-red-500" />
-            Alertas e Incidentes
+            {t('alerts.title')}
           </h1>
-          <p className="text-textMuted mt-2">Monitoreo y resolución de eventos críticos.</p>
+          <p className="text-textMuted mt-2">{t('alerts.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           {isAdmin && (
             <button
               onClick={() => setShowSettings(true)}
               className="bg-bgSurface hover:bg-borderDefault text-textMuted hover:text-white px-3 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm border border-borderDefault shadow-card"
-              title="Configuración de Alertas"
+              title={t('alerts.settings_btn')}
             >
-              <Settings className="w-4 h-4" /> Configuración
+              <Settings className="w-4 h-4" /> {t('alerts.settings_btn')}
             </button>
           )}
           <button
             onClick={fetchAlerts}
             className="bg-bgSurfaceHigh hover:bg-borderDefault text-white px-4 py-2 rounded flex items-center gap-2 transition-colors font-bold text-sm shadow-card"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('alerts.refresh_btn')}
           </button>
         </div>
       </div>
@@ -375,7 +377,7 @@ export const AlertsPage: React.FC = () => {
           {!selectedAlert && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-bgStart/50 backdrop-blur-[2px] pointer-events-none transition-all duration-300">
               <MapPin className="w-12 h-12 text-textMuted opacity-50 mb-3" />
-              <p className="text-white font-bold tracking-wider">Selecciona una alerta para ubicarla en el mapa</p>
+              <p className="text-white font-bold tracking-wider">{t('alerts.select_instruction')}</p>
             </div>
           )}
           {selectedAlert && selectedAlert.latitude && selectedAlert.longitude && (
@@ -393,7 +395,7 @@ export const AlertsPage: React.FC = () => {
                 rel="noreferrer"
                 className="text-xs font-bold text-accentBlue hover:underline flex items-center gap-1"
               >
-                <ExternalLink className="w-3 h-3" /> Abrir en Google Maps
+                <ExternalLink className="w-3 h-3" /> {t('alerts.open_maps')}
               </a>
             </div>
           )}
@@ -437,7 +439,7 @@ export const AlertsPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar vehículo, viaje..."
+              placeholder={t('alerts.search_placeholder')}
               className="w-full bg-bgSurface border border-borderDefault rounded-lg pl-9 pr-4 py-1.5 text-sm text-textPrimary focus:border-red-500 focus:outline-none transition-colors"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -445,23 +447,23 @@ export const AlertsPage: React.FC = () => {
           </div>
 
           <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none">
-            <option value="">Todas las Severidades</option>
+            <option value="">{t('alerts.all_severities')}</option>
             {SEVERITY_LEVELS.map(sev => <option key={sev.id} value={sev.id}>{sev.label}</option>)}
           </select>
 
           <select value={carrierFilter} onChange={(e) => setCarrierFilter(e.target.value)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none">
-            <option value="">Todos los Transportistas</option>
+            <option value="">{t('alerts.all_carriers')}</option>
             {uniqueCarriers.map((c: any) => <option key={c} value={c}>{c}</option>)}
           </select>
 
           <select value={avlFilter} onChange={(e) => setAvlFilter(e.target.value)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none">
-            <option value="">Todos los AVLs</option>
+            <option value="">{t('alerts.all_avls')}</option>
             {uniqueAvls.map((a: any) => <option key={a} value={a}>{a}</option>)}
           </select>
 
           <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-red-500 focus:outline-none font-bold">
-            <option value="desc">Más Recientes ▼</option>
-            <option value="asc">Más Antiguos ▲</option>
+            <option value="desc">{t('alerts.sort_desc')}</option>
+            <option value="asc">{t('alerts.sort_asc')}</option>
           </select>
 
           <div className="ml-auto flex items-center gap-3">
@@ -470,11 +472,11 @@ export const AlertsPage: React.FC = () => {
                 onClick={() => { setAlertToResolve('BULK'); setResolutionNote(''); setShowModal(true); }}
                 className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-bold rounded-lg border border-red-500/50 transition-colors"
               >
-                Atender Seleccionados ({selectedIds.size})
+                {t('alerts.resolve_selected')} ({selectedIds.size})
               </button>
             )}
             <span className="text-xs text-textMuted font-bold bg-bgSurface px-3 py-1.5 rounded-lg border border-borderDefault">
-              {filtered.length} alerta{filtered.length !== 1 ? 's' : ''}
+              {filtered.length} {filtered.length !== 1 ? t('alerts.alert_count_other') : t('alerts.alert_count_one')}
             </span>
 
             <button 
@@ -482,7 +484,7 @@ export const AlertsPage: React.FC = () => {
               className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
             >
               <Download size={14} className="text-accentBlue" />
-              Exportar CSV
+              {t('alerts.export_csv')}
             </button>
           </div>
         </div>
@@ -491,7 +493,6 @@ export const AlertsPage: React.FC = () => {
       {/* ── LIST VIEW ── */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden flex flex-col relative w-full px-8 pb-8 z-10">
         <div className="bg-bgSurface border border-borderDefault rounded-xl overflow-hidden shadow-card flex flex-col min-w-[1400px] h-full">
-          {/* Header */}
           <div className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-textMuted text-[10px] uppercase tracking-wider font-bold px-4 py-3 flex items-center w-full shrink-0">
             <div className="w-8 shrink-0 flex items-center justify-center">
               <input 
@@ -504,25 +505,24 @@ export const AlertsPage: React.FC = () => {
                 className="w-3.5 h-3.5 rounded border-borderDefault bg-bgSurface text-accentBlue focus:ring-accentBlue/50 cursor-pointer"
               />
             </div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.hora }}>Hora <Resizer col="hora" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.evento }}>Evento <Resizer col="evento" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.vehiculo }}>Vehículo <Resizer col="vehiculo" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.chofer }}>Chofer <Resizer col="chofer" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.viaje }}>Viaje <Resizer col="viaje" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.codigo }}>Código Viaje <Resizer col="codigo" /></div>
-            <div className="shrink-0 relative pr-2" style={{ width: colWidths.coordenadas }}>Coordenadas <Resizer col="coordenadas" /></div>
-            <div className="flex-1 min-w-[200px] relative pr-2">Ubicación</div>
-            <div className="w-28 shrink-0 text-right pr-2">Acciones</div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.hora }}>{t('alerts.table.time')} <Resizer col="hora" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.evento }}>{t('alerts.table.event')} <Resizer col="evento" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.vehiculo }}>{t('alerts.table.vehicle')} <Resizer col="vehiculo" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.chofer }}>{t('alerts.table.driver')} <Resizer col="chofer" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.viaje }}>{t('alerts.table.trip')} <Resizer col="viaje" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.codigo }}>{t('alerts.table.trip_code')} <Resizer col="codigo" /></div>
+            <div className="shrink-0 relative pr-2" style={{ width: colWidths.coordenadas }}>{t('alerts.table.coordinates')} <Resizer col="coordenadas" /></div>
+            <div className="flex-1 min-w-[200px] relative pr-2">{t('alerts.table.location')}</div>
+            <div className="w-28 shrink-0 text-right pr-2">{t('alerts.table.actions')}</div>
           </div>
           
-          {/* Body */}
           <div className="flex-1 flex flex-col overflow-y-auto">
             {loading && activeAlerts.length === 0 ? (
-              <div className="text-center text-textMuted py-12">Cargando alertas...</div>
+              <div className="text-center text-textMuted py-12">{t('alerts.loading')}</div>
             ) : filtered.length === 0 ? (
               <div className="text-center text-textMuted py-12 flex flex-col items-center">
                 <CheckCircle className="w-10 h-10 text-statusSuccess mb-2 opacity-50" />
-                No se encontraron incidentes abiertos.
+                {t('alerts.no_alerts')}
               </div>
             ) : (
               filtered.map(alert => (
@@ -607,7 +607,7 @@ export const AlertsPage: React.FC = () => {
                   <div className="flex-[1.5] min-w-[200px] pr-2 flex items-center">
                     <div className="text-textSecondary text-xs flex items-center gap-1.5 truncate">
                       <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                      <span className="truncate" title={alert.address || ''}>{alert.address || 'Sin dirección registrada'}</span>
+                      <span className="truncate" title={alert.address || ''}>{alert.address || t('alerts.no_address_registered')}</span>
                     </div>
                   </div>
 
@@ -615,9 +615,9 @@ export const AlertsPage: React.FC = () => {
                     <button 
                       onClick={(e) => { e.stopPropagation(); setAlertToResolve(alert.id); setResolutionNote(''); setShowModal(true); }}
                       className="text-[10px] font-bold text-red-400 hover:text-white border border-red-500/30 hover:bg-red-500/20 px-2 py-1 rounded transition-colors flex-1 text-center"
-                      title="Atender Incidente"
+                      title={t('alerts.resolve_tooltip')}
                     >
-                      Atender
+                      {t('alerts.resolve_btn')}
                     </button>
                     <button 
                       onClick={(e) => handleExportDetail(alert, e)}
@@ -641,7 +641,7 @@ export const AlertsPage: React.FC = () => {
             <div className="p-4 border-b border-borderDefault bg-red-500/10 flex justify-between items-center">
               <h2 className="text-lg font-bold text-red-500 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
-                Resolver Alerta
+                {t('alerts.modal.title')}
               </h2>
               <button onClick={() => setShowModal(false)} className="text-textMuted hover:text-white transition-colors">
                 <X className="w-5 h-5" />
@@ -649,12 +649,12 @@ export const AlertsPage: React.FC = () => {
             </div>
             <div className="p-6">
               <p className="text-sm text-textSecondary mb-4">
-                Por favor ingresa una justificación o comentario técnico para el cierre de esta alerta. Este registro quedará guardado permanentemente.
+                {t('alerts.modal.description')}
               </p>
               <textarea
                 autoFocus
                 className="w-full bg-bgStart border border-borderDefault rounded-lg p-3 text-white text-sm focus:border-red-500 focus:outline-none min-h-[120px] resize-none"
-                placeholder="Ej: Falsa alarma por pérdida de señal, o el conductor reportó frenada brusca por cruce de animal..."
+                placeholder={t('alerts.modal.placeholder')}
                 value={resolutionNote}
                 onChange={(e) => setResolutionNote(e.target.value)}
               />
@@ -663,14 +663,14 @@ export const AlertsPage: React.FC = () => {
                   onClick={() => setShowModal(false)}
                   className="px-4 py-2 rounded text-sm font-bold text-textSecondary hover:text-white hover:bg-bgSurfaceHigh transition-colors"
                 >
-                  Cancelar
+                  {t('alerts.modal.cancel')}
                 </button>
                 <button 
                   onClick={submitResolve}
                   disabled={!resolutionNote.trim()}
                   className="px-6 py-2 rounded text-sm font-bold bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors shadow-lg shadow-red-500/20"
                 >
-                  Cerrar Alerta
+                  {t('alerts.modal.submit')}
                 </button>
               </div>
             </div>

@@ -5,8 +5,10 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { DriverModal } from './DriverModal';
 import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const DriversPage: React.FC = () => {
+  const { t } = useTranslation();
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export const DriversPage: React.FC = () => {
       const res = await fetch('http://localhost:3000/api/v1/drivers', {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
-      if (!res.ok) throw new Error('Error al cargar choferes');
+      if (!res.ok) throw new Error(t('drivers.error_loading'));
       setDrivers(await res.json());
     } catch (err: any) {
       setError(err.message);
@@ -29,7 +31,7 @@ export const DriversPage: React.FC = () => {
   };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
-    if (!confirm(`¿Estás seguro de ${currentStatus === 'active' ? 'suspender' : 'reactivar'} este chofer?`)) return;
+    if (!confirm(currentStatus === 'active' ? t('drivers.confirm.suspend') : t('drivers.confirm.reactivate'))) return;
     
     try {
       const res = await fetch(`http://localhost:3000/api/v1/drivers/${id}`, {
@@ -48,23 +50,23 @@ export const DriversPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    const headers = ['Nombre Completo', 'Documento', 'Teléfono', 'Email', 'Nacionalidad', 'Estado'];
+    const headers = [t('drivers.table.driver'), 'Documento', 'Teléfono', 'Email', 'Nacionalidad', t('drivers.table.status')];
     const rows = drivers.map(d => [
       d.full_name,
       d.document || '',
       d.phone || '',
       d.email || '',
       d.nationality || '',
-      d.status === 'active' ? 'Activo' : 'Suspendido'
+      d.status === 'active' ? t('drivers.status.active') : t('drivers.status.suspended')
     ]);
-    exportToCsv('Choferes', headers, rows);
+    exportToCsv(t('drivers.title'), headers, rows);
   };
 
   useEffect(() => {
     fetchDrivers();
   }, []);
 
-  if (loading) return <div className="p-8 text-center text-textMuted">Cargando Choferes...</div>;
+  if (loading) return <div className="p-8 text-center text-textMuted">{t('drivers.loading')}</div>;
   if (error) return <div className="p-8 text-center text-statusDanger">{error}</div>;
 
   return (
@@ -76,9 +78,9 @@ export const DriversPage: React.FC = () => {
             style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
           >
             <Users className="w-8 h-8 mr-3 text-accentBlue" />
-            Choferes
+            {t('drivers.title')}
           </h1>
-          <p className="text-textMuted mt-2">Gestiona el personal de conducción y sus asignaciones.</p>
+          <p className="text-textMuted mt-2">{t('drivers.subtitle')}</p>
         </div>
         <RequirePermission permission="drivers:edit">
           <button 
@@ -86,7 +88,7 @@ export const DriversPage: React.FC = () => {
             className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition flex items-center gap-2"
           >
             <UserPlus className="w-5 h-5" />
-            <span>Nuevo Chofer</span>
+            <span>{t('drivers.new_driver')}</span>
           </button>
         </RequirePermission>
       </div>
@@ -112,7 +114,7 @@ export const DriversPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Total Choferes</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('drivers.total_drivers')}</div>
                   <div className="text-3xl font-display font-black text-white">{totalDrivers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-accentBlue/10 flex items-center justify-center border border-accentBlue/20">
@@ -121,7 +123,7 @@ export const DriversPage: React.FC = () => {
               </div>
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Choferes Activos</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('drivers.active')}</div>
                   <div className="text-3xl font-display font-black text-white">{activeDrivers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-statusOnline/10 flex items-center justify-center border border-statusOnline/20">
@@ -130,7 +132,7 @@ export const DriversPage: React.FC = () => {
               </div>
               <div className="bg-bgSurface border border-borderDefault rounded-xl p-4 shadow-card flex items-center justify-between">
                 <div>
-                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">Suspendidos</div>
+                  <div className="text-textMuted text-xs font-bold uppercase tracking-wider mb-1">{t('drivers.suspended')}</div>
                   <div className="text-3xl font-display font-black text-white">{suspendedDrivers}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-statusDanger/10 flex items-center justify-center border border-statusDanger/20">
@@ -145,38 +147,38 @@ export const DriversPage: React.FC = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Buscar por nombre o documento..."
+                    placeholder={t('drivers.search_placeholder')}
                     className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentBlue focus:outline-none"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-textSecondary text-sm">{filtered.length} choferes encontrados</span>
+                  <span className="text-textSecondary text-sm">{filtered.length} {t('drivers.found')}</span>
                   <button 
                     onClick={handleExport}
                     className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
                   >
                     <Download size={16} className="text-accentBlue" />
-                    Exportar CSV
+                    {t('drivers.export_csv')}
                   </button>
                 </div>
               </div>
 
               <div className="overflow-y-auto flex-1">
                 {filtered.length === 0 ? (
-                  <div className="p-12 text-center text-textMuted">No hay choferes que coincidan con la búsqueda.</div>
+                  <div className="p-12 text-center text-textMuted">{t('drivers.no_drivers')}</div>
                 ) : (
                   <table className="w-full text-left text-sm text-textSecondary">
                     <thead className="bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-4">Chofer</th>
-                        <th className="px-6 py-4">Contacto</th>
-                        <th className="px-6 py-4">Licencia</th>
-                        <th className="px-6 py-4">Transportista</th>
-                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4">{t('drivers.table.driver')}</th>
+                        <th className="px-6 py-4">{t('drivers.table.contact')}</th>
+                        <th className="px-6 py-4">{t('drivers.table.license')}</th>
+                        <th className="px-6 py-4">{t('drivers.table.carrier')}</th>
+                        <th className="px-6 py-4">{t('drivers.table.status')}</th>
                         <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="drivers:edit">Acciones</RequirePermission>
+                          <RequirePermission permission="drivers:edit">{t('drivers.table.actions')}</RequirePermission>
                         </th>
                       </tr>
                     </thead>
@@ -197,17 +199,17 @@ export const DriversPage: React.FC = () => {
                             {driver.carrier ? (
                               <span className="text-accentGreen bg-accentGreen/10 px-2 py-1 rounded font-medium text-sm">{driver.carrier.name}</span>
                             ) : (
-                              <span className="text-textMuted italic">Independiente</span>
+                              <span className="text-textMuted italic">{t('drivers.independent')}</span>
                             )}
                           </td>
                           <td className="px-6 py-4">
                             {driver.status === 'active' ? (
                               <div className="inline-flex items-center text-statusOnline bg-statusOnline/10 px-3 py-1 rounded-full text-xs font-bold border border-statusOnline/20">
-                                ACTIVO
+                                {t('drivers.status.active')}
                               </div>
                             ) : (
                               <div className="inline-flex items-center text-statusDanger bg-statusDanger/10 px-3 py-1 rounded-full text-xs font-bold border border-statusDanger/20">
-                                SUSPENDIDO
+                                {t('drivers.status.suspended')}
                               </div>
                             )}
                           </td>
@@ -218,13 +220,13 @@ export const DriversPage: React.FC = () => {
                                   onClick={() => { setDriverToEdit(driver); setShowModal(true); }}
                                   className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
                                 >
-                                  EDITAR
+                                  {t('drivers.actions.edit')}
                                 </button>
                                 <button 
                                   onClick={() => toggleStatus(driver.id, driver.status)}
                                   className={`text-xs underline font-bold ${driver.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
                                 >
-                                  {driver.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                  {driver.status === 'active' ? t('drivers.actions.suspend') : t('drivers.actions.reactivate')}
                                 </button>
                               </div>
                             </RequirePermission>

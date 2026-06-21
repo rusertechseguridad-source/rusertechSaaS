@@ -5,8 +5,10 @@ import { SensorGauge } from './components/SensorGauge';
 import { SensorSparkline } from './components/SensorSparkline';
 import { SensorHistoryModal } from './SensorHistoryModal';
 import { Search, Download, Filter } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const SensorsDashboardPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user, token } = useAuthStore();
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -55,7 +57,7 @@ export const SensorsDashboardPage: React.FC = () => {
     return '#00F59B';
   };
 
-  if (loading) return <div className="p-8 text-textMuted">Cargando sensores...</div>;
+  if (loading) return <div className="p-8 text-textMuted">{t('sensors.loading')}</div>;
 
   const filteredData = data.filter((item) => {
     const v = item.vehicle;
@@ -96,9 +98,9 @@ export const SensorsDashboardPage: React.FC = () => {
           v.alias || '',
           v.carrier?.name || '',
           v.avl_user?.name || '',
-          isTemp ? 'Temperatura' : 'Humedad',
+          isTemp ? t('sensors.temperature') : t('sensors.humidity'),
           `${config.value_min}${unit} a ${config.value_max}${unit}`,
-          numVal === 'Sin datos' ? numVal : `${numVal} ${unit}`
+          numVal === 'Sin datos' ? t('sensors.no_data') : `${numVal} ${unit}`
         ].map(cell => `"${cell}"`).join(',');
       });
     });
@@ -123,16 +125,16 @@ export const SensorsDashboardPage: React.FC = () => {
             style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
           >
             <Thermometer className="w-8 h-8 mr-3 text-accentGreen" />
-            Sensores de Clima
+            {t('sensors.title')}
           </h1>
-          <p className="text-textMuted mt-1 ml-11">Monitoreo de temperatura y humedad en unidades</p>
+          <p className="text-textMuted mt-1 ml-11">{t('sensors.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar patente o alias..."
+              placeholder={t('sensors.search_placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-bgSurface/50 border border-borderDefault text-white pl-9 pr-3 py-1.5 text-sm rounded-lg focus:outline-none focus:border-accentBlue transition-colors"
@@ -144,7 +146,7 @@ export const SensorsDashboardPage: React.FC = () => {
             value={carrierFilter}
             onChange={e => setCarrierFilter(e.target.value)}
           >
-            <option value="">Todos los Transportes</option>
+            <option value="">{t('sensors.all_carriers')}</option>
             {carriers.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
 
@@ -153,7 +155,7 @@ export const SensorsDashboardPage: React.FC = () => {
             value={avlFilter}
             onChange={e => setAvlFilter(e.target.value)}
           >
-            <option value="">Todas las AVL</option>
+            <option value="">{t('sensors.all_avl')}</option>
             {avls.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
 
@@ -162,7 +164,7 @@ export const SensorsDashboardPage: React.FC = () => {
             className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
           >
             <Download size={16} className="text-accentBlue" />
-            Exportar CSV
+            {t('sensors.export_csv')}
           </button>
         </div>
       </div>
@@ -181,7 +183,7 @@ export const SensorsDashboardPage: React.FC = () => {
                     <div className="w-2 h-2 rounded-full bg-accentGreen animate-pulse"></div>
                     <h3 className="font-bold text-base">{v.plate}</h3>
                   </div>
-                  <span className="text-xs text-textMuted truncate max-w-[120px]">{v.alias || 'Sin alias'}</span>
+                  <span className="text-xs text-textMuted truncate max-w-[120px]">{v.alias || t('sensors.no_alias')}</span>
                 </div>
                 {v.carrier?.name && <div className="text-xs text-textMuted flex items-center gap-1"><Truck size={12}/> {v.carrier.name}</div>}
               </div>
@@ -209,10 +211,10 @@ export const SensorsDashboardPage: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 text-textMuted">
                         <Icon size={16} />
-                        <span className="text-sm font-medium uppercase tracking-wider">{isTemp ? 'Temperatura' : 'Humedad'}</span>
+                        <span className="text-sm font-medium uppercase tracking-wider">{isTemp ? t('sensors.temperature') : t('sensors.humidity')}</span>
                       </div>
                       <span className="text-xs font-mono bg-bgSurface px-2 py-0.5 rounded text-textMuted border border-borderDefault">
-                        Rango: {config.value_min}{unit} - {config.value_max}{unit}
+                        {t('sensors.range')}: {config.value_min}{unit} - {config.value_max}{unit}
                       </span>
                     </div>
 
@@ -244,14 +246,13 @@ export const SensorsDashboardPage: React.FC = () => {
         {filteredData.length === 0 && !loading && (
           <div className="col-span-full py-20 text-center text-textMuted">
             <Activity size={48} className="mx-auto mb-4 opacity-20" />
-            <p>No se encontraron sensores o vehículos para tu búsqueda.</p>
+            <p>{t('sensors.not_found')}</p>
           </div>
         )}
       </div>
 
       {selectedVehicle && selectedSensorType && (
         <SensorHistoryModal
-          isOpen={true}
           onClose={() => {
             setSelectedVehicle(null);
             setSelectedSensorType('');

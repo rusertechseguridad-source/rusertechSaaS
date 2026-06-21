@@ -9,6 +9,7 @@ import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import { Link } from 'react-router-dom';
 import { TripModal } from './TripModal';
+import { useTranslation } from 'react-i18next';
 
 /* ─────────────── helpers ─────────────── */
 const STATUS_COLOR: Record<string, string> = {
@@ -42,6 +43,7 @@ function alertCount(trip: Trip) {
 }
 
 const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip, onEdit }) => {
+  const { t } = useTranslation();
   const ev = lastEvent(trip) as any;
   const alerts = alertCount(trip);
   const hasEvents = !!ev;
@@ -53,14 +55,14 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
       {/* 1. Estado */}
       <div className="w-24 shrink-0">
         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${statusBadge(trip.status)}`}>
-          {trip.status === 'EN_CURSO' ? 'En Curso' : trip.status === 'PROGRAMADO' ? 'Programado' : trip.status === 'FINALIZADO' ? 'Finalizado' : trip.status}
+          {trip.status === 'EN_CURSO' ? t('trips.status.en_curso') : trip.status === 'PROGRAMADO' ? t('trips.status.programado') : trip.status === 'FINALIZADO' ? t('trips.status.finalizado') : trip.status}
         </span>
       </div>
 
       {/* 2. Viaje */}
       <div className="flex-1 min-w-[150px]">
         <div className="text-white font-bold text-sm truncate">{trip.name}</div>
-        <div className="font-bold text-white mt-0.5 truncate">{trip.trip_code ?? 'SIN_CÓDIGO'}</div>
+        <div className="font-bold text-white mt-0.5 truncate">{trip.trip_code ?? t('trips.no_code')}</div>
         <div className="text-textMuted text-[9px] font-mono mt-0.5 truncate" title={trip.id}>ID: {trip.id}</div>
       </div>
 
@@ -73,11 +75,11 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
               {trip.vehicle.plate}{trip.vehicle.alias ? ` (${trip.vehicle.alias})` : ''}
             </div>
             <div className="text-white font-bold text-xs mt-0.5 truncate">
-              {(trip as any).carrier?.name || (trip.vehicle as any)?.carrier?.name || 'Sin transportista'}
+              {(trip as any).carrier?.name || (trip.vehicle as any)?.carrier?.name || t('trips.no_carrier')}
             </div>
           </>
         ) : (
-          <span className="text-white font-bold text-xs italic">Sin Vehículo</span>
+          <span className="text-white font-bold text-xs italic">{t('trips.no_vehicle')}</span>
         )}
       </div>
 
@@ -89,7 +91,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
             {(trip as any).driver.full_name}
           </div>
         ) : (
-          <span className="text-xs text-textMuted italic">N/D</span>
+          <span className="text-xs text-textMuted italic">{t('trips.not_available')}</span>
         )}
       </div>
 
@@ -97,11 +99,11 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
       <div className="flex-[1.5] min-w-[200px]">
         <div className="text-white font-bold text-xs truncate flex items-center gap-1.5 mb-0.5">
           <MapPin className="w-3 h-3 text-statusDanger shrink-0" />
-          {trip.origin_location?.name ?? 'N/D'}
+          {trip.origin_location?.name ?? t('trips.not_available')}
         </div>
         <div className="text-white font-bold text-xs truncate flex items-center gap-1.5">
           <MapPin className="w-3 h-3 text-accentMint shrink-0" />
-          {trip.destination_location?.name ?? 'N/D'}
+          {trip.destination_location?.name ?? t('trips.not_available')}
         </div>
       </div>
 
@@ -113,7 +115,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
         </div>
         <div className={`text-xs font-bold mt-0.5 flex items-center gap-1.5 ${trip.actual_start ? 'text-accentBlue' : 'text-white/50'}`}>
           <Play className="w-2.5 h-2.5" />
-          {trip.actual_start ? fmt(trip.actual_start) : 'No iniciado'}
+          {trip.actual_start ? fmt(trip.actual_start) : t('trips.not_started')}
         </div>
       </div>
 
@@ -127,11 +129,11 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
               {ev.humidity_pct != null && <span className="text-white"><Droplets className="w-3 h-3 inline text-accentBlue" /> {ev.humidity_pct}%</span>}
             </div>
             <div className="text-white font-bold text-xs mt-0.5 truncate">
-              {ev.address ? `📍 ${ev.address}` : 'Sin dirección'}
+              {ev.address ? `📍 ${ev.address}` : t('trips.no_address')}
             </div>
           </>
         ) : (
-          <span className="text-white font-bold text-xs italic">— Sin señal</span>
+          <span className="text-white font-bold text-xs italic">{t('trips.no_signal')}</span>
         )}
       </div>
 
@@ -153,7 +155,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(trip); }}
             className="inline-flex items-center gap-1 text-[11px] font-bold text-textMuted hover:text-white bg-bgSurfaceHigh hover:bg-bgSurfaceHigh/80 border border-borderDefault px-2 py-1.5 rounded-lg transition-all duration-150"
           >
-            Editar
+            {t('trips.edit')}
           </button>
         </RequirePermission>
         <Link
@@ -162,7 +164,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
             bg-accentBlue/10 hover:bg-accentBlue/20 border border-accentBlue/20 hover:border-accentBlue/40
             px-3 py-1.5 rounded-lg transition-all duration-150"
         >
-          Ver <ChevronRight className="w-3 h-3" />
+          {t('trips.view')} <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
     </div>
@@ -171,6 +173,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
 
 /* ─────────────── main page ─────────────── */
 export const TripsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { trips, fetchTrips, createTrip, loading } = useTripsStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -227,7 +230,7 @@ export const TripsPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    const headers = ['Viaje', 'Código', 'Estado', 'Vehículo', 'Placa', 'Transportista', 'Chofer', 'Origen', 'Destino', 'Inicio Programado', 'Inicio Real'];
+    const headers = [t('trips.table.trip'), 'Código', t('trips.table.status'), t('trips.table.vehicle'), 'Placa', 'Transportista', t('trips.table.driver'), 'Origen', 'Destino', t('trips.table.start'), 'Inicio Real'];
     const rows = filtered.map(t => [
       t.name,
       t.trip_code || '',
@@ -241,14 +244,14 @@ export const TripsPage: React.FC = () => {
       fmt(t.scheduled_start) || '',
       fmt(t.actual_start) || ''
     ]);
-    exportToCsv('Viajes', headers, rows);
+    exportToCsv(t('trips.title'), headers, rows);
   };
 
   const statusTabs = [
-    { value: '', label: 'Todos', count: trips.length },
-    { value: 'EN_CURSO', label: 'En Curso', count: trips.filter((t) => t.status === 'EN_CURSO').length },
-    { value: 'PROGRAMADO', label: 'Programado', count: trips.filter((t) => t.status === 'PROGRAMADO').length },
-    { value: 'FINALIZADO', label: 'Finalizado', count: trips.filter((t) => t.status === 'FINALIZADO').length },
+    { value: '', label: t('trips.status.all'), count: trips.length },
+    { value: 'EN_CURSO', label: t('trips.status.en_curso'), count: trips.filter((t) => t.status === 'EN_CURSO').length },
+    { value: 'PROGRAMADO', label: t('trips.status.programado'), count: trips.filter((t) => t.status === 'PROGRAMADO').length },
+    { value: 'FINALIZADO', label: t('trips.status.finalizado'), count: trips.filter((t) => t.status === 'FINALIZADO').length },
   ];
 
   return (
@@ -258,14 +261,14 @@ export const TripsPage: React.FC = () => {
       <div className="pb-0 flex justify-between items-center shrink-0">
         <h1 className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center">
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
-          Viajes y Monitoreo
+          {t('trips.title')}
         </h1>
         <RequirePermission permission="trips:manage">
           <button
             onClick={openCreateModal}
             className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20 transition-colors"
           >
-            <Plus className="w-5 h-5 mr-2" /> Programar Viaje
+            <Plus className="w-5 h-5 mr-2" /> {t('trips.new_trip')}
           </button>
         </RequirePermission>
       </div>
@@ -279,7 +282,7 @@ export const TripsPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar nombre, código, placa..."
+              placeholder={t('trips.search_placeholder')}
               className="w-full bg-bgSurface border border-borderDefault rounded-lg pl-9 pr-4 py-1.5 text-sm text-textPrimary focus:border-accentGreen focus:outline-none transition-colors"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -317,7 +320,7 @@ export const TripsPage: React.FC = () => {
             onChange={(e) => setCarrierFilter(e.target.value)}
             className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-accentGreen focus:outline-none"
           >
-            <option value="">Todos los Transportistas</option>
+            <option value="">{t('trips.all_carriers')}</option>
             {uniqueCarriers.map((c: any) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -329,7 +332,7 @@ export const TripsPage: React.FC = () => {
             onChange={(e) => setAvlFilter(e.target.value)}
             className="bg-bgSurface border border-borderDefault rounded-lg px-3 py-1.5 text-xs text-textPrimary focus:border-accentGreen focus:outline-none"
           >
-            <option value="">Todos los Proveedores GPS</option>
+            <option value="">{t('trips.all_providers')}</option>
             {uniqueAvl.map((a: any) => (
               <option key={a.id} value={a.id}>{a.provider_name}</option>
             ))}
@@ -340,20 +343,20 @@ export const TripsPage: React.FC = () => {
               onClick={() => { setCarrierFilter(''); setAvlFilter(''); }}
               className="text-xs text-statusDanger hover:text-red-400 flex items-center gap-1"
             >
-              <X className="w-3 h-3" /> Limpiar
+              <X className="w-3 h-3" /> {t('trips.clear_filters')}
             </button>
           )}
 
           <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-textMuted">
-              {filtered.length} viaje{filtered.length !== 1 ? 's' : ''}
+              {filtered.length} {t('trips.trips_found')}
             </span>
             <button 
               onClick={handleExport}
               className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
             >
               <Download size={14} className="text-accentBlue" />
-              Exportar CSV
+              {t('trips.export_csv')}
             </button>
           </div>
         </div>
@@ -363,15 +366,15 @@ export const TripsPage: React.FC = () => {
       <div className="flex-1 overflow-auto flex flex-col relative w-full">
         {/* Table Header (Sticky) */}
         <div className="sticky top-0 bg-bgStart/95 backdrop-blur-md border-b border-borderDefault text-white text-[10px] uppercase tracking-wider font-black px-4 py-3 flex items-center min-w-[1100px] w-full z-10 gap-4">
-          <div className="w-24 shrink-0">Estado</div>
-          <div className="flex-1 min-w-[150px]">Viaje</div>
-          <div className="flex-1 min-w-[150px]">Vehículo</div>
-          <div className="flex-1 min-w-[150px]">Chofer</div>
-          <div className="flex-[1.5] min-w-[200px]">Origen → Destino</div>
-          <div className="w-32 shrink-0">Inicio</div>
-          <div className="flex-[1.5] min-w-[200px]">Telemetría (Último evento)</div>
-          <div className="w-20 shrink-0 text-center">Alertas</div>
-          <div className="w-24 shrink-0 text-right">Acciones</div>
+          <div className="w-24 shrink-0">{t('trips.table.status')}</div>
+          <div className="flex-1 min-w-[150px]">{t('trips.table.trip')}</div>
+          <div className="flex-1 min-w-[150px]">{t('trips.table.vehicle')}</div>
+          <div className="flex-1 min-w-[150px]">{t('trips.table.driver')}</div>
+          <div className="flex-[1.5] min-w-[200px]">{t('trips.table.route')}</div>
+          <div className="w-32 shrink-0">{t('trips.table.start')}</div>
+          <div className="flex-[1.5] min-w-[200px]">{t('trips.table.telemetry')}</div>
+          <div className="w-20 shrink-0 text-center">{t('trips.table.alerts')}</div>
+          <div className="w-24 shrink-0 text-right">{t('trips.table.actions')}</div>
         </div>
 
         {/* Table Body */}
@@ -379,12 +382,12 @@ export const TripsPage: React.FC = () => {
           {loading ? (
             <div className="flex flex-col items-center justify-center h-48 gap-3 w-full absolute left-0">
               <div className="w-8 h-8 border-2 border-accentGreen/30 border-t-accentGreen rounded-full animate-spin" />
-              <p className="text-textMuted text-sm">Cargando viajes...</p>
+              <p className="text-textMuted text-sm">{t('trips.loading')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 w-full absolute left-0">
               <Truck className="w-12 h-12 text-textMuted/30" />
-              <p className="text-textMuted">No se encontraron viajes con los filtros aplicados.</p>
+              <p className="text-textMuted">{t('trips.no_trips')}</p>
             </div>
           ) : (
             filtered.map((trip) => <TripRow key={trip.id} trip={trip} onEdit={handleEditTrip} />)

@@ -2,18 +2,19 @@
 
 Rusertech es una plataforma empresarial multi-tenant avanzada para el seguimiento satelital vehicular, gestión de flotas y monitoreo de viajes en tiempo real.
 
-## 🚀 Estado del Proyecto: BLOQUE 0 Finalizado
+## 🚀 Estado del Proyecto: MVP Funcional
 
-Actualmente, el proyecto ha completado las fases de infraestructura base y sitio público.
+Actualmente, el proyecto ha completado las fases de infraestructura base, sitio público y módulos principales del SaaS.
 
-### ✅ Bloques Completados
-- **BLOQUE -1 — Sitio Público:** Landing page funcional con diseño premium, responsiva y orientada a conversión B2B.
-- **BLOQUE 0 — Infraestructura:** 
-  - Monorepo configurado con NestJS (Backend) y React+Vite (Frontend).
-  - Base de datos PostgreSQL (Supabase) con PostGIS inicializada.
-  - Esquema de datos con 16 modelos de negocio implementados en Prisma.
-  - Estrategia de particionamiento mensual para telemetría activa vía `pg_cron`.
-  - Integración con Redis (Upstash) para caché y colas de procesos.
+### ✅ Funcionalidades Completadas
+- **Sitio Público:** Landing page funcional con diseño premium B2B.
+- **Infraestructura Core:** Backend NestJS, Frontend React+Vite, Base de datos PostgreSQL (Supabase) + Prisma.
+- **Mapa Global:** Mapa en tiempo real (MapLibre GL JS) con seguimiento de viajes, vehículos y eventos.
+- **Módulos Administrativos:** Gestión de Alertas, Viajes, Vehículos, Dispositivos, Locaciones, Sensores, etc.
+- **Internacionalización (i18n):** Plataforma 100% bilingüe (Español / Inglés) con cambio en tiempo real.
+- **Seguridad y Accesos (RBAC + Entity-Based):**
+  - Roles de usuario (Owner, Manager, Operator, Viewer).
+  - Control de accesos granular por entidades: Los usuarios *Viewers* pueden ser restringidos a visualizar únicamente patentes (vehículos) y centros logísticos específicos. El backend asegura y filtra nativamente los registros a través de JWT y Prisma.
 
 ## 🛠️ Stack Tecnológico
 

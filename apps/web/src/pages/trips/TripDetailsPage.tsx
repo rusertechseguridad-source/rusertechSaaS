@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
-import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download } from 'lucide-react';
+import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download, Link as LinkIcon, X } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
 import { SensorConfigModal } from '../sensors/SensorConfigModal';
@@ -961,7 +961,8 @@ export const TripDetailsPage: React.FC = () => {
       
       {sensorModalOpen && trip.vehicle_id && (
         <SensorHistoryModal 
-          vehicleId={trip.vehicle_id}
+          vehicle={trip.vehicle}
+          token={localStorage.getItem('rusertech_token') || ''}
           sensorType={selectedSensorType}
           onClose={() => setSensorModalOpen(false)}
         />

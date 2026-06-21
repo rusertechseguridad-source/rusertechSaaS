@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Building, Users, Sliders, Bell, Leaf, MapPin, ExternalLink, User, Edit2, X, Check, HelpCircle } from 'lucide-react';
+import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
 import { translateParameterKey } from '../../utils/labels';
+import { useTranslation } from 'react-i18next';
 
 export const SettingsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'users' | 'parameters' | 'notifications' | 'carbon' | 'forwarding'>('profile');
   const navigate = useNavigate();
@@ -22,6 +24,11 @@ export const SettingsPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
+  const [editEntityRestrictions, setEditEntityRestrictions] = useState<{vehicles: string[], locations: string[]}>({vehicles: [], locations: []});
+  
+  // Entities for restrictions
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [allLocations, setAllLocations] = useState<any[]>([]);
 
   const canManageUsers = (user?.role || user?.role_code) === 'account_owner' || (user?.role || user?.role_code) === 'rusertech_admin';
 
@@ -89,6 +96,13 @@ export const SettingsPage: React.FC = () => {
     if (res.ok) {
       setForwarders(await res.json());
     }
+
+    // Entities
+    res = await fetch('http://localhost:3000/api/v1/vehicles', { headers });
+    if (res.ok) setAllVehicles(await res.json());
+
+    res = await fetch('http://localhost:3000/api/v1/locations', { headers });
+    if (res.ok) setAllLocations(await res.json());
   };
 
   useEffect(() => {
@@ -140,6 +154,17 @@ export const SettingsPage: React.FC = () => {
     if (res.ok) fetchUsers();
   };
 
+  const deleteUser = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este usuario permanentemente?')) return;
+    const token = localStorage.getItem('rusertech_token');
+    const res = await fetch(`http://localhost:3000/api/v1/settings/users/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) fetchUsers();
+    else alert('Error al eliminar usuario o no tienes permisos.');
+  };
+
   const changeRole = async (id: string, roleCode: string) => {
     const token = localStorage.getItem('rusertech_token');
     const res = await fetch(`http://localhost:3000/api/v1/settings/users/${id}`, {
@@ -158,7 +183,7 @@ export const SettingsPage: React.FC = () => {
     const res = await fetch(`http://localhost:3000/api/v1/settings/users/${editingUser.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ role_code: editRole, full_name: editName })
+      body: JSON.stringify({ role_code: editRole, full_name: editName, entity_restrictions: editEntityRestrictions })
     });
     if (res.ok) {
       setEditingUser(null);
@@ -254,15 +279,12 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="p-8 h-full w-full flex flex-col">
       <div className="flex justify-between items-center mb-6 shrink-0">
-        <div>
-          <h1 
-            className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center"
-            style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
-          >
-            <Settings className="w-8 h-8 mr-3 text-accentGreen" />
-            Configuración
-          </h1>
-          <p className="text-textMuted mt-2">Gestión del perfil de la empresa y permisos de usuarios</p>
+        <div className="flex items-center gap-4">
+          <Settings className="w-8 h-8 text-accentBlue" />
+          <div>
+            <h1 className="text-3xl font-black text-white">{t('settings.title')}</h1>
+            <p className="text-sm text-textMuted mt-1">{t('settings.subtitle')}</p>
+          </div>
         </div>
       </div>
 
@@ -410,6 +432,7 @@ export const SettingsPage: React.FC = () => {
                                       setEditingUser(u);
                                       setEditName(u.full_name || '');
                                       setEditRole(u.role_code || '');
+                                      setEditEntityRestrictions(u.entity_restrictions?.vehicles ? u.entity_restrictions : { vehicles: [], locations: [] });
                                     }}
                                     disabled={u.email === user?.email}
                                     className="p-1.5 text-accentBlue hover:bg-accentBlue/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -420,19 +443,27 @@ export const SettingsPage: React.FC = () => {
                                   <button
                                     onClick={() => toggleUserStatus(u.id, u.status === 'active')}
                                     disabled={u.email === user?.email}
-                                    className={`px-3 py-1 rounded text-xs font-bold border transition-colors ${
-                                      u.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'
+                                    className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${
+                                      u.status === 'active' ? 'bg-orange-500/10 text-orange-500 border-orange-500/30 hover:bg-orange-500/20' : 'bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                                   >
-                                    {u.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
+                                    {u.status === 'active' ? 'SUSPENDER' : 'REACTIVAR'}
+                                  </button>
+                                  <button
+                                    onClick={() => deleteUser(u.id)}
+                                    disabled={u.email === user?.email}
+                                    className="p-1.5 text-red-500 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Eliminar Usuario"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </>
                               )}
                               {!canManageUsers && (
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                  u.status === 'active' ? 'text-green-500' : 'text-red-500'
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                                  u.status === 'active' ? 'text-green-500' : 'text-orange-500'
                                 }`}>
-                                  {u.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
+                                  {u.status === 'active' ? 'ACTIVO' : 'SUSPENDIDO'}
                                 </span>
                               )}
                             </div>
@@ -695,6 +726,56 @@ export const SettingsPage: React.FC = () => {
                   <option value="viewer">Visualizador</option>
                 </select>
               </div>
+
+              {editRole === 'viewer' && (
+                <div className="mt-2 border-t border-borderDefault pt-4">
+                  <label className="block text-xs font-bold text-textSecondary mb-2 uppercase">{t('settings.access_restrictions_viewer')}</label>
+                  <p className="text-xs text-textMuted mb-3">{t('settings.access_restrictions_desc')}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-bgStart border border-borderDefault p-3 rounded h-40 overflow-y-auto">
+                      <label className="block text-xs font-bold text-white mb-2">{t('settings.allowed_vehicles')}</label>
+                      {allVehicles.map(v => (
+                        <label key={v.id} className="flex items-center gap-2 mb-1 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={editEntityRestrictions.vehicles.includes(v.id)}
+                            onChange={(e) => {
+                              const newV = e.target.checked 
+                                ? [...editEntityRestrictions.vehicles, v.id]
+                                : editEntityRestrictions.vehicles.filter((id: string) => id !== v.id);
+                              setEditEntityRestrictions({ ...editEntityRestrictions, vehicles: newV });
+                            }}
+                            className="accent-accentBlue"
+                          />
+                          <span className="text-xs text-textMuted">{v.plate}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="bg-bgStart border border-borderDefault p-3 rounded h-40 overflow-y-auto">
+                      <label className="block text-xs font-bold text-white mb-2">{t('settings.allowed_locations')}</label>
+                      {allLocations.map(l => (
+                        <label key={l.id} className="flex items-center gap-2 mb-1 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={editEntityRestrictions.locations.includes(l.id)}
+                            onChange={(e) => {
+                              const newL = e.target.checked 
+                                ? [...editEntityRestrictions.locations, l.id]
+                                : editEntityRestrictions.locations.filter((id: string) => id !== l.id);
+                              setEditEntityRestrictions({ ...editEntityRestrictions, locations: newL });
+                            }}
+                            className="accent-accentBlue"
+                          />
+                          <span className="text-xs text-textMuted">{l.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-borderDefault">
                 <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">Cancelar</button>
                 <button type="submit" className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">

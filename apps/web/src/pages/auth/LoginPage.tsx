@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { useTranslation } from 'react-i18next';
 
 export const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const { login, loading, error } = useAuthStore();
   const navigate = useNavigate();
   
@@ -25,8 +27,8 @@ export const LoginPage: React.FC = () => {
           <div className="w-12 h-12 rounded-lg bg-gradient-accent flex items-center justify-center font-display font-extrabold text-iconSymbol text-2xl mb-4">
             R
           </div>
-          <h1 className="font-display font-bold text-2xl text-textPrimary">Iniciar Sesión</h1>
-          <p className="font-body text-textSecondary text-sm mt-1">Ingresá a tu cuenta corporativa</p>
+          <h1 className="font-display font-bold text-2xl text-textPrimary">{t('auth.login_title')}</h1>
+          <p className="font-body text-textSecondary text-sm mt-1">{t('auth.login_subtitle')}</p>
         </div>
 
         {error && (
@@ -37,7 +39,7 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <label className="text-textPrimary font-medium text-sm">Email</label>
+            <label className="text-textPrimary font-medium text-sm">{t('auth.email')}</label>
             <input 
               required 
               type="email" 
@@ -49,7 +51,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-textPrimary font-medium text-sm">Contraseña</label>
+            <label className="text-textPrimary font-medium text-sm">{t('auth.password')}</label>
             <input 
               required 
               type="password" 
@@ -65,13 +67,13 @@ export const LoginPage: React.FC = () => {
             disabled={loading}
             className="bg-gradient-accent text-textOnAccent font-bold px-4 py-3 rounded-lg hover:shadow-glow-green transition-shadow mt-4 disabled:opacity-50"
           >
-            {loading ? 'Ingresando...' : 'Ingresar a la plataforma'}
+            {loading ? t('auth.logging_in') : t('auth.login_button')}
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <button onClick={() => navigate('/')} className="text-textSecondary text-sm hover:text-textPrimary transition-colors">
-            Volver al sitio público
+            {t('auth.back_public')}
           </button>
         </div>
 

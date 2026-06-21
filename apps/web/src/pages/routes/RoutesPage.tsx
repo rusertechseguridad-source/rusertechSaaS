@@ -2,11 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRoutesStore } from '../../store/routesStore';
 import { Map, Plus, Search, Upload, Download, Route as RouteIcon, Trash2 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
+import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { kml } from '@tmcw/togeojson';
+import { useTranslation } from 'react-i18next';
 
 export const RoutesPage: React.FC = () => {
+  const { t } = useTranslation();
   const { routes, fetchRoutes, deleteRoute, createRoute, loading } = useRoutesStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -124,7 +127,7 @@ export const RoutesPage: React.FC = () => {
   };
 
   const handleCreateManual = () => {
-    window.alert('La creación manual de rutas requiere la integración completa del mapa interactivo (MapLibre GL Draw). Por el momento, por favor utilice la función "Importar KML".');
+    window.alert(t('routes.manual_creation_alert'));
   };
 
   const handleImport = async (e: React.FormEvent) => {
@@ -145,7 +148,7 @@ export const RoutesPage: React.FC = () => {
     }
 
     if (!lineStringGeoJSON) {
-      window.alert("El archivo KML no contiene una ruta válida (LineString).");
+      window.alert(t('routes.invalid_kml'));
       return;
     }
 
@@ -170,12 +173,12 @@ export const RoutesPage: React.FC = () => {
     const headers = ['Nombre', 'Operación', 'Origen', 'Destino', 'Corredor (m)'];
     const rows = routes.map(r => [
       r.name,
-      r.operation?.name || 'Sin Operación',
+      r.operation?.name || t('routes.no_operation'),
       r.origin_location?.name || '',
       r.destination_location?.name || '',
       r.corridor_meters || 500
     ]);
-    exportToCsv('Rutas', headers, rows);
+    exportToCsv(t('routes.title'), headers, rows);
   };
 
   const handleExportDetail = (r: any) => {
@@ -185,7 +188,7 @@ export const RoutesPage: React.FC = () => {
   };
 
   const groupedRoutes = routes.reduce((acc, route) => {
-    const opName = route.operation?.name || 'Internos / Sin Cliente';
+    const opName = route.operation?.name || t('routes.internal_operation');
     if (!acc[opName]) acc[opName] = [];
     acc[opName].push(route);
     return acc;
@@ -199,19 +202,19 @@ export const RoutesPage: React.FC = () => {
           style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
         >
           <RouteIcon className="w-8 h-8 mr-3 text-accentGreen" />
-          Recorridos KML
+          {t('routes.title')}
         </h1>
         <RequirePermission permission="routes:edit">
           <div className="flex gap-4">
             <label className="cursor-pointer bg-bgSurface border border-borderDefault hover:bg-bgSurfaceHigh text-white px-4 py-2 rounded font-bold flex items-center shadow-card transition-colors">
-              <Upload className="w-5 h-5 mr-2" /> Importar KML
+              <Upload className="w-5 h-5 mr-2" /> {t('routes.import_kml')}
               <input type="file" accept=".kml" className="hidden" onChange={handleFileUpload} />
             </label>
             <button
               onClick={handleCreateManual}
               className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
             >
-              <Plus className="w-5 h-5 mr-2" /> Crear Manual
+              <Plus className="w-5 h-5 mr-2" /> {t('routes.create_manual')}
             </button>
           </div>
         </RequirePermission>
@@ -224,29 +227,29 @@ export const RoutesPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-textMuted w-5 h-5" />
               <input
                 type="text"
-                placeholder="Buscar recorridos..."
+                placeholder={t('routes.search_placeholder')}
                 className="w-full bg-bgStart border border-borderDefault rounded-lg pl-10 pr-4 py-2 text-textPrimary focus:border-accentGreen focus:outline-none"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-textSecondary text-sm">{routes.length} rutas encontradas</span>
+              <span className="text-textSecondary text-sm">{routes.length} {t('routes.found')}</span>
               <button 
                 onClick={handleExport}
                 className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-3 py-1.5 text-xs rounded-lg border border-borderDefault transition-colors"
               >
                 <Download size={14} className="text-accentBlue" />
-                Exportar CSV
+                {t('routes.export_csv')}
               </button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
             {loading ? (
-              <div className="text-center text-textMuted p-8">Cargando rutas...</div>
+              <div className="text-center text-textMuted p-8">{t('routes.loading')}</div>
             ) : Object.keys(groupedRoutes).length === 0 ? (
-              <div className="text-center text-textMuted p-8">No hay rutas registradas</div>
+              <div className="text-center text-textMuted p-8">{t('routes.no_routes')}</div>
             ) : (
               <div className="space-y-4">
                 {Object.entries(groupedRoutes).map(([opName, opRoutes]) => (
@@ -299,8 +302,8 @@ export const RoutesPage: React.FC = () => {
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-bgStart/50 backdrop-blur-sm pointer-events-none">
               <div className="text-center p-8 bg-bgSurface border border-borderDefault rounded-xl shadow-card max-w-sm">
                 <RouteIcon className="w-16 h-16 mx-auto text-textMuted mb-4" />
-                <p className="text-white font-bold mb-2">Seleccione una ruta para previsualizarla</p>
-                <p className="text-textMuted text-sm italic">Se dibujará la ruta con color verde neón usando MapLibre GL.</p>
+                <p className="text-white font-bold mb-2">{t('routes.select_instruction')}</p>
+                <p className="text-textMuted text-sm italic">{t('routes.select_instruction_desc')}</p>
               </div>
             </div>
           )}
@@ -311,25 +314,25 @@ export const RoutesPage: React.FC = () => {
         <div className="fixed inset-0 bg-bgOverlay z-50 flex items-center justify-center p-4">
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card flex flex-col" style={{ maxHeight: '80vh' }}>
             <div className="p-6 border-b border-borderDefault shrink-0">
-              <h2 className="text-2xl font-bold text-white">Importar KML</h2>
+              <h2 className="text-2xl font-bold text-white">{t('routes.modal.import_title')}</h2>
             </div>
             <form onSubmit={handleImport} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div className="bg-statusWarning/10 border border-statusWarning/20 text-statusWarning p-3 rounded text-sm">
-                  ⚠️ Solo se aceptan geometrías LineString. Puntos y polígonos serán ignorados.
+                  {t('routes.modal.warning')}
                 </div>
                 <div>
-                  <label className="block text-sm text-textSecondary mb-1">Nombre de la Ruta</label>
+                  <label className="block text-sm text-textSecondary mb-1">{t('routes.modal.name')}</label>
                   <input required type="text" className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={routeName} onChange={e => setRouteName(e.target.value)} />
                 </div>
                 
                 <div className="border-t border-borderDefault pt-4 mt-2">
-                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">Asignación y Logística</h3>
+                  <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">{t('routes.modal.assignment')}</h3>
                   
                   <div className="mb-3">
-                    <label className="block text-sm text-textSecondary mb-1">Cliente / Operación</label>
+                    <label className="block text-sm text-textSecondary mb-1">{t('routes.modal.operation')}</label>
                     <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={operationId} onChange={e => setOperationId(e.target.value)}>
-                      <option value="">— Ninguno (Ruta Interna) —</option>
+                      <option value="">{t('routes.modal.none_internal')}</option>
                       {operations.map(op => (
                         <option key={op.id} value={op.id}>{op.name}</option>
                       ))}
@@ -338,18 +341,18 @@ export const RoutesPage: React.FC = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-textSecondary mb-1">Origen</label>
+                      <label className="block text-sm text-textSecondary mb-1">{t('routes.modal.origin')}</label>
                       <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={originId} onChange={e => setOriginId(e.target.value)}>
-                        <option value="">— Seleccionar —</option>
+                        <option value="">{t('routes.modal.select')}</option>
                         {locations.filter(l => !operationId || l.operation_id === operationId).map(loc => (
                           <option key={loc.id} value={loc.id}>{loc.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm text-textSecondary mb-1">Destino</label>
+                      <label className="block text-sm text-textSecondary mb-1">{t('routes.modal.destination')}</label>
                       <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={destinationId} onChange={e => setDestinationId(e.target.value)}>
-                        <option value="">— Seleccionar —</option>
+                        <option value="">{t('routes.modal.select')}</option>
                         {locations.filter(l => !operationId || l.operation_id === operationId).map(loc => (
                           <option key={loc.id} value={loc.id}>{loc.name}</option>
                         ))}
@@ -366,8 +369,8 @@ export const RoutesPage: React.FC = () => {
                 </div>
               </div>
               <div className="p-6 border-t border-borderDefault flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">Confirmar e Importar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded text-textSecondary hover:text-white transition-colors">{t('routes.modal.cancel')}</button>
+                <button type="submit" className="px-6 py-2 bg-accentGreen text-bgStart font-bold rounded hover:bg-accentGreen/90 transition-colors">{t('routes.modal.confirm')}</button>
               </div>
             </form>
           </div>
