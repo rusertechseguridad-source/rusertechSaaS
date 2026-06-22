@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
+import { MailService } from '../mail/mail.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class VehiclesService {
-  constructor(private prisma: PrismaService, private redis: RedisService) {}
+  constructor(
+    private prisma: PrismaService, 
+    private redis: RedisService,
+    private mailService: MailService
+  ) {}
 
   async findAll(user?: any, skip?: number, take?: number) {
     // Determine restrictions
@@ -92,12 +97,61 @@ export class VehiclesService {
         is_blocked: blocked, 
         block_reason: blocked ? reason : null 
       },
-      select: { id: true, plate: true, is_blocked: true, block_reason: true, hub_asset_id: true, avl_user_id: true }
+      select: { 
+        id: true, 
+        plate: true, 
+        is_blocked: true, 
+        block_reason: true, 
+        hub_asset_id: true, 
+        avl_user_id: true,
+        tenant_id: true,
+        tenant: { select: { name: true } },
+        avl_user: { select: { email: true } }
+      }
     });
 
     // Invalidate Redis cache so TelemetryService picks up the new status
     if (updated.hub_asset_id && updated.avl_user_id) {
       await this.redis.getClient().del(`vehicle:asset:${updated.avl_user_id}:${updated.hub_asset_id}`);
+    }
+
+    if (blocked && reason) {
+      // 1. Enviar email de bloqueo
+      const toEmails = [];
+      if (updated.avl_user?.email) toEmails.push(updated.avl_user.email);
+      
+      const tenantManagers = await this.prisma.extended.user.findMany({
+        where: { tenant_id: updated.tenant_id, role_code: { in: ['account_owner', 'manager'] }, status: 'active' },
+        select: { email: true }
+      });
+      tenantManagers.forEach(u => toEmails.push(u.email));
+
+      if (toEmails.length > 0) {
+        this.mailService.sendVehicleBlockedAlert({
+          plate: updated.plate,
+          reason,
+          toEmails,
+          tenantName: updated.tenant?.name
+        }).catch(err => console.error('Failed to send block alert email:', err));
+      }
+
+      // 2. Registrar el EventLog (Auditoría de Bloqueo)
+      await this.prisma.extended.eventLog.create({
+        data: {
+          tenant_id: updated.tenant_id,
+          vehicle_id: updated.id,
+          event_type: 'vehicle_blocked',
+          severity: 'critical',
+          metadata_json: { reason, plate: updated.plate },
+          status: 'open'
+        }
+      });
+    } else if (!blocked) {
+      // Al desbloquear, marcamos el EventLog como resuelto
+      await this.prisma.extended.eventLog.updateMany({
+        where: { vehicle_id: updated.id, event_type: 'vehicle_blocked', status: 'open' },
+        data: { status: 'resolved', resolved_at: new Date(), resolution_note: 'Vehículo desbloqueado manualmente' }
+      });
     }
 
     return updated;

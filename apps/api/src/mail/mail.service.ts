@@ -135,4 +135,133 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendVehicleBlockedAlert(params: {
+    plate: string;
+    reason: string;
+    toEmails: string[];
+    tenantName?: string;
+  }) {
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALERTA CRÍTICA: Vehículo Bloqueado</title>
+</head>
+<body style="margin:0;padding:0;background:#0a121e;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a121e;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border:1px solid #7f1d1d;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#7f1d1d,#450a0a);padding:32px 40px;text-align:center;border-bottom:1px solid #ef4444;">
+              <h1 style="margin:0;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:1px;">
+                ⚠️ ALERTA DE BLOQUEO
+              </h1>
+              <p style="margin:6px 0 0;color:#fca5a5;font-size:12px;letter-spacing:3px;text-transform:uppercase;">
+                Rusertech Seguridad
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="color:#ffffff;font-size:20px;margin:0 0 12px;">Se ha bloqueado un vehículo</h2>
+              <p style="color:#94a3b8;font-size:15px;line-height:1.6;margin:0 0 24px;">
+                El vehículo con patente <strong style="color:#ef4444;font-size:18px;">${params.plate}</strong> 
+                ha sido bloqueado operativamente. Se ha detenido la ingesta de telemetría de este activo de forma inmediata.
+              </p>
+
+              <!-- Details Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a121e;border:1px solid #1e3a5f;border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">Detalles del Bloqueo</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;">
+                          <span style="color:#94a3b8;font-size:13px;">Patente</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;text-align:right;">
+                          <span style="color:#ffffff;font-size:14px;font-weight:700;">${params.plate}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;">
+                          <span style="color:#94a3b8;font-size:13px;">Empresa / Tenant</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;text-align:right;">
+                          <span style="color:#ffffff;font-size:13px;font-weight:700;">${params.tenantName || 'No especificada'}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;">
+                          <span style="color:#94a3b8;font-size:13px;">Fecha y Hora</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #1e3a5f;text-align:right;">
+                          <span style="color:#ffffff;font-size:13px;font-weight:700;">${new Date().toLocaleString('es-AR')}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;">
+                          <span style="color:#94a3b8;font-size:13px;">Motivo</span>
+                        </td>
+                        <td style="padding:8px 0;text-align:right;">
+                          <span style="color:#fca5a5;font-size:13px;font-weight:700;">${params.reason}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Warning -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a0f0a;border:1px solid #92400e;border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="color:#fbbf24;font-size:13px;margin:0;">
+                      ⚠️ <strong>Aviso al Operador AVL:</strong> Para reanudar el seguimiento, contacte con el responsable de cuenta o libere el vehículo desde el panel de control.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid #1e3a5f;text-align:center;">
+              <p style="color:#475569;font-size:12px;margin:0;">
+                Este es un mensaje automático de Rusertech.<br/>
+                &copy; ${new Date().getFullYear()} Rusertech — Seguridad &amp; Logística
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    try {
+      const result = await this.resend.emails.send({
+        from: 'Rusertech <alertas@resend.dev>',
+        to: params.toEmails,
+        subject: \`⚠️ ALERTA: Vehículo \${params.plate} Bloqueado\`,
+        html,
+      });
+      console.log(\`[MailService] Block alert sent for \${params.plate} to \${params.toEmails.join(', ')}:\`, result);
+      return result;
+    } catch (error) {
+      console.error(\`[MailService] Failed to send block alert for \${params.plate}:\`, error);
+      // No lanzamos error para que no interrumpa el bloqueo en DB
+      return null;
+    }
+  }
 }
