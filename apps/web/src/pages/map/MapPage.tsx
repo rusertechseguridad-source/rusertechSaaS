@@ -403,6 +403,36 @@ export const MapPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Map Style Selector - Bottom Left */}
+      <div
+        className="absolute bottom-6 left-4 z-20 flex gap-2"
+        style={{
+          background: 'rgba(10,18,30,0.82)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px',
+          padding: '8px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        {[
+          { label: t('map.dark_mode', 'Oscuro'), value: 'https://tiles.openfreemap.org/styles/dark' },
+          { label: t('map.light_mode', 'Claro'), value: 'https://tiles.openfreemap.org/styles/liberty' },
+        ].map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => setMapStyle(opt.value)}
+            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              mapStyle === opt.value
+                ? 'bg-accentGreen/20 text-accentGreen border border-accentGreen/30'
+                : 'text-textSecondary hover:text-white border border-transparent hover:bg-white/5'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <style>{`
         .map-global-popup .maplibregl-popup-content {
           background: transparent !important; padding: 0 !important;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocationsStore } from '../../store/locationsStore';
-import { MapPin, Plus, Search, Edit, Trash2, Power, Download } from 'lucide-react';
+import { MapPin, Plus, Search, Edit2, Trash2, Power, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
@@ -280,7 +280,7 @@ export const LocationsPage: React.FC = () => {
                             className="p-1.5 hover:bg-bgSurfaceHigh rounded text-textSecondary hover:text-white"
                             title="Editar ubicación"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); if(confirm(`¿Estás seguro de ${loc.is_active ? 'suspender' : 'reactivar'} esta ubicación?`)) toggleActive(loc.id, !loc.is_active); }}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
-import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download, Link as LinkIcon, X } from 'lucide-react';
+import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit2, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download, Link as LinkIcon, X } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
 import { SensorConfigModal } from '../sensors/SensorConfigModal';
@@ -458,7 +458,7 @@ export const TripDetailsPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 ml-4">
             <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textSecondary hover:text-white hover:bg-bgSurface transition-colors" title="Editar Viaje">
-              <Edit className="w-4 h-4" /> <span className="text-sm font-bold">Editar</span>
+              <Edit2 className="w-4 h-4" /> <span className="text-sm font-bold">Editar</span>
             </button>
             <button onClick={() => loadTrip(trip.id)} className="text-textMuted hover:text-white transition-colors p-1" title="Recargar">
               <RotateCcw className="w-5 h-5" />

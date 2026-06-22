@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useVehiclesStore } from '../../store/vehiclesStore';
-import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit, Trash2, Download } from 'lucide-react';
+import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit2, Trash2, Download } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
@@ -370,7 +370,7 @@ export const VehiclesPage: React.FC = () => {
                             className="p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors"
                             title="Editar vehículo"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
