@@ -8,8 +8,8 @@ import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigati
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
   const userRole = user?.role || user?.role_code || '';
-  const isAdmin = userRole === 'rusertech_admin' || userRole === 'super_admin' || user?.permissions?.includes('admin_global');
-  const isManagerOrOwner = userRole === 'account_owner' || userRole === 'manager' || user?.permissions?.includes('manage_settings');
+  const isAdmin = userRole === 'SUPERADMIN' || userRole === 'rusertech_admin' || userRole === 'super_admin' || user?.permissions?.includes('admin_global');
+  const isManagerOrOwner = userRole === 'TENANT_OWNER' || userRole === 'TENANT_MANAGER' || userRole === 'account_owner' || userRole === 'manager' || user?.permissions?.includes('manage_settings');
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
@@ -93,7 +93,7 @@ export const AppLayout: React.FC = () => {
                 ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: t('nav.settings'), icon: Settings, perm: 'view_settings' }] : []),
                 ...(isAdmin ? [{ path: '/admin', label: t('nav.admin'), icon: Shield, perm: 'admin_global' }] : []),
               ].filter(item => {
-                if (userRole === 'super_admin') return true;
+                if (userRole === 'SUPERADMIN' || userRole === 'super_admin') return true;
                 if (!user?.permissions) return false;
                 return user.permissions.includes(item.perm);
               }).map(item => {

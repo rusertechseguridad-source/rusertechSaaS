@@ -7,7 +7,14 @@ export const RequirePermission: React.FC<{
 }> = ({ permission, children }) => {
   const { user } = useAuthStore();
   
-  if (!user || !user.permissions) return null;
+  if (!user) return null;
+  
+  const userRole = user.role || user.role_code || '';
+  
+  // Super Admin Bypass
+  if (userRole === 'super_admin' || userRole === 'rusertech_admin' || userRole === 'SUPERADMIN') return <>{children}</>;
+  
+  if (!user.permissions) return null;
   
   const hasPermission = user.permissions.includes('*') || user.permissions.includes(permission);
   

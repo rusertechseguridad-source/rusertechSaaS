@@ -33,7 +33,8 @@ export const AlertsPage: React.FC = () => {
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      isAdmin = ['tenant_admin', 'admin', 'super_admin', 'rusertech_admin'].includes(payload.role || payload.role_code);
+      // Check token payload for roles directly since authStore might not be populated in this specific context
+      isAdmin = ['TENANT_OWNER', 'TENANT_MANAGER', 'SUPERADMIN', 'tenant_admin', 'admin', 'super_admin', 'rusertech_admin'].includes(payload.role || payload.role_code);
     } catch(e) {}
   }
 
