@@ -253,13 +253,13 @@ export class MailService {
       const result = await this.resend.emails.send({
         from: 'Rusertech <alertas@resend.dev>',
         to: params.toEmails,
-        subject: \`⚠️ ALERTA: Vehículo \${params.plate} Bloqueado\`,
+        subject: `⚠️ ALERTA: Vehículo ${params.plate} Bloqueado`,
         html,
       });
-      console.log(\`[MailService] Block alert sent for \${params.plate} to \${params.toEmails.join(', ')}:\`, result);
+      console.log(`[MailService] Block alert sent for ${params.plate} to ${params.toEmails.join(', ')}:`, result);
       return result;
     } catch (error) {
-      console.error(\`[MailService] Failed to send block alert for \${params.plate}:\`, error);
+      console.error(`[MailService] Failed to send block alert for ${params.plate}:`, error);
       // No lanzamos error para que no interrumpa el bloqueo en DB
       return null;
     }
