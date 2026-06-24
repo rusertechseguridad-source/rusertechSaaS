@@ -105,8 +105,7 @@ export class VehiclesService {
         hub_asset_id: true, 
         avl_user_id: true,
         tenant_id: true,
-        tenant: { select: { name: true } },
-        avl_user: { select: { email: true } }
+        tenant: { select: { name: true } }
       }
     });
 
@@ -118,7 +117,6 @@ export class VehiclesService {
     if (blocked && reason) {
       // 1. Enviar email de bloqueo
       const toEmails = [];
-      if (updated.avl_user?.email) toEmails.push(updated.avl_user.email);
       
       const tenantManagers = await this.prisma.extended.user.findMany({
         where: { tenant_id: updated.tenant_id, role_code: { in: ['account_owner', 'manager'] }, status: 'active' },
@@ -131,7 +129,7 @@ export class VehiclesService {
           plate: updated.plate,
           reason,
           toEmails,
-          tenantName: updated.tenant?.name
+          tenantName: (updated as any).tenant?.name
         }).catch(err => console.error('Failed to send block alert email:', err));
       }
 
