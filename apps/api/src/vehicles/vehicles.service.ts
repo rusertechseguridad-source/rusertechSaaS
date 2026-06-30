@@ -115,8 +115,7 @@ export class VehiclesService {
     }
 
     if (blocked && reason) {
-      // 1. Enviar email de bloqueo
-      const toEmails = [];
+      const toEmails: string[] = [];
       
       const tenantManagers = await this.prisma.extended.user.findMany({
         where: { tenant_id: updated.tenant_id, role_code: { in: ['account_owner', 'manager'] }, status: 'active' },

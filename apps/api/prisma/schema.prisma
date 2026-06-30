@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
@@ -45,6 +46,8 @@ model Tenant {
   vehicles              Vehicle[]
   notification_channels NotificationChannel[]
   vehicle_groups        VehicleGroup[]
+  operational_protocols OperationalProtocol[]
+  security_keys         SecurityKey[]
 
   @@map("tenants")
 }
@@ -88,6 +91,7 @@ model User {
   granted_permissions        String[]             @default([])
   revoked_permissions        String[]             @default([])
   entity_restrictions        Json                 @default("{}")
+  contact_type               String?              @db.VarChar(30)
   last_login_at              DateTime?            @db.Timestamptz(6)
   created_at                 DateTime             @default(now()) @db.Timestamptz(6)
   control_zones_created      ControlZone[]
@@ -243,9 +247,10 @@ model Operation {
   tenant_id       String          @db.Uuid
   name            String          @db.VarChar(200)
   code            String?         @db.VarChar(50)
-  description     String?
-  status          String          @default("active") @db.VarChar(20)
-  devices         Device[]
+  description         String?
+  status              String          @default("active") @db.VarChar(20)
+  operation_flow_type String?         @default("estandar") @db.VarChar(30)
+  devices             Device[]
   tenant          Tenant          @relation(fields: [tenant_id], references: [id])
   routes          Route[]
   saved_locations SavedLocation[]
@@ -834,4 +839,38 @@ model UserGroupAccess {
 
   @@id([user_id, group_id])
   @@map("user_group_access")
+}
+
+model OperationalProtocol {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id            String?  @db.Uuid
+  name                 String   @db.VarChar(200)
+  description          String?
+  trip_status          String   @db.VarChar(30)
+  sub_status           String   @db.VarChar(100)
+  gps_reporting        String   @db.VarChar(20)
+  driver_communication String   @db.VarChar(20)
+  risk_level           String   @db.VarChar(20)
+  protocol_steps       Json     @default("[]")
+  sla_minutes          Int?
+  is_active            Boolean  @default(true)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant               Tenant?  @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, trip_status, sub_status, gps_reporting, driver_communication])
+  @@map("operational_protocols")
+}
+
+model SecurityKey {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id   String   @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("security_keys")
 }

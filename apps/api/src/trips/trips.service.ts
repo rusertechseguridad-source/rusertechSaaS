@@ -388,4 +388,44 @@ export class TripsService {
     });
     return { success: true };
   }
+
+  // --- DRIVER CONTACT ---
+
+  async contactDriverAttempt(tripId: string, user: any) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { tenant_id: true }
+    });
+    if (!trip) throw new NotFoundException('Trip not found');
+
+    const event = await this.prisma.tripEvent.create({
+      data: {
+        trip_id: tripId,
+        tenant_id: trip.tenant_id,
+        event_type: 'driver_contact_attempt',
+        metadata_json: { initiated_by: user.id }
+      }
+    });
+
+    return { success: true, event };
+  }
+
+  async contactDriverResponse(tripId: string, data: any) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { tenant_id: true }
+    });
+    if (!trip) throw new NotFoundException('Trip not found');
+
+    const event = await this.prisma.tripEvent.create({
+      data: {
+        trip_id: tripId,
+        tenant_id: trip.tenant_id,
+        event_type: 'driver_contact_response',
+        metadata_json: { response: data.response || 'acknowledged' }
+      }
+    });
+
+    return { success: true, event };
+  }
 }

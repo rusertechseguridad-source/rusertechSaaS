@@ -8,6 +8,7 @@ import { SensorConfigModal } from '../sensors/SensorConfigModal';
 import { TripModal } from './TripModal';
 import { LinkVehicleModal } from './LinkVehicleModal';
 import { exportToCsv } from '../../utils/export';
+import { VehicleCard } from '../../components/map/VehicleCard';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -475,15 +476,8 @@ export const TripDetailsPage: React.FC = () => {
           <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card">
             <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5">Logística</h3>
             <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-3">
-                <Truck className="w-5 h-5 text-textMuted mt-0.5" />
-                <div>
-                  <div className="text-textMuted text-xs">Vehículo</div>
-                  <div className="text-white font-bold">{trip.vehicle?.plate}</div>
-                  {trip.vehicle?.alias && <div className="text-textSecondary text-xs">{trip.vehicle.alias}</div>}
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
+              <VehicleCard vehicle={trip.vehicle} tripId={trip.id} />
+              <div className="flex items-start gap-3 mt-3">
                 <User className="w-5 h-5 text-textMuted mt-0.5" />
                 <div>
                   <div className="text-textMuted text-xs">Operación / Cliente</div>

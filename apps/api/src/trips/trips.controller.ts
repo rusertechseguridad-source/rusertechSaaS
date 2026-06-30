@@ -70,4 +70,17 @@ export class TripsController {
   unlinkVehicle(@Param('id') id: string, @Param('vehicleId') vehicleId: string) {
     return this.tripsService.unlinkVehicle(id, vehicleId);
   }
+
+  @Post(':id/driver-contact-attempt')
+  @RequirePermissions('trips:manage')
+  contactDriverAttempt(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.contactDriverAttempt(id, user);
+  }
+
+  @Post(':id/driver-contact-response')
+  contactDriverResponse(@Param('id') id: string, @Body() data: any) {
+    // Permiso abierto o específico según app móvil.
+    // De momento lo dejamos protegido por JwtAuthGuard.
+    return this.tripsService.contactDriverResponse(id, data);
+  }
 }

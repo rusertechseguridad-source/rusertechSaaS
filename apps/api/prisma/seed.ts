@@ -97,6 +97,34 @@ async function main() {
         'view_map', 'view_trips',
       ],
     },
+    {
+      code: 'gerencia',
+      name: 'Gerencia / Ejecutivos',
+      is_system_role: true,
+      permissions: [
+        // Lectura ejecutiva pura
+        'view_analytics', 'view_carbon', 'view_map', 'view_trips',
+        'view_vehicles', 'view_alerts', 'view_carriers', 'view_locations',
+      ],
+    },
+    {
+      code: 'key_user',
+      name: 'Key User (Configurador)',
+      is_system_role: true,
+      permissions: [
+        // Configuración operativa avanzada
+        'view_map', 'view_alerts', 'manage_alerts', 'view_trips', 'manage_trips',
+        'view_vehicles', 'manage_vehicles', 'view_devices', 'manage_devices',
+        'view_carriers', 'manage_carriers', 'view_drivers', 'manage_drivers',
+        'view_locations', 'manage_locations', 'view_avl', 'manage_avl',
+        'view_sensors', 'manage_sensors', 'view_analytics', 'view_carbon',
+        'view_settings', 'manage_settings',
+        // Settings permitidos
+        'settings_general', 'settings_ui', 'settings_localization',
+        'settings_notifications', 'settings_security', 'settings_avl',
+        'settings_maps', 'settings_integrations', 'settings_sensors',
+      ],
+    },
   ];
 
   for (const role of roles) {
@@ -278,6 +306,102 @@ async function main() {
     create: { tenant_id: tenant.id, use_climatiq_api: false },
   });
   console.log('Carbon settings seeded.');
+
+  // 8. Parameter Settings (SLAs and Operational Parameters)
+  const globalParams = [
+    { key: 'ndr_sla_normal_minutes', value: '5', type: 'integer', desc: 'SLA tratamiento NDR Normal (minutos)' },
+    { key: 'ndr_sla_anomalia_minutes', value: '10', type: 'integer', desc: 'SLA tratamiento NDR Anomalía (minutos)' },
+    { key: 'ndr_sla_riesgo_critico_minutes', value: '15', type: 'integer', desc: 'SLA tratamiento NDR Riesgo Crítico (minutos)' },
+    { key: 'ndr_sla_activacion_policial_minutes', value: '20', type: 'integer', desc: 'SLA tratamiento NDR Activación Policial (minutos)' },
+    { key: 'vehicle_moving_min_speed_kmh', value: '5', type: 'integer', desc: 'Velocidad mínima para considerar movimiento (km/h)' },
+    { key: 'location_default_radius_meters', value: '100', type: 'integer', desc: 'Radio por defecto para nuevas locaciones (metros)' },
+    { key: 'destination_arrival_proximity_km', value: '10', type: 'integer', desc: 'Proximidad para alerta de arribo a destino (km)' },
+    { key: 'broken_loop_threshold_minutes', value: '6', type: 'integer', desc: 'Tiempo para considerar lazo roto o pérdida de señal (minutos)' },
+    { key: 'provider_ok_threshold_minutes', value: '15', type: 'integer', desc: 'Tiempo de reconexión aceptable del proveedor GPS (minutos)' },
+  ];
+
+  for (const p of globalParams) {
+    try {
+      const existingP = await prisma.parameterSetting.findFirst({
+        where: { tenant_id: null, parameter_key: p.key }
+      });
+      if (!existingP) {
+        await prisma.parameterSetting.create({
+          data: {
+            tenant_id: null,
+            parameter_key: p.key,
+            parameter_value: p.value,
+            data_type: p.type,
+            description: p.desc,
+          },
+        });
+      }
+    } catch (_) {}
+  }
+  console.log('Global parameters seeded.');
+
+  // 9. Security Keys
+  const securityKeys = [
+    { name: 'Óptimo', desc: 'Condición óptima de viaje' },
+    { name: 'Crítico', desc: 'Condición crítica de seguridad' },
+    { name: 'Refuerzo', desc: 'Requiere refuerzo o custodia' },
+  ];
+
+  for (const sk of securityKeys) {
+    try {
+      const existingKey = await prisma.securityKey.findFirst({
+        where: { tenant_id: tenant.id, name: sk.name }
+      });
+      if (!existingKey) {
+        await prisma.securityKey.create({
+          data: {
+            tenant_id: tenant.id,
+            name: sk.name,
+            description: sk.desc,
+          }
+        });
+      }
+    } catch (_) {}
+  }
+  console.log('Security keys seeded.');
+
+  // 10. Operational Protocols
+  const protocols = [
+    { name: 'Carga Combustible Normal', ts: 'in_progress', ss: 'carga_combustible', gps: 'reporting', dc: 'responsive', risk: 'panorama_normal', sla: 5 },
+    { name: 'Carga Combustible Sospechosa', ts: 'in_progress', ss: 'carga_combustible', gps: 'not_reporting', dc: 'unresponsive', risk: 'anomalia', sla: 10 },
+    { name: 'Desvío Peligroso', ts: 'deviated', ss: 'desvio_ruta', gps: 'not_reporting', dc: 'unresponsive', risk: 'riesgo_critico', sla: 15 },
+    { name: 'Botón de Pánico', ts: 'at_risk', ss: 'boton_panico', gps: 'reporting', dc: 'n_a', risk: 'activacion_policial', sla: 20 },
+    { name: 'Exceso Velocidad', ts: 'in_progress', ss: 'exceso_velocidad', gps: 'reporting', dc: 'responsive', risk: 'anomalia', sla: 10 },
+    { name: 'Pernocte Autorizado', ts: 'authorized_stop', ss: 'pernocte', gps: 'reporting', dc: 'n_a', risk: 'panorama_normal', sla: 5 },
+    { name: 'Pérdida Señal Crítica', ts: 'in_progress', ss: 'perdida_senal', gps: 'not_reporting', dc: 'unresponsive', risk: 'riesgo_critico', sla: 15 },
+    { name: 'Siniestro Vial', ts: 'at_risk', ss: 'siniestro', gps: 'reporting', dc: 'unresponsive', risk: 'riesgo_critico', sla: 15 },
+    { name: 'Abandono de Carga', ts: 'in_progress', ss: 'abandono_carga', gps: 'reporting', dc: 'unresponsive', risk: 'activacion_policial', sla: 20 },
+    { name: 'Desperfecto Mecánico', ts: 'in_progress', ss: 'desperfecto_mecanico', gps: 'reporting', dc: 'responsive', risk: 'anomalia', sla: 10 },
+  ];
+
+  for (const prot of protocols) {
+    try {
+      const existingProt = await prisma.operationalProtocol.findFirst({
+        where: { tenant_id: null, trip_status: prot.ts, sub_status: prot.ss, gps_reporting: prot.gps, driver_communication: prot.dc }
+      });
+      if (!existingProt) {
+        await prisma.operationalProtocol.create({
+          data: {
+            tenant_id: null,
+            name: prot.name,
+            trip_status: prot.ts,
+            sub_status: prot.ss,
+            gps_reporting: prot.gps,
+            driver_communication: prot.dc,
+            risk_level: prot.risk,
+            sla_minutes: prot.sla,
+            protocol_steps: [{ step: 1, action: 'Verificar estado del vehículo' }, { step: 2, action: 'Contactar al conductor' }],
+          }
+        });
+      }
+    } catch (_) {}
+  }
+  console.log('Operational protocols seeded.');
 
   console.log('Seed completed successfully.');
 }
