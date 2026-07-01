@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
+import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
 import { X, CheckCircle, RefreshCw } from 'lucide-react';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
 
@@ -234,9 +235,14 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
                   styles={selectStyles}
                   placeholder="— Buscar Operación —"
                   isClearable
-                  options={operations.map(o => ({ value: o.id, label: o.name }))}
-                  value={operationId ? { value: operationId, label: operations.find(o => o.id === operationId)?.name } : null}
-                  onChange={(val) => setOperationId(val ? val.value : '')}
+                  options={operations.map(o => ({ value: o.id, label: o.name, operation_flow_type: o.operation_flow_type }))}
+                  value={operationId ? { 
+                    value: operationId, 
+                    label: operations.find(o => o.id === operationId)?.name,
+                    operation_flow_type: operations.find(o => o.id === operationId)?.operation_flow_type
+                  } : null}
+                  onChange={(val: any) => setOperationId(val ? val.value : '')}
+                  formatOptionLabel={formatOperationOption}
                 />
               </div>
               <div>

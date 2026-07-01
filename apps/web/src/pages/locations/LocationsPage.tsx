@@ -6,6 +6,27 @@ import { exportToCsv } from '../../utils/export';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTranslation } from 'react-i18next';
+import Select from 'react-select';
+import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
+
+const selectStyles = {
+  control: (base: any) => ({
+    ...base,
+    background: '#1A2346',
+    borderColor: '#2D3B6A',
+    color: '#fff',
+    '&:hover': { borderColor: '#405696' },
+  }),
+  menu: (base: any) => ({ ...base, background: '#1A2346', border: '1px solid #2D3B6A' }),
+  option: (base: any, state: any) => ({
+    ...base,
+    background: state.isFocused ? '#2D3B6A' : '#1A2346',
+    color: '#fff',
+    '&:active': { background: '#405696' },
+  }),
+  singleValue: (base: any) => ({ ...base, color: '#fff' }),
+  input: (base: any) => ({ ...base, color: '#fff' })
+};
 
 export const LocationsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -433,12 +454,19 @@ export const LocationsPage: React.FC = () => {
                   <h3 className="text-sm font-bold text-accentGreen uppercase tracking-wider mb-3">{t('locations.modal.assignment')}</h3>
                   <div className="mb-3">
                     <label className="block text-sm text-textSecondary mb-1">{t('locations.modal.operation')}</label>
-                    <select className="w-full bg-bgStart border border-borderDefault rounded p-2 text-white focus:border-accentGreen focus:outline-none" value={operationId} onChange={e => setOperationId(e.target.value)}>
-                      <option value="">{t('locations.modal.none_internal')}</option>
-                      {operations.map(op => (
-                        <option key={op.id} value={op.id}>{op.name}</option>
-                      ))}
-                    </select>
+                    <Select
+                      styles={selectStyles}
+                      placeholder={t('locations.modal.none_internal')}
+                      isClearable
+                      options={operations.map(op => ({ value: op.id, label: op.name, operation_flow_type: op.operation_flow_type }))}
+                      value={operationId ? { 
+                        value: operationId, 
+                        label: operations.find(o => o.id === operationId)?.name,
+                        operation_flow_type: operations.find(o => o.id === operationId)?.operation_flow_type 
+                      } : null}
+                      onChange={(val: any) => setOperationId(val ? val.value : '')}
+                      formatOptionLabel={formatOperationOption}
+                    />
                   </div>
                   <div>
                     <label className="flex items-center space-x-2 cursor-pointer">
