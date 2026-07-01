@@ -29,6 +29,7 @@ import { AnalyticsDashboard } from './pages/analytics/AnalyticsDashboard';
 import { CarbonDashboard } from './pages/carbon/CarbonDashboard';
 import { AdminPage } from './pages/admin/AdminPage';
 import ProtocolsListPage from './pages/admin/protocols';
+import SecurityKeysListPage from './pages/admin/security-keys';
 import { SettingsPage } from './pages/settings/SettingsPage';
 
 function App() {
@@ -69,6 +70,7 @@ function App() {
             <Route path="/carbon" element={<CarbonDashboard />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/protocols" element={<ProtocolsListPage />} />
+            <Route path="/admin/security-keys" element={<SecurityKeysListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/simulator" element={<SimulatorPage />} />
           </Route>

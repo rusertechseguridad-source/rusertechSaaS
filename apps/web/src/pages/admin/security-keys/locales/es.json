@@ -1,0 +1,38 @@
+{
+  "title": "Claves de Seguridad",
+  "subtitle": "Gestión de palabras clave para validación de choferes en pánico/coacción.",
+  "createButton": "Nueva Clave",
+  "filters": {
+    "all": "Todos",
+    "active": "Activos",
+    "inactive": "Inactivos"
+  },
+  "table": {
+    "name": "Clave",
+    "description": "Descripción",
+    "status": "Estado",
+    "actions": "Acciones"
+  },
+  "form": {
+    "createTitle": "Crear Clave de Seguridad",
+    "editTitle": "Editar Clave de Seguridad",
+    "name": "Clave (Ej. ROJO, PANICO)",
+    "description": "Descripción o contexto (Opcional)",
+    "isActive": "Activo",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "deleteModal": {
+    "title": "Eliminar Clave",
+    "message": "¿Estás seguro de eliminar la clave '{{name}}'? Esta acción no se puede deshacer.",
+    "warning": "Nota: Si esta clave está referenciada en algún viaje, su eliminación podría afectar la validación.",
+    "cancel": "Cancelar",
+    "confirm": "Eliminar"
+  },
+  "toasts": {
+    "created": "Clave creada exitosamente",
+    "updated": "Clave actualizada exitosamente",
+    "deleted": "Clave eliminada exitosamente",
+    "statusChanged": "Estado actualizado"
+  }
+}

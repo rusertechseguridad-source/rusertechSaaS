@@ -1,0 +1,38 @@
+{
+  "title": "Security Keys",
+  "subtitle": "Management of keywords for driver validation in panic/coercion.",
+  "createButton": "New Key",
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "table": {
+    "name": "Key",
+    "description": "Description",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "form": {
+    "createTitle": "Create Security Key",
+    "editTitle": "Edit Security Key",
+    "name": "Key (e.g. RED, PANIC)",
+    "description": "Description or context (Optional)",
+    "isActive": "Active",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "deleteModal": {
+    "title": "Delete Key",
+    "message": "Are you sure you want to delete the key '{{name}}'? This action cannot be undone.",
+    "warning": "Note: If this key is referenced in an active trip, deleting it could affect validation.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "toasts": {
+    "created": "Key successfully created",
+    "updated": "Key successfully updated",
+    "deleted": "Key successfully deleted",
+    "statusChanged": "Status updated"
+  }
+}

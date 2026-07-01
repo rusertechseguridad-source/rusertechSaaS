@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
-import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert } from 'lucide-react';
+import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert, Key } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
@@ -91,6 +91,7 @@ export const AppLayout: React.FC = () => {
                 { path: '/carbon', label: t('nav.carbon'), icon: Leaf, perm: 'view_carbon' },
                 { path: '/simulator', label: t('nav.simulator'), icon: Zap, perm: 'view_simulator' },
                 ...(isManagerOrOwner || isAdmin ? [{ path: '/admin/protocols', label: t('nav.protocols') || 'Protocolos', icon: ShieldAlert, perm: 'view_settings' }] : []),
+                ...(isManagerOrOwner || isAdmin ? [{ path: '/admin/security-keys', label: t('nav.securityKeys') || 'Claves', icon: Key, perm: 'view_settings' }] : []),
                 ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: t('nav.settings'), icon: Settings, perm: 'view_settings' }] : []),
                 ...(isAdmin ? [{ path: '/admin', label: t('nav.admin'), icon: Shield, perm: 'admin_global' }] : []),
               ].filter(item => {
