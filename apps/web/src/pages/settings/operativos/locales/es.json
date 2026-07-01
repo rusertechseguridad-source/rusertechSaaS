@@ -1,0 +1,37 @@
+{
+  "title": "Parámetros Operativos",
+  "subtitle": "Configuración de variables físicas, distancias y tiempos para la motorización de operaciones.",
+  "save": "Guardar Cambios",
+  "discard": "¿Descartar cambios no guardados?",
+  "fields": {
+    "speed": {
+      "label": "Velocidad Mínima en Movimiento (km/h)",
+      "tooltip": "Velocidad a partir de la cual el vehículo se considera en movimiento continuo."
+    },
+    "radius": {
+      "label": "Radio por Defecto para Geocercas (metros)",
+      "tooltip": "Radio aplicable al crear nuevas ubicaciones sin radio específico."
+    },
+    "proximity": {
+      "label": "Proximidad de Llegada (km)",
+      "tooltip": "Distancia restante al destino para disparar notificaciones de aproximación."
+    },
+    "broken_loop": {
+      "label": "Umbral de Pérdida de Conexión (minutos)",
+      "tooltip": "Tiempo sin reporte de GPS para considerar pérdida de señal (broken loop)."
+    },
+    "provider_ok": {
+      "label": "Tolerancia de Proveedor OK (minutos)",
+      "tooltip": "Margen de tiempo sin datos del proveedor antes de emitir alerta técnica."
+    }
+  },
+  "validation": {
+    "positive": "Debe ser mayor a 0",
+    "max_speed": "Máximo permitido: 200 km/h",
+    "max_radius": "Máximo permitido: 5000 metros"
+  },
+  "toasts": {
+    "success": "Parámetros operativos actualizados exitosamente",
+    "error": "Error al actualizar los parámetros"
+  }
+}

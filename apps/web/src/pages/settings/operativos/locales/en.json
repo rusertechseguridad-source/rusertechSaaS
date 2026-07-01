@@ -1,0 +1,37 @@
+{
+  "title": "Operational Parameters",
+  "subtitle": "Configuration of physical variables, distances, and times for operations motoring.",
+  "save": "Save Changes",
+  "discard": "Discard unsaved changes?",
+  "fields": {
+    "speed": {
+      "label": "Minimum Moving Speed (km/h)",
+      "tooltip": "Speed above which the vehicle is considered in continuous motion."
+    },
+    "radius": {
+      "label": "Default Geofence Radius (meters)",
+      "tooltip": "Default radius applied when creating locations without a specific one."
+    },
+    "proximity": {
+      "label": "Arrival Proximity (km)",
+      "tooltip": "Remaining distance to destination to trigger proximity notifications."
+    },
+    "broken_loop": {
+      "label": "Broken Loop Threshold (minutes)",
+      "tooltip": "Time without GPS report to consider a signal loss (broken loop)."
+    },
+    "provider_ok": {
+      "label": "Provider OK Tolerance (minutes)",
+      "tooltip": "Time margin without provider data before issuing a technical alert."
+    }
+  },
+  "validation": {
+    "positive": "Must be greater than 0",
+    "max_speed": "Maximum allowed: 200 km/h",
+    "max_radius": "Maximum allowed: 5000 meters"
+  },
+  "toasts": {
+    "success": "Operational parameters successfully updated",
+    "error": "Error updating parameters"
+  }
+}

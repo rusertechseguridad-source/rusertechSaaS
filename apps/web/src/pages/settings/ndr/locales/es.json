@@ -1,0 +1,32 @@
+{
+  "title": "SLAs de Respuesta a Desvíos (NDR)",
+  "subtitle": "Configuración de tiempos máximos permitidos para la resolución de desvíos según su severidad.",
+  "save": "Guardar Cambios",
+  "discard": "¿Descartar cambios no guardados?",
+  "fields": {
+    "normal": {
+      "label": "SLA - Severidad Normal (minutos)",
+      "tooltip": "Tiempo máximo para resolver desvíos de severidad normal."
+    },
+    "anomalia": {
+      "label": "SLA - Anomalía (minutos)",
+      "tooltip": "Tiempo máximo para resolver anomalías operativas."
+    },
+    "riesgo_critico": {
+      "label": "SLA - Riesgo Crítico (minutos)",
+      "tooltip": "Tiempo máximo para atender riesgos críticos."
+    },
+    "activacion_policial": {
+      "label": "SLA - Activación Policial (minutos)",
+      "tooltip": "Tiempo máximo para gestionar eventos que requieren intervención policial."
+    }
+  },
+  "validation": {
+    "positive": "Debe ser mayor a 0",
+    "max": "Máximo permitido: 1440 minutos (24 horas)"
+  },
+  "toasts": {
+    "success": "SLAs actualizados exitosamente",
+    "error": "Error al actualizar los parámetros"
+  }
+}

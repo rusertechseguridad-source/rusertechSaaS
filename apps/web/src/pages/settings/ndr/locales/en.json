@@ -1,0 +1,32 @@
+{
+  "title": "NDR SLAs (Non-Deviation Responses)",
+  "subtitle": "Configuration of maximum allowed times to resolve deviations based on their severity.",
+  "save": "Save Changes",
+  "discard": "Discard unsaved changes?",
+  "fields": {
+    "normal": {
+      "label": "SLA - Normal Severity (minutes)",
+      "tooltip": "Maximum time to resolve normal severity deviations."
+    },
+    "anomalia": {
+      "label": "SLA - Anomaly (minutes)",
+      "tooltip": "Maximum time to resolve operational anomalies."
+    },
+    "riesgo_critico": {
+      "label": "SLA - Critical Risk (minutes)",
+      "tooltip": "Maximum time to address critical risks."
+    },
+    "activacion_policial": {
+      "label": "SLA - Police Activation (minutes)",
+      "tooltip": "Maximum time to manage events requiring police intervention."
+    }
+  },
+  "validation": {
+    "positive": "Must be greater than 0",
+    "max": "Maximum allowed: 1440 minutes (24 hours)"
+  },
+  "toasts": {
+    "success": "SLAs successfully updated",
+    "error": "Error updating parameters"
+  }
+}

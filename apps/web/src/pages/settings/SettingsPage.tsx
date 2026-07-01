@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User, Sliders, Bell } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
 import { translateParameterKey } from '../../utils/labels';
+
+const NdrPanel = lazy(() => import('./ndr/NdrPanel').then(m => ({ default: m.NdrPanel })));
+const OperativosPanel = lazy(() => import('./operativos/OperativosPanel').then(m => ({ default: m.OperativosPanel })));
 import { useTranslation } from 'react-i18next';
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'users' | 'parameters' | 'notifications' | 'carbon' | 'forwarding'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'users' | 'parameters' | 'notifications' | 'carbon' | 'forwarding' | 'ndr' | 'operativos'>('profile');
   const navigate = useNavigate();
   
   // Profile
@@ -354,6 +357,24 @@ export const SettingsPage: React.FC = () => {
                 }`}
               >
                 <MapPin className="w-5 h-5" /> {t('settings.tab_forwarding')}
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('ndr')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
+                  activeTab === 'ndr' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
+                }`}
+              >
+                <ShieldAlert className="w-5 h-5" /> SLAs NDR
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('operativos')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
+                  activeTab === 'operativos' ? 'bg-green-500/20 text-green-400 border border-green-500/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
+                }`}
+              >
+                <Settings className="w-5 h-5" /> Parámetros Operativos
               </button>
             </>
           )}
@@ -791,6 +812,17 @@ export const SettingsPage: React.FC = () => {
               </div>
             </form>
           </div>
+          {activeTab === 'ndr' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <NdrPanel />
+            </Suspense>
+          )}
+
+          {activeTab === 'operativos' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <OperativosPanel />
+            </Suspense>
+          )}
         </div>
       )}
     </div>
