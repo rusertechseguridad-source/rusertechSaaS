@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
-import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings } from 'lucide-react';
+import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
@@ -61,12 +61,12 @@ export const AppLayout: React.FC = () => {
                 </div>
                 <div className="flex flex-col leading-none mt-0.5">
                   <span
-                    className="text-[1.65rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wide"
+                    className="text-[1.65rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-accentMint to-accentBlue tracking-wide animate-pulse"
                     style={{ textShadow: '0 0 12px rgba(42,179,255,0.3)' }}
                   >
                     Rusertech
                   </span>
-                  <span className="text-xs font-bold text-white/70 tracking-widest hidden xl:block mt-1">
+                  <span className="text-xs font-bold text-white/70 tracking-widest hidden xl:block mt-1 animate-pulse">
                     Seguridad &amp; Logística
                   </span>
                 </div>
@@ -90,6 +90,7 @@ export const AppLayout: React.FC = () => {
                 { path: '/analytics', label: t('nav.analytics'), icon: PieChart, perm: 'view_analytics' },
                 { path: '/carbon', label: t('nav.carbon'), icon: Leaf, perm: 'view_carbon' },
                 { path: '/simulator', label: t('nav.simulator'), icon: Zap, perm: 'view_simulator' },
+                ...(isManagerOrOwner || isAdmin ? [{ path: '/admin/protocols', label: t('nav.protocols') || 'Protocolos', icon: ShieldAlert, perm: 'view_settings' }] : []),
                 ...(isManagerOrOwner || isAdmin ? [{ path: '/settings', label: t('nav.settings'), icon: Settings, perm: 'view_settings' }] : []),
                 ...(isAdmin ? [{ path: '/admin', label: t('nav.admin'), icon: Shield, perm: 'admin_global' }] : []),
               ].filter(item => {
@@ -108,7 +109,7 @@ export const AppLayout: React.FC = () => {
                       isAlerts
                         ? 'bg-red-600/40 text-white border border-red-500 shadow-[0_0_14px_rgba(255,0,0,0.7)] animate-pulse'
                         : isActive
-                          ? 'bg-accentGreen/10 text-white border border-accentGreen/40 shadow-[0_0_8px_rgba(0,200,100,0.15)]'
+                          ? 'bg-accentGreen/10 text-white border border-accentGreen/40 shadow-[0_0_8px_rgba(0,200,100,0.15)] animate-pulse'
                           : 'text-white hover:bg-white/10 border border-transparent hover:border-white/20'
                     }`}
                   >

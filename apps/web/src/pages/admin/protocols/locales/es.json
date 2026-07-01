@@ -1,0 +1,83 @@
+{
+  "title": "Protocolos Operativos",
+  "subtitle": "Gestión de reglas de respuesta y SLA por nivel de riesgo.",
+  "createButton": "Nuevo Protocolo",
+  "searchPlaceholder": "Buscar protocolo...",
+  "filters": {
+    "all": "Todos",
+    "active": "Activos",
+    "inactive": "Inactivos",
+    "riskLevel": "Nivel de Riesgo",
+    "tripStatus": "Estado del Viaje"
+  },
+  "table": {
+    "name": "Nombre",
+    "description": "Descripción",
+    "tripStatus": "Estado / Sub-estado",
+    "signals": "Señales",
+    "riskSla": "Riesgo / SLA",
+    "status": "Estado",
+    "actions": "Acciones"
+  },
+  "form": {
+    "createTitle": "Crear Protocolo Operativo",
+    "editTitle": "Editar Protocolo Operativo",
+    "name": "Nombre del Protocolo",
+    "description": "Descripción (Opcional)",
+    "tripStatus": "Estado del Viaje",
+    "subStatus": "Sub-estado",
+    "gpsReporting": "Reporte GPS",
+    "driverCommunication": "Comunicación Chofer",
+    "riskLevel": "Nivel de Riesgo",
+    "slaMinutes": "SLA (Minutos)",
+    "isActive": "Activo",
+    "steps": "Pasos del Protocolo",
+    "addStep": "Agregar Paso",
+    "stepTitle": "Título del paso",
+    "stepDescription": "Instrucción o detalle",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "deleteModal": {
+    "title": "Eliminar Protocolo",
+    "message": "¿Estás seguro de eliminar el protocolo '{{name}}'? Esta acción no se puede deshacer.",
+    "cancel": "Cancelar",
+    "confirm": "Eliminar"
+  },
+  "toasts": {
+    "created": "Protocolo creado exitosamente",
+    "updated": "Protocolo actualizado exitosamente",
+    "deleted": "Protocolo eliminado exitosamente",
+    "statusChanged": "Estado actualizado"
+  },
+  "enums": {
+    "trip_status": {
+      "en_curso": "En Curso",
+      "programado": "Programado",
+      "finalizado": "Finalizado"
+    },
+    "sub_status": {
+      "normal": "Normal",
+      "demorado": "Demorado",
+      "detenido": "Detenido",
+      "desviado": "Desviado",
+      "panico": "Pánico"
+    },
+    "gps_reporting": {
+      "online": "Online",
+      "offline": "Offline",
+      "intermitente": "Intermitente"
+    },
+    "driver_communication": {
+      "ok": "OK",
+      "sin_respuesta": "Sin Respuesta",
+      "sos": "SOS"
+    },
+    "risk_level": {
+      "bajo": "Bajo",
+      "medio": "Medio",
+      "alto": "Alto",
+      "critico": "Crítico"
+    }
+  }
+}

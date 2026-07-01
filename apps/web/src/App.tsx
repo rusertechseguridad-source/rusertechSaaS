@@ -28,6 +28,7 @@ import { SensorsDashboardPage } from './pages/sensors/SensorsDashboardPage';
 import { AnalyticsDashboard } from './pages/analytics/AnalyticsDashboard';
 import { CarbonDashboard } from './pages/carbon/CarbonDashboard';
 import { AdminPage } from './pages/admin/AdminPage';
+import ProtocolsListPage from './pages/admin/protocols';
 import { SettingsPage } from './pages/settings/SettingsPage';
 
 function App() {
@@ -67,6 +68,7 @@ function App() {
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/carbon" element={<CarbonDashboard />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/protocols" element={<ProtocolsListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/simulator" element={<SimulatorPage />} />
           </Route>

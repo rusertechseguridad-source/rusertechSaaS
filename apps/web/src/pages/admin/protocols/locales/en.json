@@ -1,0 +1,83 @@
+{
+  "title": "Operational Protocols",
+  "subtitle": "Management of response rules and SLA by risk level.",
+  "createButton": "New Protocol",
+  "searchPlaceholder": "Search protocol...",
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "riskLevel": "Risk Level",
+    "tripStatus": "Trip Status"
+  },
+  "table": {
+    "name": "Name",
+    "description": "Description",
+    "tripStatus": "Status / Sub-status",
+    "signals": "Signals",
+    "riskSla": "Risk / SLA",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "form": {
+    "createTitle": "Create Operational Protocol",
+    "editTitle": "Edit Operational Protocol",
+    "name": "Protocol Name",
+    "description": "Description (Optional)",
+    "tripStatus": "Trip Status",
+    "subStatus": "Sub-status",
+    "gpsReporting": "GPS Reporting",
+    "driverCommunication": "Driver Communication",
+    "riskLevel": "Risk Level",
+    "slaMinutes": "SLA (Minutes)",
+    "isActive": "Active",
+    "steps": "Protocol Steps",
+    "addStep": "Add Step",
+    "stepTitle": "Step Title",
+    "stepDescription": "Instruction or detail",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "deleteModal": {
+    "title": "Delete Protocol",
+    "message": "Are you sure you want to delete protocol '{{name}}'? This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "toasts": {
+    "created": "Protocol successfully created",
+    "updated": "Protocol successfully updated",
+    "deleted": "Protocol successfully deleted",
+    "statusChanged": "Status updated"
+  },
+  "enums": {
+    "trip_status": {
+      "en_curso": "In Progress",
+      "programado": "Scheduled",
+      "finalizado": "Finished"
+    },
+    "sub_status": {
+      "normal": "Normal",
+      "demorado": "Delayed",
+      "detenido": "Stopped",
+      "desviado": "Deviated",
+      "panico": "Panic"
+    },
+    "gps_reporting": {
+      "online": "Online",
+      "offline": "Offline",
+      "intermitente": "Intermittent"
+    },
+    "driver_communication": {
+      "ok": "OK",
+      "sin_respuesta": "No Answer",
+      "sos": "SOS"
+    },
+    "risk_level": {
+      "bajo": "Low",
+      "medio": "Medium",
+      "alto": "High",
+      "critico": "Critical"
+    }
+  }
+}
