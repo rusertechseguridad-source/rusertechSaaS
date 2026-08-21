@@ -583,7 +583,7 @@ export const TripDetailsPage: React.FC = () => {
                   ) : (
                     <div className="flex items-center justify-end gap-2">
                       {trip.actual_start ? new Date(trip.actual_start).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : 'No iniciado'}
-                      <button onClick={() => setEditingActualStart(true)} className="text-textMuted hover:text-white" title="Establecer Inicio Real manualmente"><Edit className="w-3 h-3" /></button>
+                      <button onClick={() => setEditingActualStart(true)} className="text-textMuted hover:text-white" title="Establecer Inicio Real manualmente"><Edit2 className="w-3 h-3" /></button>
                     </div>
                   )}
                 </div>
