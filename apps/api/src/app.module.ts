@@ -32,7 +32,6 @@ import { ForwardingModule } from './forwarding/forwarding.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OperationalProtocolsModule } from './operational-protocols/operational-protocols.module';
 import { SecurityKeysModule } from './security-keys/security-keys.module';
-import { MobileModule } from './mobile/mobile.module';
 
 @Module({
   imports: [
@@ -75,7 +74,6 @@ import { MobileModule } from './mobile/mobile.module';
     NotificationsModule,
     OperationalProtocolsModule,
     SecurityKeysModule,
-    MobileModule,
   ],
   controllers: [AppController],
   providers: [
