@@ -121,13 +121,13 @@ export const AdminSystemParameters: React.FC = () => {
         <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Settings className="w-5 h-5 text-accentBlue" /> {t('admin_params.title')}
+              <Settings className="w-5 h-5 text-accentGreen" /> {t('admin_params.title')}
             </h2>
             <p className="text-xs text-textMuted mt-1">{t('admin_params.subtitle')}</p>
           </div>
           <button
             onClick={openNewModal}
-            className="bg-accentBlue hover:bg-blue-600 text-white px-4 py-2 rounded font-bold flex items-center text-sm shadow-card transition-colors"
+            className="bg-accentGreen hover:bg-green-600 text-white px-4 py-2 rounded font-bold flex items-center text-sm shadow-card transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" /> {t('admin_params.new_param')}
           </button>
@@ -167,7 +167,7 @@ export const AdminSystemParameters: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    <code className="text-[10px] text-accentBlue/60 font-mono mt-0.5 block">{p.parameter_key}</code>
+                    <code className="text-[10px] text-accentGreen/60 font-mono mt-0.5 block">{p.parameter_key}</code>
                   </td>
                   <td className="px-6 py-4">
                     <code className="bg-bgStart px-2 py-1 rounded text-yellow-400 text-sm font-bold border border-yellow-400/20">
@@ -186,7 +186,7 @@ export const AdminSystemParameters: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEditModal(p)} className="p-2 bg-bgStart hover:bg-accentBlue/20 text-textMuted hover:text-accentBlue rounded transition-colors" title={t('common.edit')}>
+                      <button onClick={() => openEditModal(p)} className="p-2 bg-bgStart hover:bg-accentGreen/20 text-textMuted hover:text-accentGreen rounded transition-colors" title={t('common.edit')}>
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(p.id, p.parameter_key)} className="p-2 bg-bgStart hover:bg-red-500/20 text-textMuted hover:text-red-500 rounded transition-colors" title={t('common.delete')}>
@@ -206,7 +206,7 @@ export const AdminSystemParameters: React.FC = () => {
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card overflow-hidden flex flex-col">
             <div className="p-5 border-b border-borderDefault bg-bgStart flex justify-between items-center">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                {editingParam ? <Edit2 className="w-5 h-5 text-accentBlue" /> : <Plus className="w-5 h-5 text-accentBlue" />}
+                {editingParam ? <Edit2 className="w-5 h-5 text-accentGreen" /> : <Plus className="w-5 h-5 text-accentGreen" />}
                 {editingParam ? t('admin_params.edit_title') : t('admin_params.new_title')}
               </h2>
               <button onClick={() => setShowModal(false)} className="p-2 text-textMuted hover:text-white rounded">
@@ -244,12 +244,12 @@ export const AdminSystemParameters: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-textSecondary mb-1 uppercase">{t('admin_params.form_override')}</label>
-                  <label className="flex items-center gap-2 p-2 border border-borderDefault bg-bgStart rounded cursor-pointer hover:border-accentBlue transition-colors">
+                  <label className="flex items-center gap-2 p-2 border border-borderDefault bg-bgStart rounded cursor-pointer hover:border-accentGreen transition-colors">
                     <input 
                       type="checkbox" 
                       checked={isEditable}
                       onChange={e => setIsEditable(e.target.checked)}
-                      className="rounded border-borderDefault text-accentBlue focus:ring-accentBlue bg-bgSurface"
+                      className="rounded border-borderDefault text-accentGreen focus:ring-accentGreen bg-bgSurface"
                     />
                     <span className="text-sm font-bold text-white">{t('admin_params.form_allow_clients')}</span>
                   </label>
@@ -292,7 +292,7 @@ export const AdminSystemParameters: React.FC = () => {
 
               <div className="flex justify-end gap-3 mt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm transition-colors">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
+                <button type="submit" className="px-6 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
                   <Check className="w-4 h-4" /> Guardar Parámetro
                 </button>
               </div>

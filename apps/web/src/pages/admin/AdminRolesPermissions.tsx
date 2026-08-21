@@ -117,9 +117,9 @@ export const AdminRolesPermissions: React.FC = () => {
       <div className="w-1/3 bg-bgSurface border border-borderDefault rounded-xl shadow-card overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-borderDefault flex justify-between items-center bg-bgStart">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-accentBlue" /> {t('admin_roles.title')}
+            <Shield className="w-5 h-5 text-accentGreen" /> {t('admin_roles.title')}
           </h2>
-          <button onClick={() => setShowModal(true)} className="p-1.5 bg-accentBlue/20 text-accentBlue hover:bg-accentBlue hover:text-white rounded transition-colors">
+          <button onClick={() => setShowModal(true)} className="p-1.5 bg-accentGreen/20 text-accentGreen hover:bg-accentGreen hover:text-white rounded transition-colors">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -132,7 +132,7 @@ export const AdminRolesPermissions: React.FC = () => {
               onClick={() => setSelectedRole(role)}
               className={`w-full text-left p-3 rounded-lg border transition-all ${
                 selectedRole?.id === role.id 
-                  ? 'bg-accentBlue/10 border-accentBlue/50 text-white' 
+                  ? 'bg-accentGreen/10 border-accentGreen/50 text-white' 
                   : 'bg-bgStart border-borderDefault text-textSecondary hover:border-borderHighlight'
               }`}
             >
@@ -153,7 +153,7 @@ export const AdminRolesPermissions: React.FC = () => {
             <div className="p-4 border-b border-borderDefault bg-bgStart flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-bold text-white">
-                  {t('admin_roles.perms_title')} <span className="text-accentBlue">{translateRole(selectedRole.name)}</span>
+                  {t('admin_roles.perms_title')} <span className="text-accentGreen">{translateRole(selectedRole.name)}</span>
                 </h2>
                 <p className="text-textMuted text-sm mt-1">{t('admin_roles.subtitle')}</p>
                 
@@ -164,13 +164,13 @@ export const AdminRolesPermissions: React.FC = () => {
                     placeholder={t('admin_roles.search')}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-bgSurface border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentBlue"
+                    className="w-full pl-9 pr-4 py-2 bg-bgSurface border border-borderDefault rounded text-white text-sm focus:outline-none focus:border-accentGreen"
                   />
                 </div>
               </div>
               <button 
                 onClick={handleSaveRole}
-                className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2"
+                className="px-6 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2"
               >
                 <Save className="w-4 h-4" /> {t('admin_roles.save')}
               </button>
@@ -179,12 +179,22 @@ export const AdminRolesPermissions: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredPermissions.map(perm => {
-                  const hasPerm = selectedRole.permissions?.includes(perm.key);
+                  const isAdminGlobalPerm = perm.key === 'admin_global';
+                  const isRusertechAdmin = selectedRole.code === 'rusertech_admin';
+                  
+                  // If it's the admin_global perm, force it ON for rusertech_admin, OFF for others.
+                  const hasPerm = isAdminGlobalPerm ? isRusertechAdmin : selectedRole.permissions?.includes(perm.key);
+                  const isDisabled = isAdminGlobalPerm;
+
                   return (
                     <div 
                       key={perm.key}
-                      onClick={() => togglePermission(perm.key)}
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      onClick={() => {
+                        if (!isDisabled) togglePermission(perm.key);
+                      }}
+                      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                        isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      } ${
                         hasPerm 
                           ? 'bg-green-500/10 border-green-500/30' 
                           : 'bg-bgStart border-borderDefault hover:border-borderHighlight'
@@ -232,7 +242,7 @@ export const AdminRolesPermissions: React.FC = () => {
               </div>
               <div className="flex justify-end gap-3 mt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">{t('admin_roles.cancel')}</button>
-                <button type="submit" className="px-4 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded">{t('admin_roles.create')}</button>
+                <button type="submit" className="px-4 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded">{t('admin_roles.create')}</button>
               </div>
             </form>
           </div>

@@ -43,7 +43,16 @@
       "DEFAULT_TIMEZONE": "Zona Horaria",
       "DISTANCE_UNIT": "Unidad de Distancia",
       "GPS_DRIFT_FILTER_METERS": "Filtro de Desviación GPS (Metros)",
-      "IDLING_TIMEOUT_MIN": "Tiempo Máximo Ralentí (Min)"
+      "IDLING_TIMEOUT_MIN": "Tiempo Máximo Ralentí (Min)",
+      "ndr_sla_normal_minutes": "SLA Reconocimiento Riesgo Normal (min)",
+      "ndr_sla_anomalia_minutes": "SLA Reconocimiento Anomalía (min)",
+      "ndr_sla_riesgo_critico_minutes": "SLA Reconocimiento Riesgo Crítico (min)",
+      "ndr_sla_activacion_policial_minutes": "SLA Activación Policial (min)",
+      "vehicle_moving_min_speed_kmh": "Velocidad mínima movimiento (km/h)",
+      "location_default_radius_meters": "Radio por defecto geocerca (metros)",
+      "destination_arrival_proximity_km": "Proximidad alerta destino (km)",
+      "broken_loop_threshold_minutes": "Tiempo lazo roto/pérdida señal (min)",
+      "provider_ok_threshold_minutes": "SLA Reconexión Proveedor GPS (min)"
     },
     "roles": {
       "admin": "Administrador",

@@ -19,7 +19,7 @@ export class OperationsService {
   }
 
   async create(data: any, tenantId: string) {
-    const { name, code, description, status } = data;
+    const { name, code, description, status, operation_flow_type } = data;
     return this.prisma.extended.operation.create({
       data: {
         tenant_id: tenantId,
@@ -27,12 +27,13 @@ export class OperationsService {
         ...(code !== undefined && { code }),
         ...(description !== undefined && { description }),
         ...(status !== undefined && { status }),
+        ...(operation_flow_type !== undefined && { operation_flow_type }),
       },
     });
   }
 
   async update(id: string, data: any) {
-    const { name, code, description, status } = data;
+    const { name, code, description, status, operation_flow_type } = data;
     return this.prisma.extended.operation.update({
       where: { id },
       data: {
@@ -40,6 +41,7 @@ export class OperationsService {
         ...(code !== undefined && { code }),
         ...(description !== undefined && { description }),
         ...(status !== undefined && { status }),
+        ...(operation_flow_type !== undefined && { operation_flow_type }),
       },
     });
   }

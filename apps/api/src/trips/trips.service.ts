@@ -428,4 +428,45 @@ export class TripsService {
 
     return { success: true, event };
   }
+
+  async generateMobilePairing(tripId: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        vehicle: true,
+        driver: true,
+      }
+    });
+
+    if (!trip) throw new NotFoundException('Trip not found');
+
+    // Generar un codigo seguro, corto y legible
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'RT-';
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    const currentMeta = typeof trip.metadata_json === 'object' && trip.metadata_json !== null ? trip.metadata_json : {};
+    
+    const updatedMeta = {
+      ...currentMeta,
+      mobile_service_active: true,
+      mobile_pairing_code: code,
+    };
+
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        metadata_json: updatedMeta
+      }
+    });
+
+    return {
+      success: true,
+      code,
+      plate: trip.vehicle?.plate || null,
+      driverDni: trip.driver?.document || null
+    };
+  }
 }

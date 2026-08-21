@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
-import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit2, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download, Link as LinkIcon, X } from 'lucide-react';
+import { Map as MapIcon, ChevronLeft, Calendar, Truck, User, MapPin, Activity, Clock, Sun, CloudSun, CloudFog, CloudDrizzle, CloudRain, Snowflake, CloudLightning, Cloud, Edit2, FileText, Send, Thermometer, Droplets, Settings, RotateCcw, Download, Link as LinkIcon, X, Copy } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { SensorHistoryModal } from '../sensors/SensorHistoryModal';
 import { SensorConfigModal } from '../sensors/SensorConfigModal';
@@ -109,6 +109,33 @@ export const TripDetailsPage: React.FC = () => {
       console.error(e);
       alert('Error al desenlazar el vehículo');
     }
+  };
+
+  const handleGenerateMobileCode = async () => {
+    if (!trip) return;
+    try {
+      await useTripsStore.getState().generateMobilePairing(trip.id);
+      loadTrip(trip.id); // Reload to get updated metadata
+    } catch (e) {
+      console.error(e);
+      alert('Error al generar código móvil');
+    }
+  };
+
+  const handleCopyMobileCredentials = () => {
+    if (!trip) return;
+    const code = (trip as any).metadata_json?.mobile_pairing_code || '';
+    const plate = trip.vehicle?.plate || '-';
+    const dni = trip.driver?.document || '-';
+    
+    const text = `*📱 Rusertech Mobile - Credenciales de Viaje*\n\n*Placa:* ${plate}\n*Chofer (DNI):* ${dni}\n*Código de Enlace:* ${code}\n\nIngresa estos datos en la App para activar el GPS.`;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Credenciales copiadas al portapapeles. Ya puedes pegarlas en WhatsApp.');
+    }).catch(err => {
+      console.error('Error al copiar: ', err);
+      alert('No se pudo copiar al portapapeles.');
+    });
   };
 
   const loadLogs = async (tripId: string) => {
@@ -688,6 +715,53 @@ export const TripDetailsPage: React.FC = () => {
                     </button>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+
+          {/* Rusertech Mobile Pairing */}
+          <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0 mt-3">
+            <div className="flex justify-between items-center mb-2 border-b border-borderDefault pb-1.5">
+              <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider flex items-center gap-2">
+                Servicio Mobile
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {(trip as any).metadata_json?.mobile_service_active ? (
+                <div className="bg-bgStart border border-borderDefault/50 rounded p-3">
+                  <div className="text-xs text-textMuted mb-2">Servicio activo para este viaje. Entregue este código al chofer:</div>
+                  <div className="text-center bg-bgSurfaceHigh rounded py-2 px-4 mb-2 select-all">
+                    <span className="text-xl font-display font-black text-accentGreen tracking-widest">
+                      {(trip as any).metadata_json?.mobile_pairing_code}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] text-textMuted mt-2 text-center">
+                    <div>Placa: <span className="text-white font-bold">{trip.vehicle?.plate || '-'}</span></div>
+                    <div>Chofer: <span className="text-white font-bold">{trip.driver?.document || '-'}</span></div>
+                  </div>
+                  <button 
+                    onClick={handleCopyMobileCredentials}
+                    className="w-full mt-3 flex items-center justify-center gap-2 bg-accentBlue hover:bg-accentBlue/90 text-bgStart font-bold text-xs py-2 rounded shadow-lg shadow-accentBlue/20 transition-all"
+                  >
+                    <Copy className="w-3 h-3" /> Copiar para WhatsApp
+                  </button>
+                  <button 
+                    onClick={handleGenerateMobileCode}
+                    className="w-full mt-2 text-xs bg-bgSurface border border-borderDefault text-textMuted hover:text-white py-1.5 rounded transition-colors"
+                  >
+                    Regenerar Código
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center p-3 border border-dashed border-borderDefault rounded">
+                  <p className="text-xs text-textMuted mb-3">La app móvil no está activada para este viaje.</p>
+                  <button 
+                    onClick={handleGenerateMobileCode}
+                    className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart font-bold text-xs px-4 py-2 rounded shadow-lg shadow-accentGreen/20 transition-all w-full"
+                  >
+                    Activar Rusertech Mobile
+                  </button>
+                </div>
               )}
             </div>
           </div>

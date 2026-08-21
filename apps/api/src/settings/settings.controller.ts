@@ -39,7 +39,7 @@ export class SettingsController {
   }
 
   @Put('users/:id')
-  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: { role_code?: string, full_name?: string, entity_restrictions?: any }) {
+  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: { role_code?: string, full_name?: string, entity_restrictions?: any, contact_type?: string }) {
     if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
       throw new ForbiddenException('Solo el propietario puede editar usuarios.');
     }

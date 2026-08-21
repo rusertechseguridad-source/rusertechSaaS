@@ -35,6 +35,7 @@ interface TripsState {
   getLinkedVehicles: (tripId: string) => Promise<any[]>;
   linkVehicle: (tripId: string, data: any) => Promise<any>;
   unlinkVehicle: (tripId: string, vehicleId: string) => Promise<void>;
+  generateMobilePairing: (tripId: string) => Promise<any>;
 }
 
 export const useTripsStore = create<TripsState>((set, get) => ({
@@ -152,6 +153,22 @@ export const useTripsStore = create<TripsState>((set, get) => ({
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (!res.ok) throw new Error('Error al desenlazar vehículo');
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    }
+  },
+  generateMobilePairing: async (tripId: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/mobile-pairing`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      });
+      if (!res.ok) throw new Error('Error al generar código de emparejamiento');
+      const data = await res.json();
+      // Refetch trip to get updated metadata
+      get().getTrip(tripId);
+      return data;
     } catch (e: any) {
       console.error(e);
       throw e;

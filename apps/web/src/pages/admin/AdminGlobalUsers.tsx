@@ -206,7 +206,7 @@ export const AdminGlobalUsers: React.FC = () => {
               placeholder={t('admin.search_placeholder')}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
+              className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentGreen"
             />
           </div>
           
@@ -214,7 +214,7 @@ export const AdminGlobalUsers: React.FC = () => {
             <select
               value={roleFilter}
               onChange={e => setRoleFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue"
+              className="w-full px-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentGreen"
             >
               <option value="">{t('admin.all_roles')}</option>
               {roles.map(r => (
@@ -271,7 +271,7 @@ export const AdminGlobalUsers: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-2.5 py-1 rounded text-xs font-bold bg-accentBlue/10 text-accentBlue border border-accentBlue/20 uppercase">
+                    <span className="px-2.5 py-1 rounded text-xs font-bold bg-accentGreen/10 text-accentGreen border border-accentGreen/20 uppercase">
                       {translateRole(u.role?.name || u.role_code)}
                     </span>
                   </td>
@@ -292,7 +292,7 @@ export const AdminGlobalUsers: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(u)}
-                        className="p-2 rounded text-accentBlue hover:bg-accentBlue/20 transition-colors"
+                        className="p-2 rounded text-accentGreen hover:bg-accentGreen/20 transition-colors"
                         title={t('admin.edit_perms')}
                       >
                         <Edit2 className="w-4 h-4" />
@@ -322,7 +322,7 @@ export const AdminGlobalUsers: React.FC = () => {
             <div className="p-5 border-b border-borderDefault bg-bgStart flex justify-between items-center shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-accentBlue" />
+                  <Shield className="w-5 h-5 text-accentGreen" />
                   {t('admin.modal_title')}{editingUser.full_name || editingUser.email}
                 </h2>
                 <p className="text-sm text-textMuted mt-1">{t('admin.modal_subtitle')}</p>
@@ -397,7 +397,7 @@ export const AdminGlobalUsers: React.FC = () => {
                           <button 
                             type="button"
                             onClick={() => setPermState(perm.key, 'inherit')}
-                            className={`flex-1 py-1.5 flex justify-center items-center gap-1 ${state === 'inherit' ? 'bg-accentBlue text-white font-bold' : 'text-textMuted hover:bg-bgStart'}`}
+                            className={`flex-1 py-1.5 flex justify-center items-center gap-1 ${state === 'inherit' ? 'bg-accentGreen text-white font-bold' : 'text-textMuted hover:bg-bgStart'}`}
                             title={t('admin.inherit_help')}
                           >
                             <Minus className="w-3 h-3" /> {t('admin.inherit_btn')}
@@ -428,7 +428,7 @@ export const AdminGlobalUsers: React.FC = () => {
 
             <div className="p-4 border-t border-borderDefault bg-bgStart flex justify-end gap-3 shrink-0">
               <button onClick={() => setEditingUser(null)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">{t('admin.cancel')}</button>
-              <button onClick={handleSaveUser} className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
+              <button onClick={handleSaveUser} className="px-6 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
                 <Save className="w-4 h-4" /> {t('admin.save_perms')}
               </button>
             </div>

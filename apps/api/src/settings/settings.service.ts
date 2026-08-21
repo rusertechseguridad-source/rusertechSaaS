@@ -78,7 +78,7 @@ export class SettingsService {
     return { ...safeUser, emailSent: true };
   }
 
-  async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string, entity_restrictions?: any }) {
+  async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string, entity_restrictions?: any, contact_type?: string }) {
     return this.prisma.user.update({
       where: { id: userId, tenant_id: tenantId },
       data,

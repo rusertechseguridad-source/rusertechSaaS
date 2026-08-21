@@ -83,4 +83,10 @@ export class TripsController {
     // De momento lo dejamos protegido por JwtAuthGuard.
     return this.tripsService.contactDriverResponse(id, data);
   }
+
+  @Post(':id/mobile-pairing')
+  @RequirePermissions('trips:manage')
+  generateMobilePairing(@Param('id') id: string) {
+    return this.tripsService.generateMobilePairing(id);
+  }
 }

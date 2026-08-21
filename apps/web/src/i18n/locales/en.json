@@ -43,7 +43,16 @@
       "DEFAULT_TIMEZONE": "Default Timezone",
       "DISTANCE_UNIT": "Distance Unit",
       "GPS_DRIFT_FILTER_METERS": "GPS Drift Filter (Meters)",
-      "IDLING_TIMEOUT_MIN": "Idling Timeout (Min)"
+      "IDLING_TIMEOUT_MIN": "Max Idling Time (Min)",
+      "ndr_sla_normal_minutes": "SLA Acknowledgement Normal Risk (min)",
+      "ndr_sla_anomalia_minutes": "SLA Acknowledgement Anomaly (min)",
+      "ndr_sla_riesgo_critico_minutes": "SLA Acknowledgement Critical Risk (min)",
+      "ndr_sla_activacion_policial_minutes": "SLA Police Activation (min)",
+      "vehicle_moving_min_speed_kmh": "Min speed to consider moving (km/h)",
+      "location_default_radius_meters": "Default radius for geofence (meters)",
+      "destination_arrival_proximity_km": "Arrival alert proximity (km)",
+      "broken_loop_threshold_minutes": "Broken loop / signal loss time (min)",
+      "provider_ok_threshold_minutes": "GPS Provider Reconnection SLA (min)"
     },
     "roles": {
       "admin": "Administrator",

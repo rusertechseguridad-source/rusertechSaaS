@@ -234,7 +234,7 @@ export const AdminPage: React.FC = () => {
       <div className="flex justify-between items-center mb-6 shrink-0">
         <div>
           <h1 
-            className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentBlue tracking-wider flex items-center"
+            className="text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-accentGreen to-accentGreen tracking-wider flex items-center"
             style={{ textShadow: '0 0 10px rgba(42,179,255,0.3)', animation: 'pulse 3s infinite' }}
           >
             <ShieldCheck className="w-8 h-8 mr-3 text-accentGreen" />
@@ -254,25 +254,25 @@ export const AdminPage: React.FC = () => {
       <div className="flex gap-4 border-b border-borderDefault mb-6 shrink-0">
         <button 
           onClick={() => setActiveTab('tenants')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'tenants' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'tenants' ? 'border-accentGreen text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
           <Building className="w-4 h-4 inline mr-2" /> {t('admin.tab_tenants')}
         </button>
         <button 
           onClick={() => setActiveTab('users')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'users' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'users' ? 'border-accentGreen text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
           <Users className="w-4 h-4 inline mr-2" /> {t('admin.tab_users_global')}
         </button>
         <button 
           onClick={() => setActiveTab('roles')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'roles' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'roles' ? 'border-accentGreen text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
           <Shield className="w-4 h-4 inline mr-2" /> {t('admin.tab_roles')}
         </button>
         <button 
           onClick={() => setActiveTab('parameters')}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'parameters' ? 'border-accentBlue text-white' : 'border-transparent text-textMuted hover:text-white'}`}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'parameters' ? 'border-accentGreen text-white' : 'border-transparent text-textMuted hover:text-white'}`}
         >
           <Settings className="w-4 h-4 inline mr-2" /> {t('admin.tab_parameters')}
         </button>
@@ -288,7 +288,7 @@ export const AdminPage: React.FC = () => {
               placeholder={t('admin_tenants.search')}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentBlue transition-colors"
+              className="w-full pl-9 pr-4 py-2 bg-bgStart border border-borderDefault rounded-lg text-white text-sm focus:outline-none focus:border-accentGreen transition-colors"
             />
           </div>
         </div>
@@ -320,60 +320,60 @@ export const AdminPage: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-textMuted">Cargando...</td>
                 </tr>
-              ) : sortedTenants.map(t => (
-                <tr key={t.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors group">
+              ) : sortedTenants.map(tenant => (
+                <tr key={tenant.id} className="border-b border-borderDefault hover:bg-bgStart/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-bgStart border border-borderDefault flex items-center justify-center">
                         <Building className="w-5 h-5 text-textSecondary" />
                       </div>
                       <div>
-                        <div className="font-bold text-white">{t.name}</div>
-                        <div className="text-xs text-textMuted">@{t.slug}</div>
+                        <div className="font-bold text-white">{tenant.name}</div>
+                        <div className="text-xs text-textMuted">@{tenant.slug}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded text-xs font-bold ${
-                      t.status === 'active' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                      tenant.status === 'active' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
                     }`}>
-                      {t.status === 'active' ? t('admin_tenants.status_active') : t('admin_tenants.status_suspended')}
+                      {tenant.status === 'active' ? t('admin_tenants.status_active') : t('admin_tenants.status_suspended')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-bold text-textSecondary uppercase">{t.plan}</span>
+                    <span className="text-xs font-bold text-textSecondary uppercase">{tenant.plan}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-sm text-textSecondary">
-                      <Users className="w-4 h-4" /> {t._count?.users || 0}
+                      <Users className="w-4 h-4" /> {tenant._count?.users || 0}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1 text-sm text-textSecondary">
-                      <Activity className="w-4 h-4" /> {t._count?.vehicles || 0}
+                      <Activity className="w-4 h-4" /> {tenant._count?.vehicles || 0}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => {
-                          setEditingTenant(t);
-                          setEditName(t.name);
-                          setEditSlug(t.slug);
-                          setEditPlan(t.plan);
-                          loadTenantUsers(t.id);
+                          setEditingTenant(tenant);
+                          setEditName(tenant.name);
+                          setEditSlug(tenant.slug);
+                          setEditPlan(tenant.plan);
+                          loadTenantUsers(tenant.id);
                         }}
-                        className="p-2 rounded text-accentBlue hover:bg-accentBlue/20 transition-colors"
+                        className="p-2 rounded text-accentGreen hover:bg-accentGreen/20 transition-colors"
                         title="Editar Empresa"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => toggleSuspend(t.id, t.status === 'active')}
-                        className={`p-2 rounded transition-colors ${t.status !== 'active' ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'}`}
-                        title={t.status === 'active' ? 'Suspender' : 'Activar'}
+                        onClick={() => toggleSuspend(tenant.id, tenant.status === 'active')}
+                        className={`p-2 rounded transition-colors ${tenant.status !== 'active' ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'}`}
+                        title={tenant.status === 'active' ? 'Suspender' : 'Activar'}
                       >
-                        {t.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-statusOnline" />}
+                        {tenant.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-statusOnline" />}
                       </button>
                     </div>
                   </td>
@@ -394,7 +394,7 @@ export const AdminPage: React.FC = () => {
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-lg shadow-card overflow-hidden flex flex-col">
             <div className="p-5 border-b border-borderDefault bg-bgStart">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-accentBlue" />
+                <Plus className="w-5 h-5 text-accentGreen" />
                 Alta de Cliente (Tenant)
               </h2>
             </div>
@@ -430,7 +430,7 @@ export const AdminPage: React.FC = () => {
               </div>
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors">Dar de Alta</button>
+                <button type="submit" className="px-6 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded shadow-card transition-colors">Dar de Alta</button>
               </div>
             </form>
           </div>
@@ -442,7 +442,7 @@ export const AdminPage: React.FC = () => {
           <div className="bg-bgSurface border border-borderDefault rounded-xl w-full max-w-2xl shadow-card overflow-hidden flex flex-col">
             <div className="p-5 border-b border-borderDefault bg-bgStart flex justify-between items-center">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-accentBlue" />
+                <Edit2 className="w-5 h-5 text-accentGreen" />
                 Editar Empresa (Tenant)
               </h2>
               <button onClick={() => setEditingTenant(null)} className="p-2 text-textMuted hover:text-white rounded">
@@ -470,7 +470,7 @@ export const AdminPage: React.FC = () => {
               </div>
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-borderDefault">
                 <button type="button" onClick={() => setEditingTenant(null)} className="px-4 py-2 text-textMuted hover:text-white font-bold text-sm">Cancelar</button>
-                <button type="submit" className="px-6 py-2 bg-accentBlue hover:bg-blue-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
+                <button type="submit" className="px-6 py-2 bg-accentGreen hover:bg-green-600 text-white font-bold text-sm rounded shadow-card transition-colors flex items-center gap-2">
                   <Check className="w-4 h-4" /> Guardar
                 </button>
               </div>
@@ -478,7 +478,7 @@ export const AdminPage: React.FC = () => {
 
             <div className="p-6 pt-0 border-t border-borderDefault/50">
               <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4 text-accentBlue" />
+                <Users className="w-4 h-4 text-accentGreen" />
                 Usuarios de la Empresa ({editingTenantUsers.length})
               </h3>
               <div className="max-h-40 overflow-y-auto bg-bgStart border border-borderDefault rounded-lg">
@@ -540,7 +540,7 @@ export const AdminPage: React.FC = () => {
                                   setEditingTenant(null);
                                   setSearch(u.email);
                                 }}
-                                className="p-1.5 text-accentBlue hover:bg-accentBlue/20 rounded transition-colors"
+                                className="p-1.5 text-accentGreen hover:bg-accentGreen/20 rounded transition-colors"
                                 title="Editar en Usuarios Globales"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />

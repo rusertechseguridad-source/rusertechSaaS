@@ -30,6 +30,9 @@ import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
 import { ForwardingModule } from './forwarding/forwarding.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { OperationalProtocolsModule } from './operational-protocols/operational-protocols.module';
+import { SecurityKeysModule } from './security-keys/security-keys.module';
+import { MobileModule } from './mobile/mobile.module';
 
 @Module({
   imports: [
@@ -70,6 +73,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     SettingsModule,
     ForwardingModule,
     NotificationsModule,
+    OperationalProtocolsModule,
+    SecurityKeysModule,
+    MobileModule,
   ],
   controllers: [AppController],
   providers: [
