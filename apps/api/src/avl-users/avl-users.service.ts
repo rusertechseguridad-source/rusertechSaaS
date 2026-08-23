@@ -18,6 +18,18 @@ export class AvlUsersService {
    * `regenerateApiKey` sobre un avl_user ajeno cortaría la ingesta GPS de otro
    * cliente.
    */
+  /** Quita un código del registro auxiliar de "desconocidos" (sólo en Redis). */
+  private async olvidarCodigoDesconocido(avlUserId: string, rawCode: string): Promise<void> {
+    if (!this.redis.isConfigured()) return;
+    try {
+      await this.redis.getClient().srem(`avl:unknown:${avlUserId}`, rawCode);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo limpiar el código desconocido ${rawCode}: ${(error as Error).message}`,
+      );
+    }
+  }
+
   private async assertAvlUserDelTenant(id: string, tenantId: string) {
     return assertTenantOwnership(this.prisma.extended.avlUser, id, tenantId, 'AVL User');
   }
@@ -118,8 +130,10 @@ export class AvlUsersService {
       where: { id: dictId },
       data,
     });
-    // Remove from unknown cache if we just mapped it
-    await this.redis.getClient().srem(`avl:unknown:${updated.avl_user_id}`, updated.raw_code);
+    // Los "códigos desconocidos" son un registro auxiliar que vive sólo en
+    // Redis: si no está configurado, no hay nada que limpiar y la edición del
+    // diccionario debe funcionar igual.
+    await this.olvidarCodigoDesconocido(updated.avl_user_id, updated.raw_code);
     return updated;
   }
 
@@ -138,8 +152,15 @@ export class AvlUsersService {
 
   async getUnknownCodes(id: string, tenantId: string) {
     await this.assertAvlUserDelTenant(id, tenantId);
-    const codes = await this.redis.getClient().smembers(`avl:unknown:${id}`);
-    return codes;
+    // Sin Redis no hay registro de códigos desconocidos: se devuelve vacío en
+    // lugar de romper la pantalla del diccionario.
+    if (!this.redis.isConfigured()) return [];
+    try {
+      return await this.redis.getClient().smembers(`avl:unknown:${id}`);
+    } catch (error) {
+      this.logger.warn(`No se pudieron leer los códigos desconocidos: ${(error as Error).message}`);
+      return [];
+    }
   }
 
   async exportDictionary(id: string, tenantId: string, res: Response) {
@@ -251,8 +272,7 @@ export class AvlUsersService {
           importedCount++;
         }
 
-        // Remove from unknown cache if we just mapped it
-        await this.redis.getClient().srem(`avl:unknown:${id}`, raw_code);
+        await this.olvidarCodigoDesconocido(id, raw_code);
       } catch (e) {
         // Antes se contaban los errores sin registrar ninguno: si una
         // importación fallaba entera, no quedaba rastro del motivo.

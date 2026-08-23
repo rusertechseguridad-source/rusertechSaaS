@@ -12,7 +12,9 @@ export class GeocodingService {
     const lngRounded = lng.toFixed(4);
     const cacheKey = `geocode:${latRounded}:${lngRounded}`;
 
-    const cached = await this.redis.get<string>(cacheKey);
+    // La caché de geocodificación es una optimización: sin Redis se resuelve
+    // igual, sólo que consultando el proveedor cada vez.
+    const cached = this.redis.isConfigured() ? await this.redis.get<string>(cacheKey) : null;
     if (cached) return cached;
 
     let address: string | null = null;
@@ -47,7 +49,9 @@ export class GeocodingService {
     }
 
     if (address) {
-      await this.redis.set(cacheKey, address, 86400); // 24h
+      if (this.redis.isConfigured()) {
+        await this.redis.set(cacheKey, address, 86400); // 24h
+      }
       return address;
     }
 

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
+import { LivePositionsService } from '../common/live-positions/live-positions.service';
 
 @Injectable()
 export class VehiclesService {
@@ -10,6 +11,7 @@ export class VehiclesService {
     private prisma: PrismaService,
     private redis: RedisService,
     private mailService: MailService,
+    private livePositions: LivePositionsService,
   ) {}
 
   async findAll(user: any, skip?: number, take?: number) {
@@ -49,7 +51,7 @@ export class VehiclesService {
 
     if (!vehicle) throw new NotFoundException('Vehículo no encontrado');
 
-    const lastPosition = await this.leerPosicion(vehicle.id);
+    const lastPosition = await this.livePositions.obtenerPorVehiculo(vehicle.id, tenantId);
 
     return { ...vehicle, lastPosition };
   }
@@ -57,38 +59,22 @@ export class VehiclesService {
   /**
    * Últimas posiciones conocidas de los vehículos del tenant.
    *
-   * Antes usaba `redis.keys('vehicle:pos:*')`, con dos problemas: devolvía las
-   * posiciones de todos los tenants, y `KEYS` recorre el keyspace completo y
-   * bloquea Redis mientras lo hace.
+   * Delega en LivePositionsService, que lee de Postgres (fuente de verdad) y
+   * usa Redis sólo si `LIVE_POSITIONS_SOURCE=redis`, con caída a Postgres.
    *
-   * Ahora las claves se derivan de los vehículos del tenant y se leen con un
-   * único `MGET`. Es más barato que `SCAN` (no recorre nada: va directo a las
-   * claves que interesan) y el aislamiento queda garantizado por construcción,
-   * porque la lista de claves sale de una consulta ya scopeada por tenant.
+   * Historial de este método, que explica por qué terminó así:
+   *  1. Usaba `redis.keys('vehicle:pos:*')` → devolvía posiciones de todos los
+   *     tenants y bloqueaba Redis con KEYS.
+   *  2. Se corrigió a MGET acotado por tenant, pero seguía devolviendo vacío:
+   *     leía `vehicle:pos:{hub_asset_id}`, una clave que nadie escribía.
+   *  3. Alineado a `vehicle:position:{vehicleId}`, seguía vacío para los
+   *     vehículos de la app móvil: la Mobile API escribe directo a `telemetry`
+   *     sin pasar por el ingest de NestJS, así que Redis nunca los ve.
+   * La causa raíz no era la clave: era depender de una caché que sólo conoce
+   * una de las dos vías de ingreso de datos.
    */
   async getLivePositions(tenantId: string) {
-    const vehiculos = await this.prisma.extended.vehicle.findMany({
-      where: tenantWhere(tenantId, 'VehiclesService.getLivePositions'),
-      select: { id: true, plate: true, hub_asset_id: true },
-    });
-
-    if (vehiculos.length === 0) return [];
-
-    const client = this.redis.getClient();
-    const claves = vehiculos.map((v: { id: string }) => this.clavePosicion(v.id));
-    const valores = await client.mget(...claves);
-
-    return valores
-      .map((raw, i) => {
-        if (!raw) return null;
-        try {
-          return { ...JSON.parse(raw), vehicle_id: vehiculos[i].id, plate: vehiculos[i].plate };
-        } catch {
-          // Un valor corrupto en cache no debe tumbar el listado completo.
-          return null;
-        }
-      })
-      .filter((v) => v !== null);
+    return this.livePositions.obtenerPorTenant(tenantId);
   }
 
   async create(data: any, tenantId: string) {
@@ -140,9 +126,19 @@ export class VehiclesService {
       },
     });
 
-    // Invalidar la cache para que TelemetryService vea el nuevo estado.
-    if (updated.hub_asset_id && updated.avl_user_id) {
-      await this.redis.getClient().del(`vehicle:asset:${updated.avl_user_id}:${updated.hub_asset_id}`);
+    // Invalidar la caché para que TelemetryService vea el nuevo estado.
+    // Sólo aplica si Redis está configurado: sin él no hay caché que invalidar,
+    // y bloquear un vehículo no puede fallar por eso.
+    if (this.redis.isConfigured() && updated.hub_asset_id && updated.avl_user_id) {
+      try {
+        await this.redis
+          .getClient()
+          .del(`vehicle:asset:${updated.avl_user_id}:${updated.hub_asset_id}`);
+      } catch (error) {
+        console.warn(
+          `[VehiclesService] No se pudo invalidar la caché del vehículo ${updated.plate}: ${(error as Error).message}`,
+        );
+      }
     }
 
     if (blocked && reason) {
@@ -194,25 +190,4 @@ export class VehiclesService {
     return updated;
   }
 
-  /**
-   * Clave de la última posición en Redis.
-   *
-   * ⚠️ Corrige una inconsistencia previa: `TelemetryService` escribe en
-   * `vehicle:position:{vehicleId}`, pero este servicio (y `sensors`) leían
-   * `vehicle:pos:{hub_asset_id}`. Como nadie escribía esa segunda clave, la
-   * posición en vivo nunca se encontraba. Se unifica con la del productor.
-   */
-  private clavePosicion(vehicleId: string): string {
-    return `vehicle:position:${vehicleId}`;
-  }
-
-  private async leerPosicion(vehicleId: string): Promise<any | null> {
-    const raw = await this.redis.getClient().get(this.clavePosicion(vehicleId));
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
 }

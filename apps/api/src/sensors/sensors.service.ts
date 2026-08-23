@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
-import { RedisService } from '../common/redis/redis.service';
+import { LivePositionsService } from '../common/live-positions/live-positions.service';
 
 @Injectable()
 export class SensorsService {
-  constructor(private prisma: PrismaService, private redis: RedisService) {}
+  constructor(
+    private prisma: PrismaService,
+    private livePositions: LivePositionsService,
+  ) {}
 
   async getConfigs(tenantId: string) {
     return this.prisma.sensorConfig.findMany({
@@ -76,23 +79,18 @@ export class SensorsService {
       }
     });
 
-    const client = this.redis.getClient();
+    // Mismo problema que tenía el mapa en vivo: este tablero leía la caché de
+    // Redis, que sólo conoce los puntos que entran por el ingest de NestJS. Los
+    // vehículos rastreados desde la app móvil nunca aparecían con datos.
+    // Ahora usa la misma fuente única, con Postgres como verdad.
+    const posiciones = await this.livePositions.obtenerPorTenant(tenantId);
+    const posicionPorVehiculo = new Map(posiciones.map((p) => [p.vehicle_id, p]));
+
     const result = [];
 
     for (const v of vehicles) {
       const vConfigs = configs.filter(c => c.scope_id === v.id);
-      let latestData = null;
-
-      // Clave alineada con la que escribe TelemetryService
-      // (antes se leía `vehicle:pos:{hub_asset_id}`, que nadie escribe).
-      const posStr = await client.get(`vehicle:position:${v.id}`);
-      if (posStr) {
-        try {
-          latestData = JSON.parse(posStr);
-        } catch {
-          latestData = null;
-        }
-      }
+      const latestData = posicionPorVehiculo.get(v.id) ?? null;
 
       result.push({
         vehicle: v,
@@ -100,7 +98,10 @@ export class SensorsService {
         latest: latestData ? {
           timestamp: latestData.timestamp,
           temperature_c: latestData.temperature_c,
-          humidity_pct: latestData.humidity_pct
+          humidity_pct: latestData.humidity_pct,
+          // Antigüedad del dato: un valor de hace horas no es una lectura actual.
+          age_seconds: latestData.age_seconds,
+          freshness: latestData.freshness,
         } : null
       });
     }
