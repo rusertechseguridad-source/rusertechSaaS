@@ -34,7 +34,11 @@ export class VehiclesService {
       take,
       where: tenantWhere(user?.tenantId, 'VehiclesService.findAll', restrictions),
       include: {
-        avl_user: { select: { name: true, user_avl_code: true } },
+        // Se incluye el id además del nombre porque el mapa filtra por id.
+        // Antes sólo venía el nombre y los filtros de transportista/AVL de la
+        // pantalla de mapa no podían compararse contra este listado.
+        avl_user: { select: { id: true, name: true, user_avl_code: true } },
+        carrier: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },
     });
