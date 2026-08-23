@@ -13,85 +13,85 @@ export class AvlUsersController {
   constructor(private readonly service: AvlUsersService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@CurrentUser() user: any) {
+    return this.service.findAll(user.tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.findOne(id, user.tenantId);
   }
 
   @Post()
-  @RequirePermissions('avl:edit')
+  @RequirePermissions('manage_avl')
   create(@CurrentUser() user: any, @Body() data: any) {
     return this.service.create(user.tenantId, data);
   }
 
   @Put(':id')
-  @RequirePermissions('avl:edit')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.service.update(id, data);
+  @RequirePermissions('manage_avl')
+  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.service.update(id, user.tenantId, data);
   }
 
   @Delete(':id')
-  @RequirePermissions('avl:edit')
-  delete(@Param('id') id: string) {
-    return this.service.delete(id);
+  @RequirePermissions('manage_avl')
+  delete(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.delete(id, user.tenantId);
   }
 
   @Patch(':id/toggle')
-  @RequirePermissions('avl:edit')
-  toggleActive(@Param('id') id: string, @Body('is_active') is_active: boolean) {
-    return this.service.toggleActive(id, is_active);
+  @RequirePermissions('manage_avl')
+  toggleActive(@Param('id') id: string, @Body('is_active') is_active: boolean, @CurrentUser() user: any) {
+    return this.service.toggleActive(id, user.tenantId, is_active);
   }
 
   @Post(':id/regenerate-api-key')
-  @RequirePermissions('avl:edit')
-  regenerateApiKey(@Param('id') id: string) {
-    return this.service.regenerateApiKey(id);
+  @RequirePermissions('manage_avl')
+  regenerateApiKey(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.regenerateApiKey(id, user.tenantId);
   }
 
   @Get(':id/dictionary')
-  getDictionary(@Param('id') id: string) {
-    return this.service.getDictionary(id);
+  getDictionary(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.getDictionary(id, user.tenantId);
   }
 
   @Post(':id/dictionary')
-  @RequirePermissions('avl:edit')
-  addDictionaryEntry(@Param('id') id: string, @Body() data: any) {
-    return this.service.addDictionaryEntry(id, data);
+  @RequirePermissions('manage_avl')
+  addDictionaryEntry(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.service.addDictionaryEntry(id, user.tenantId, data);
   }
 
   @Put(':id/dictionary/:dictId')
-  @RequirePermissions('avl:edit')
-  updateDictionaryEntry(@Param('dictId') dictId: string, @Body() data: any) {
-    return this.service.updateDictionaryEntry(dictId, data);
+  @RequirePermissions('manage_avl')
+  updateDictionaryEntry(@Param('dictId') dictId: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.service.updateDictionaryEntry(dictId, user.tenantId, data);
   }
 
   @Delete(':id/dictionary/:dictId')
-  @RequirePermissions('avl:edit')
-  deleteDictionaryEntry(@Param('dictId') dictId: string) {
-    return this.service.deleteDictionaryEntry(dictId);
+  @RequirePermissions('manage_avl')
+  deleteDictionaryEntry(@Param('dictId') dictId: string, @CurrentUser() user: any) {
+    return this.service.deleteDictionaryEntry(dictId, user.tenantId);
   }
 
   @Get(':id/unknown-codes')
-  getUnknownCodes(@Param('id') id: string) {
-    return this.service.getUnknownCodes(id);
+  getUnknownCodes(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.getUnknownCodes(id, user.tenantId);
   }
 
   @Get(':id/dictionary/export')
-  exportDictionary(@Param('id') id: string, @Res() res: Response) {
-    return this.service.exportDictionary(id, res);
+  exportDictionary(@Param('id') id: string, @Res() res: Response, @CurrentUser() user: any) {
+    return this.service.exportDictionary(id, user.tenantId, res);
   }
 
   @Post(':id/dictionary/import')
-  @RequirePermissions('avl:edit')
+  @RequirePermissions('manage_avl')
   @UseInterceptors(FileInterceptor('file'))
-  importDictionary(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  importDictionary(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     if (!file) {
       throw new Error('No file provided');
     }
-    return this.service.importDictionary(id, file.buffer);
+    return this.service.importDictionary(id, user.tenantId, file.buffer);
   }
 }

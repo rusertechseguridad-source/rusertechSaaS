@@ -82,7 +82,7 @@ export const DriversPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">{t('drivers.subtitle')}</p>
         </div>
-        <RequirePermission permission="drivers:edit">
+        <RequirePermission permission="manage_drivers">
           <button 
             onClick={() => { setDriverToEdit(null); setShowModal(true); }}
             className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition flex items-center gap-2"
@@ -178,7 +178,7 @@ export const DriversPage: React.FC = () => {
                         <th className="px-6 py-4">{t('drivers.table.carrier')}</th>
                         <th className="px-6 py-4">{t('drivers.table.status')}</th>
                         <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="drivers:edit">{t('drivers.table.actions')}</RequirePermission>
+                          <RequirePermission permission="manage_drivers">{t('drivers.table.actions')}</RequirePermission>
                         </th>
                       </tr>
                     </thead>
@@ -214,7 +214,7 @@ export const DriversPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <RequirePermission permission="drivers:edit">
+                            <RequirePermission permission="manage_drivers">
                               <div className="flex justify-end gap-3 items-center">
                                 <button 
                                   onClick={() => { setDriverToEdit(driver); setShowModal(true); }}

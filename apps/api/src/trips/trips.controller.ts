@@ -16,77 +16,90 @@ export class TripsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tripsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.findOne(id, user.tenantId);
   }
 
   @Post()
-  @RequirePermissions('trips:manage')
+  @RequirePermissions('manage_trips')
   create(@Body() data: any, @CurrentUser() user: any) {
     return this.tripsService.create(data, user.tenantId, user.id);
   }
 
   @Put(':id')
-  @RequirePermissions('trips:manage')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.tripsService.update(id, data);
+  @RequirePermissions('manage_trips')
+  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.tripsService.update(id, user.tenantId, data);
   }
 
   @Delete(':id')
-  @RequirePermissions('trips:manage')
-  remove(@Param('id') id: string) {
-    return this.tripsService.remove(id);
+  @RequirePermissions('manage_trips')
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.remove(id, user.tenantId);
   }
 
-  // Permiso específico para choferes
+  // Cambio de estado del viaje.
+  // NOTA: el decorador original pedía `trips:update_status`, un permiso que no
+  // existe en el catálogo ni en ningún rol del seed. Se mapea a `manage_trips`
+  // (ver reporte de la tanda): no se pierde ninguna capacidad, porque con el
+  // formato anterior este endpoint nunca autorizaba a nadie.
   @Post(':id/status')
-  @RequirePermissions('trips:update_status')
-  updateStatus(@Param('id') id: string, @Body() data: any) {
-    return this.tripsService.updateStatus(id, data);
+  @RequirePermissions('manage_trips')
+  updateStatus(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.tripsService.updateStatus(id, user.tenantId, data);
   }
 
   @Get(':id/logs')
-  getLogs(@Param('id') id: string) {
-    return this.tripsService.getLogs(id);
+  getLogs(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.getLogs(id, user.tenantId);
   }
 
   @Post(':id/logs')
   addLog(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
     return this.tripsService.addLog(id, data.text, user);
   }
+
   @Get(':id/linked-vehicles')
-  getLinkedVehicles(@Param('id') id: string) {
-    return this.tripsService.getLinkedVehicles(id);
+  getLinkedVehicles(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.getLinkedVehicles(id, user.tenantId);
   }
 
   @Post(':id/linked-vehicles')
-  @RequirePermissions('trips:manage')
-  linkVehicle(@Param('id') id: string, @Body() data: any) {
-    return this.tripsService.linkVehicle(id, data.vehicle_id, data.link_type, data.notes);
+  @RequirePermissions('manage_trips')
+  linkVehicle(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.tripsService.linkVehicle(
+      id,
+      user.tenantId,
+      data.vehicle_id,
+      data.link_type,
+      data.notes,
+    );
   }
 
   @Delete(':id/linked-vehicles/:vehicleId')
-  @RequirePermissions('trips:manage')
-  unlinkVehicle(@Param('id') id: string, @Param('vehicleId') vehicleId: string) {
-    return this.tripsService.unlinkVehicle(id, vehicleId);
+  @RequirePermissions('manage_trips')
+  unlinkVehicle(
+    @Param('id') id: string,
+    @Param('vehicleId') vehicleId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.tripsService.unlinkVehicle(id, user.tenantId, vehicleId);
   }
 
   @Post(':id/driver-contact-attempt')
-  @RequirePermissions('trips:manage')
+  @RequirePermissions('manage_trips')
   contactDriverAttempt(@Param('id') id: string, @CurrentUser() user: any) {
     return this.tripsService.contactDriverAttempt(id, user);
   }
 
   @Post(':id/driver-contact-response')
-  contactDriverResponse(@Param('id') id: string, @Body() data: any) {
-    // Permiso abierto o específico según app móvil.
-    // De momento lo dejamos protegido por JwtAuthGuard.
-    return this.tripsService.contactDriverResponse(id, data);
+  contactDriverResponse(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.tripsService.contactDriverResponse(id, user.tenantId, data);
   }
 
   @Post(':id/mobile-pairing')
-  @RequirePermissions('trips:manage')
-  generateMobilePairing(@Param('id') id: string) {
-    return this.tripsService.generateMobilePairing(id);
+  @RequirePermissions('manage_trips')
+  generateMobilePairing(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tripsService.generateMobilePairing(id, user.tenantId);
   }
 }

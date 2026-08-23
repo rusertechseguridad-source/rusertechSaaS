@@ -6,15 +6,21 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { getRequiredSecret } from '../common/config/secrets';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
-    JwtModule.register({
-      // NOTA: En producción usar ConfigModule y variables de entorno reales.
-      secret: process.env.JWT_SECRET || 'rusertech-super-secret-key-2026',
-      signOptions: { expiresIn: '12h' },
+    JwtModule.registerAsync({
+      // Sin fallback hardcodeado: el secreto se valida al arrancar y, si falta,
+      // la aplicación no levanta. `registerAsync` difiere la lectura hasta que
+      // el módulo se inicializa, para que el error salga por el mismo camino
+      // que el resto de la validación de configuración.
+      useFactory: () => ({
+        secret: getRequiredSecret('JWT_SECRET'),
+        signOptions: { expiresIn: '12h' },
+      }),
     }),
   ],
   controllers: [AuthController],

@@ -219,7 +219,7 @@ export const LocationsPage: React.FC = () => {
           <MapPin className="w-8 h-8 mr-3 text-accentMint" />
           {t('locations.title')}
         </h1>
-        <RequirePermission permission="locations:edit">
+        <RequirePermission permission="manage_locations">
           <button
             onClick={openCreateModal}
             className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20"
@@ -294,7 +294,7 @@ export const LocationsPage: React.FC = () => {
                         )}
                         {loc.address && <div className="text-xs text-textSecondary mt-1">{loc.address}</div>}
                       </div>
-                      <RequirePermission permission="locations:edit">
+                      <RequirePermission permission="manage_locations">
                         <div className="flex space-x-1 shrink-0 ml-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); openEditModal(loc); }}

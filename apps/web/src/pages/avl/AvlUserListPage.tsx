@@ -64,7 +64,7 @@ export const AvlUserListPage: React.FC = () => {
             <Download size={16} className="text-accentBlue" />
             {t('avl.export_csv')}
           </button>
-          <RequirePermission permission="avl:edit">
+          <RequirePermission permission="manage_avl">
             <button 
               onClick={handleOpenNew}
               className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
@@ -107,7 +107,7 @@ export const AvlUserListPage: React.FC = () => {
                 </div>
               </div>
               <div className="bg-bgSurfaceHigh p-4 border-t border-borderDefault flex justify-between items-center">
-                <RequirePermission permission="avl:edit">
+                <RequirePermission permission="manage_avl">
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={() => toggleActive(user.id, !user.is_active)}
@@ -119,7 +119,7 @@ export const AvlUserListPage: React.FC = () => {
                   </div>
                 </RequirePermission>
                 <div className="flex space-x-3">
-                  <RequirePermission permission="avl:edit">
+                  <RequirePermission permission="manage_avl">
                     <button 
                       onClick={() => handleOpenEdit(user.id)}
                       className="text-sm text-accentGreen hover:text-accentGreen/80 font-medium transition-colors"

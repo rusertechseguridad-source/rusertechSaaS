@@ -30,7 +30,11 @@ export const AppLayout: React.FC = () => {
           const openAlerts = alertsArray.filter((a: any) => a.status !== 'resolved');
           setHasAlerts(openAlerts.length > 0);
         }
-      } catch (e) { }
+      } catch (e) {
+        // No romper el layout si el parseo falla, pero dejar rastro:
+        // un catch vacío acá ya ocultó bugs durante semanas en este proyecto.
+        console.warn('[AppLayout] No se pudo procesar la configuración de UI:', e);
+      }
     };
     
     checkAlerts();

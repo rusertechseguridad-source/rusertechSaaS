@@ -16,31 +16,31 @@ export class RoutesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.findOne(id, user.tenantId);
   }
 
   @Post()
-  @RequirePermissions('routes:edit')
+  @RequirePermissions('manage_locations')
   create(@Body() data: any, @CurrentUser() user: any) {
     return this.service.create(data, user.tenantId, user.id);
   }
 
   @Put(':id')
-  @RequirePermissions('routes:edit')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.service.update(id, data);
+  @RequirePermissions('manage_locations')
+  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.service.update(id, user.tenantId, data);
   }
 
   @Delete(':id')
-  @RequirePermissions('routes:edit')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @RequirePermissions('manage_locations')
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.remove(id, user.tenantId);
   }
 
   @Patch(':id/toggle')
-  @RequirePermissions('routes:edit')
-  toggleActive(@Param('id') id: string, @Body() body: { is_active: boolean }) {
-    return this.service.toggleActive(id, body.is_active);
+  @RequirePermissions('manage_locations')
+  toggleActive(@Param('id') id: string, @Body() body: { is_active: boolean }, @CurrentUser() user: any) {
+    return this.service.toggleActive(id, user.tenantId, body.is_active);
   }
 }

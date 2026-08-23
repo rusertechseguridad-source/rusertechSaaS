@@ -35,13 +35,13 @@ export class OperationalProtocolsController {
   @Roles('rusertech_admin', 'account_owner', 'key_user')
   update(@Param('id') id: string, @Body() data: any, @Req() req?: Request) {
     const user = (req as any).user;
-    return this.service.update(id, data, user.tenantId);
+    return this.service.update(id, data, user.tenantId, user.role);
   }
 
   @Delete(':id')
   @Roles('rusertech_admin', 'account_owner')
   remove(@Param('id') id: string, @Req() req?: Request) {
     const user = (req as any).user;
-    return this.service.remove(id, user.tenantId);
+    return this.service.remove(id, user.tenantId, user.role);
   }
 }

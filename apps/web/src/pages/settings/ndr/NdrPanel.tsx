@@ -92,7 +92,7 @@ export const NdrPanel: React.FC = () => {
   ];
 
   return (
-    <RequirePermission permission="admin:settings">
+    <RequirePermission permission="manage_settings">
       <div className="max-w-4xl space-y-6">
         <div className="bg-[#1A2346] p-6 rounded-xl border border-[#2D3B6A] shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-3 mb-2">

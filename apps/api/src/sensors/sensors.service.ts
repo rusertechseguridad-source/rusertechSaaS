@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
@@ -47,9 +48,11 @@ export class SensorsService {
     });
   }
 
-  async toggleConfig(id: string) {
-    const current = await this.prisma.sensorConfig.findUnique({ where: { id } });
-    if (!current) throw new Error('Not found');
+  async toggleConfig(id: string, tenantId: string) {
+    const current = await this.prisma.sensorConfig.findFirst({
+      where: tenantWhere(tenantId, 'SensorsService.toggleConfig', { id }),
+    });
+    if (!current) throw new NotFoundException('Configuración de sensor no encontrada');
     return this.prisma.sensorConfig.update({
       where: { id },
       data: { is_active: !current.is_active }
@@ -60,13 +63,12 @@ export class SensorsService {
     const configs = await this.prisma.sensorConfig.findMany({
       where: { tenant_id: tenantId, is_active: true, scope_type: 'vehicle' }
     });
-    console.log('getDashboard called for tenant:', tenantId, 'found configs:', configs.length);
 
     if (!configs.length) return [];
 
     const vehicleIds = configs.map(c => c.scope_id);
     const vehicles = await this.prisma.vehicle.findMany({
-      where: { id: { in: vehicleIds } },
+      where: tenantWhere(tenantId, 'SensorsService.getDashboard', { id: { in: vehicleIds } }),
       select: { 
         id: true, plate: true, alias: true, hub_asset_id: true,
         avl_user: { select: { name: true, user_avl_code: true } },
@@ -81,9 +83,15 @@ export class SensorsService {
       const vConfigs = configs.filter(c => c.scope_id === v.id);
       let latestData = null;
 
-      if (v.hub_asset_id) {
-        const posStr = await client.get(`vehicle:pos:${v.hub_asset_id}`);
-        if (posStr) latestData = JSON.parse(posStr);
+      // Clave alineada con la que escribe TelemetryService
+      // (antes se leía `vehicle:pos:{hub_asset_id}`, que nadie escribe).
+      const posStr = await client.get(`vehicle:position:${v.id}`);
+      if (posStr) {
+        try {
+          latestData = JSON.parse(posStr);
+        } catch {
+          latestData = null;
+        }
       }
 
       result.push({
@@ -100,7 +108,11 @@ export class SensorsService {
     return result;
   }
 
-  async getHistory(vehicleId: string, sensorType: string, period: string) {
+  async getHistory(vehicleId: string, tenantId: string, sensorType: string, period: string) {
+    // Sin esta verificación, cualquier usuario autenticado podía leer el
+    // histórico de sensores de un vehículo de otro cliente pasando su UUID.
+    await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');
+
     let hours = 24;
     if (period === '1h') hours = 1;
     else if (period === '6h') hours = 6;
@@ -108,19 +120,20 @@ export class SensorsService {
     
     // Using native PostgreSQL date_trunc and math for 5-minute buckets
     // This matches the Bloque 7 Master Prompt fallback
-    const sql = `
-      SELECT 
-        date_trunc('minute', timestamp) - 
+    // Consulta parametrizada: `hours` y el tenant dejan de interpolarse en el
+    // string. El filtro por tenant_id además permite podar particiones.
+    return this.prisma.$queryRaw`
+      SELECT
+        date_trunc('minute', timestamp) -
         INTERVAL '1 minute' * (EXTRACT(MINUTE FROM timestamp)::int % 5) AS bucket,
-        AVG(temperature_c) as avg_temp, 
+        AVG(temperature_c) as avg_temp,
         AVG(humidity_pct) as avg_hum
       FROM telemetry
-      WHERE vehicle_id = $1::uuid 
-        AND timestamp > NOW() - INTERVAL '${hours} hours'
-      GROUP BY 1 
+      WHERE vehicle_id = ${vehicleId}::uuid
+        AND tenant_id = ${tenantId}::uuid
+        AND timestamp > NOW() - (${hours} * INTERVAL '1 hour')
+      GROUP BY 1
       ORDER BY 1 ASC
     `;
-    
-    return this.prisma.$queryRawUnsafe(sql, vehicleId);
   }
 }

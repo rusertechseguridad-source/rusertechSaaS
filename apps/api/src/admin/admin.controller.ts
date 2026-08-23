@@ -1,14 +1,21 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { isAdminRole } from '../common/constants/admin-roles';
 
 @Controller('api/v1/admin')
 @UseGuards(JwtAuthGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  /**
+   * Sólo administradores del sistema. La lista de roles vive en
+   * common/constants/admin-roles: antes se aceptaba además `super_admin`, que
+   * no existe en el seed, así que crear un rol con ese nombre desde la
+   * pantalla de roles otorgaba acceso total sin decisión explícita.
+   */
   private checkSuperAdmin(req: any) {
-    if (req.user.role !== 'rusertech_admin' && req.user.role !== 'super_admin') {
+    if (!isAdminRole(req.user?.role)) {
       throw new ForbiddenException('Acceso denegado. Solo administradores del sistema.');
     }
   }

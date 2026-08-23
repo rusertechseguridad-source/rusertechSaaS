@@ -150,7 +150,7 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
 
       {/* 9. Acciones */}
       <div className="w-32 shrink-0 text-right flex items-center justify-end gap-2">
-        <RequirePermission permission="trips:manage">
+        <RequirePermission permission="manage_trips">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(trip); }}
             className="inline-flex items-center gap-1 text-[11px] font-bold text-textMuted hover:text-white bg-bgSurfaceHigh hover:bg-bgSurfaceHigh/80 border border-borderDefault px-2 py-1.5 rounded-lg transition-all duration-150"
@@ -263,7 +263,7 @@ export const TripsPage: React.FC = () => {
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
           {t('trips.title')}
         </h1>
-        <RequirePermission permission="trips:manage">
+        <RequirePermission permission="manage_trips">
           <button
             onClick={openCreateModal}
             className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20 transition-colors"

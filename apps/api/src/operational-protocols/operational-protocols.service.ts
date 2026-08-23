@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { isAdminRole } from '../common/constants/admin-roles';
 
 @Injectable()
 export class OperationalProtocolsService {
@@ -40,10 +41,9 @@ export class OperationalProtocolsService {
     });
     if (!protocol) throw new NotFoundException('Protocol not found');
 
-    if (user.role !== 'super_admin' && user.role !== 'rusertech_admin') {
-      if (protocol.tenant_id !== user.tenantId && protocol.tenant_id !== null) {
-        throw new NotFoundException('Protocol not found');
-      }
+    // Los protocolos globales (tenant_id null) son visibles para todos.
+    if (!isAdminRole(user.role) && protocol.tenant_id !== user.tenantId && protocol.tenant_id !== null) {
+      throw new NotFoundException('Protocolo no encontrado');
     }
     return protocol;
   }
@@ -64,14 +64,34 @@ export class OperationalProtocolsService {
     }
   }
 
-  async update(id: string, data: any, tenantId: string) {
+  /**
+   * Valida que el protocolo se pueda modificar desde este tenant.
+   *
+   * ⚠️ Corrige un hueco real: la condición anterior era
+   * `if (existing.tenant_id !== tenantId && existing.tenant_id !== null) { ... }`,
+   * de modo que un protocolo GLOBAL (tenant_id null) caía fuera del `if` y
+   * quedaba editable y borrable desde cualquier tenant — afectando a todos los
+   * clientes a la vez. Ahora los globales sólo los toca un rol administrativo.
+   */
+  private async assertProtocoloEditable(id: string, tenantId: string, role?: string) {
     const existing = await this.prisma.extended.operationalProtocol.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Protocol not found');
-    if (existing.tenant_id !== tenantId && existing.tenant_id !== null) {
-      if (existing.tenant_id !== tenantId) {
-        throw new NotFoundException('Protocol not found or unauthorized');
+    if (!existing) throw new NotFoundException('Protocolo no encontrado');
+
+    if (existing.tenant_id === null) {
+      if (!isAdminRole(role)) {
+        throw new ForbiddenException(
+          'Los protocolos globales sólo pueden modificarse desde un rol administrativo.',
+        );
       }
+      return existing;
     }
+
+    if (existing.tenant_id !== tenantId) throw new NotFoundException('Protocolo no encontrado');
+    return existing;
+  }
+
+  async update(id: string, data: any, tenantId: string, role?: string) {
+    await this.assertProtocoloEditable(id, tenantId, role);
 
     try {
       return await this.prisma.extended.operationalProtocol.update({
@@ -86,14 +106,8 @@ export class OperationalProtocolsService {
     }
   }
 
-  async remove(id: string, tenantId: string) {
-    const existing = await this.prisma.extended.operationalProtocol.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Protocol not found');
-    if (existing.tenant_id !== tenantId && existing.tenant_id !== null) {
-      if (existing.tenant_id !== tenantId) {
-        throw new NotFoundException('Protocol not found or unauthorized');
-      }
-    }
+  async remove(id: string, tenantId: string, role?: string) {
+    await this.assertProtocoloEditable(id, tenantId, role);
     return this.prisma.extended.operationalProtocol.delete({
       where: { id }
     });

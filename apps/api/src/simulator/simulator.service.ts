@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { TelemetryService } from '../telemetry/telemetry.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership } from '../common/tenant/tenant-scope';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
@@ -17,6 +18,9 @@ export class SimulatorService {
   async sendPoint(data: any, tenantId: string) {
     const { avlUserId, vehicleId, lat, lng, speedKmh = 0, ignition = true, temperatureC, humidityPct, code, timestamp } = data;
     
+    // Sin esta verificación se podía inyectar telemetría simulada en un
+    // vehículo de otro cliente, contaminando sus datos reales.
+    await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');
     const vehicle = await this.prisma.vehicle.findUnique({ where: { id: vehicleId } });
     if (!vehicle) throw new BadRequestException('Vehicle not found');
 

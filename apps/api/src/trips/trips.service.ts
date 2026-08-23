@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CarbonService } from '../carbon/carbon.service';
+import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 
 @Injectable()
 export class TripsService {
   constructor(private prisma: PrismaService, private carbonService: CarbonService) {}
+
+  /** Verifica que el viaje pertenezca al tenant antes de leerlo o modificarlo. */
+  private async assertViajeDelTenant(id: string, tenantId: string) {
+    return assertTenantOwnership(this.prisma.trip, id, tenantId, 'Viaje');
+  }
 
   private mapToDto(trip: any) {
     if (!trip) return null;
@@ -65,9 +71,9 @@ export class TripsService {
     return trips.map(t => this.mapToDto(t));
   }
 
-  async findOne(id: string) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id },
+  async findOne(id: string, tenantId: string) {
+    const trip = await this.prisma.trip.findFirst({
+      where: tenantWhere(tenantId, 'TripsService.findOne', { id }),
       include: {
         vehicle: {
           include: { avl_user: true, carrier: true }
@@ -82,14 +88,15 @@ export class TripsService {
         }
       }
     });
-    if (!trip) throw new NotFoundException('Trip not found');
-    
+    if (!trip) throw new NotFoundException('Viaje no encontrado');
+
     const dto = this.mapToDto(trip) as any;
     
     if (trip.route_id && dto.route) {
-      const geo: any = await this.prisma.$queryRawUnsafe(`
-        SELECT ST_AsGeoJSON(geometry) as geojson FROM "routes" WHERE id = '${trip.route_id}'
-      `);
+      // SQL parametrizado: antes se interpolaba route_id directamente en el
+      // string, un patrón replicado en varios servicios y peligroso en cuanto
+      // el valor deje de venir de una fila propia.
+      const geo: any = await this.prisma.$queryRaw`SELECT ST_AsGeoJSON(geometry) as geojson FROM "routes" WHERE id = ${trip.route_id}::uuid`;
       if (geo && geo[0] && geo[0].geojson) {
         dto.route.geojson = JSON.parse(geo[0].geojson);
       }
@@ -104,8 +111,8 @@ export class TripsService {
     let origin_lat = null;
     let origin_lng = null;
     if (data.origin_location_id) {
-      const loc = await this.prisma.savedLocation.findUnique({
-        where: { id: data.origin_location_id }
+      const loc = await this.prisma.savedLocation.findFirst({
+        where: tenantWhere(tenantId, 'TripsService.create.origin', { id: data.origin_location_id })
       });
       if (loc) {
         origin_name = loc.name;
@@ -120,8 +127,8 @@ export class TripsService {
     let destination_lat = null;
     let destination_lng = null;
     if (data.destination_location_id) {
-      const loc = await this.prisma.savedLocation.findUnique({
-        where: { id: data.destination_location_id }
+      const loc = await this.prisma.savedLocation.findFirst({
+        where: tenantWhere(tenantId, 'TripsService.create.destination', { id: data.destination_location_id })
       });
       if (loc) {
         destination_name = loc.name;
@@ -172,7 +179,9 @@ export class TripsService {
     return this.mapToDto(trip);
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, tenantId: string, data: any) {
+    await this.assertViajeDelTenant(id, tenantId);
+
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.trip_code !== undefined) updateData.trip_code = data.trip_code;
@@ -207,8 +216,8 @@ export class TripsService {
     if (data.origin_location_id !== undefined) {
       updateData.origin_location = data.origin_location_id ? { connect: { id: data.origin_location_id } } : { disconnect: true };
       if (data.origin_location_id) {
-        const loc = await this.prisma.savedLocation.findUnique({
-          where: { id: data.origin_location_id }
+        const loc = await this.prisma.savedLocation.findFirst({
+          where: tenantWhere(tenantId, 'TripsService.update.origin', { id: data.origin_location_id })
         });
         if (loc) {
           updateData.origin_name = loc.name;
@@ -227,8 +236,8 @@ export class TripsService {
     if (data.destination_location_id !== undefined) {
       updateData.destination_location = data.destination_location_id ? { connect: { id: data.destination_location_id } } : { disconnect: true };
       if (data.destination_location_id) {
-        const loc = await this.prisma.savedLocation.findUnique({
-          where: { id: data.destination_location_id }
+        const loc = await this.prisma.savedLocation.findFirst({
+          where: tenantWhere(tenantId, 'TripsService.update.destination', { id: data.destination_location_id })
         });
         if (loc) {
           updateData.destination_name = loc.name;
@@ -263,13 +272,16 @@ export class TripsService {
     return this.mapToDto(trip);
   }
 
-  async remove(id: string) {
+  async remove(id: string, tenantId: string) {
+    await this.assertViajeDelTenant(id, tenantId);
     return this.prisma.trip.delete({
       where: { id }
     });
   }
 
-  async updateStatus(id: string, data: { status: string, notes?: string }) {
+  async updateStatus(id: string, tenantId: string, data: { status: string, notes?: string }) {
+    await this.assertViajeDelTenant(id, tenantId);
+
     const updateData: any = { status: data.status };
     if (data.status === 'EN_CURSO') {
       updateData.actual_start = new Date();
@@ -298,7 +310,8 @@ export class TripsService {
     return this.mapToDto(trip);
   }
 
-  async getLogs(id: string) {
+  async getLogs(id: string, tenantId: string) {
+    await this.assertViajeDelTenant(id, tenantId);
     return this.prisma.eventLog.findMany({
       where: {
         trip_id: id,
@@ -314,12 +327,12 @@ export class TripsService {
   }
 
   async addLog(id: string, text: string, user: any) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id },
+    const trip = await this.prisma.trip.findFirst({
+      where: tenantWhere(user?.tenantId, 'TripsService.addLog', { id }),
       select: { tenant_id: true, vehicle_id: true }
     });
-    if (!trip) throw new Error('Trip not found');
-    if (!trip.vehicle_id) throw new Error('Trip must have a vehicle to add logs');
+    if (!trip) throw new NotFoundException('Viaje no encontrado');
+    if (!trip.vehicle_id) throw new BadRequestException('El viaje debe tener un vehículo para agregar notas');
 
     return this.prisma.eventLog.create({
       data: {
@@ -342,7 +355,8 @@ export class TripsService {
 
   // --- LINKED VEHICLES ---
 
-  async getLinkedVehicles(tripId: string) {
+  async getLinkedVehicles(tripId: string, tenantId: string) {
+    await this.assertViajeDelTenant(tripId, tenantId);
     return this.prisma.tripLinkedVehicle.findMany({
       where: { trip_id: tripId },
       include: {
@@ -352,7 +366,12 @@ export class TripsService {
     });
   }
 
-  async linkVehicle(tripId: string, vehicleId: string, linkType: string = 'support', notes?: string) {
+  async linkVehicle(tripId: string, tenantId: string, vehicleId: string, linkType: string = 'support', notes?: string) {
+    // Ambos extremos del enlace deben pertenecer al tenant: si no, se podría
+    // enganchar un vehículo ajeno a un viaje propio (o al revés).
+    await this.assertViajeDelTenant(tripId, tenantId);
+    await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');
+
     const existing = await this.prisma.tripLinkedVehicle.findFirst({
       where: { trip_id: tripId, vehicle_id: vehicleId }
     });
@@ -360,11 +379,6 @@ export class TripsService {
     if (existing) {
       throw new BadRequestException('El vehículo ya está enlazado a este viaje.');
     }
-
-    // Get vehicle to link its device if it has one
-    const vehicle = await this.prisma.vehicle.findUnique({
-      where: { id: vehicleId }
-    });
 
     return this.prisma.tripLinkedVehicle.create({
       data: {
@@ -379,7 +393,8 @@ export class TripsService {
     });
   }
 
-  async unlinkVehicle(tripId: string, vehicleId: string) {
+  async unlinkVehicle(tripId: string, tenantId: string, vehicleId: string) {
+    await this.assertViajeDelTenant(tripId, tenantId);
     await this.prisma.tripLinkedVehicle.deleteMany({
       where: {
         trip_id: tripId,
@@ -392,11 +407,11 @@ export class TripsService {
   // --- DRIVER CONTACT ---
 
   async contactDriverAttempt(tripId: string, user: any) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id: tripId },
+    const trip = await this.prisma.trip.findFirst({
+      where: tenantWhere(user?.tenantId, 'TripsService.contactDriverAttempt', { id: tripId }),
       select: { tenant_id: true }
     });
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) throw new NotFoundException('Viaje no encontrado');
 
     const event = await this.prisma.tripEvent.create({
       data: {
@@ -410,12 +425,12 @@ export class TripsService {
     return { success: true, event };
   }
 
-  async contactDriverResponse(tripId: string, data: any) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id: tripId },
+  async contactDriverResponse(tripId: string, tenantId: string, data: any) {
+    const trip = await this.prisma.trip.findFirst({
+      where: tenantWhere(tenantId, 'TripsService.contactDriverResponse', { id: tripId }),
       select: { tenant_id: true }
     });
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) throw new NotFoundException('Viaje no encontrado');
 
     const event = await this.prisma.tripEvent.create({
       data: {
@@ -429,16 +444,19 @@ export class TripsService {
     return { success: true, event };
   }
 
-  async generateMobilePairing(tripId: string) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id: tripId },
+  async generateMobilePairing(tripId: string, tenantId: string) {
+    // NOTA: el código RT-XXXX que genera este método pertenece al debate
+    // abierto sobre la identidad canónica del conductor (fuera del alcance de
+    // esta tanda). Acá sólo se corrige el aislamiento por tenant.
+    const trip = await this.prisma.trip.findFirst({
+      where: tenantWhere(tenantId, 'TripsService.generateMobilePairing', { id: tripId }),
       include: {
         vehicle: true,
         driver: true,
       }
     });
 
-    if (!trip) throw new NotFoundException('Trip not found');
+    if (!trip) throw new NotFoundException('Viaje no encontrado');
 
     // Generar un codigo seguro, corto y legible
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

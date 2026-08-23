@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
-import { X, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
 
 interface TripModalProps {
@@ -97,7 +97,10 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
   };
 
   const resetForm = () => {
-    setName(''); setTripCode(`VJ-${Date.now().toString().slice(-6)}`); setVehicleId(''); setDriverId(''); setOperationId('');
+    // El código de viaje lo genera la base (formato V-AAMMDD-NNN, secuencia
+    // por tenant y por día). El cliente ya no inventa códigos: se dejaba vacío
+    // y el trigger lo completa al insertar.
+    setName(''); setTripCode(''); setVehicleId(''); setDriverId(''); setOperationId('');
     setOriginId(''); setDestinationId(''); setRouteId(''); setScheduledStart(''); setScheduledEnd(''); setCarrierId('');
   };
 
@@ -105,7 +108,9 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
     e.preventDefault();
     const payload: any = {
       name,
-      trip_code: tripCode || undefined,
+      // En alta no se envía trip_code: lo completa el trigger de la base.
+      // En edición se reenvía el existente para no perderlo.
+      trip_code: tripToEdit ? (tripCode || undefined) : undefined,
       vehicle_id: vehicleId || undefined,
       carrier_id: carrierId || undefined,
       driver_id: driverId || undefined,
@@ -218,13 +223,19 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
                 <input required type="text" placeholder="Ej: Viaje a Rosario" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-textSecondary mb-1">Código de Viaje (Opcional)</label>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="Ej: VJ-2023-001" className={`${inputCls} font-mono`} value={tripCode} onChange={(e) => setTripCode(e.target.value)} />
-                  <button type="button" onClick={() => setTripCode(`VJ-${Date.now().toString().slice(-6)}`)} className="bg-bgSurfaceHigh border border-borderDefault text-textSecondary hover:text-white px-3 rounded-lg flex items-center justify-center transition-colors" title="Generar código automático">
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
+                <label className="block text-sm text-textSecondary mb-1">Código de Viaje</label>
+                {/* Lo asigna la base al crear el viaje (V-AAMMDD-NNN, secuencia
+                    diaria por tenant). En alta se muestra el placeholder; en
+                    edición se muestra el código ya asignado, sin permitir
+                    inventar uno nuevo desde el cliente. */}
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  placeholder="Se asigna automáticamente (V-AAMMDD-NNN)"
+                  className={`${inputCls} font-mono opacity-70 cursor-not-allowed`}
+                  value={tripCode}
+                />
               </div>
             </div>
 

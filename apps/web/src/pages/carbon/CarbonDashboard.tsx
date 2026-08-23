@@ -138,7 +138,7 @@ export const CarbonDashboard: React.FC = () => {
             <option value="year">{t('carbon.period_year')}</option>
           </select>
 
-          <RequirePermission permission="admin:settings">
+          <RequirePermission permission="manage_carbon">
             <div className="bg-bgSurface border border-borderDefault rounded-xl px-4 py-2 flex items-center gap-3">
               <span className="text-sm font-bold text-textSecondary uppercase tracking-wider">
                 {t('carbon.climatiq_engine')}

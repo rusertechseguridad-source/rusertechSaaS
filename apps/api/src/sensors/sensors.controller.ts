@@ -24,16 +24,17 @@ export class SensorsController {
   }
 
   @Patch('config/:id/toggle')
-  toggleConfig(@Param('id') id: string) {
-    return this.sensorsService.toggleConfig(id);
+  toggleConfig(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.sensorsService.toggleConfig(id, user.tenantId);
   }
 
   @Get('history/:vehicleId')
   getHistory(
     @Param('vehicleId') vehicleId: string, 
     @Query('sensorType') sensorType: string,
-    @Query('period') period: string
+    @Query('period') period: string,
+    @CurrentUser() user: any
   ) {
-    return this.sensorsService.getHistory(vehicleId, sensorType, period || '24h');
+    return this.sensorsService.getHistory(vehicleId, user.tenantId, sensorType, period || '24h');
   }
 }

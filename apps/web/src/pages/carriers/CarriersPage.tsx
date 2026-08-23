@@ -84,7 +84,7 @@ export const CarriersPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">{t('carriers.subtitle')}</p>
         </div>
-        <RequirePermission permission="carriers:edit">
+        <RequirePermission permission="manage_carriers">
           <button 
             onClick={() => { setCarrierToEdit(null); setShowModal(true); }}
             className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
@@ -179,7 +179,7 @@ export const CarriersPage: React.FC = () => {
                         <th className="px-6 py-4">{t('carriers.table.drivers')}</th>
                         <th className="px-6 py-4">{t('carriers.table.status')}</th>
                         <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="carriers:edit">{t('carriers.table.actions')}</RequirePermission>
+                          <RequirePermission permission="manage_carriers">{t('carriers.table.actions')}</RequirePermission>
                         </th>
                       </tr>
                     </thead>
@@ -211,7 +211,7 @@ export const CarriersPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <RequirePermission permission="carriers:edit">
+                            <RequirePermission permission="manage_carriers">
                               <div className="flex justify-end gap-3 items-center">
                                 <button 
                                   onClick={() => { setCarrierToEdit(carrier); setShowModal(true); }}

@@ -1,3 +1,11 @@
+/**
+ * CATÁLOGO CANÓNICO DE PERMISOS — espejo de
+ * `apps/api/src/common/constants/permissions.ts`.
+ *
+ * Formato: `accion_recurso` (ej. `manage_vehicles`). Es el que guarda la tabla
+ * `roles`, el que viaja en el claim `permissions` del JWT y el que evalúan los
+ * decoradores del backend. Ambos catálogos deben tener las mismas claves.
+ */
 export const SYSTEM_PERMISSIONS = {
   view_map: 'Ver Mapa Global',
   view_alerts: 'Ver Alertas',
@@ -26,8 +34,8 @@ export const SYSTEM_PERMISSIONS = {
   view_settings: 'Ver Configuración de Empresa',
   manage_settings: 'Administrar Configuración de Empresa',
   manage_users: 'Administrar Usuarios',
-  admin_global: 'Acceso Super Admin'
-};
+  admin_global: 'Acceso Super Admin',
+} as const;
 
 export type PermissionKey = keyof typeof SYSTEM_PERMISSIONS;
 export const PERMISSION_LIST = Object.entries(SYSTEM_PERMISSIONS).map(([key, label]) => ({ key, label }));

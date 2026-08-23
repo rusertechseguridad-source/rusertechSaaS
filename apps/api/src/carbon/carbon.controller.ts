@@ -11,19 +11,19 @@ export class CarbonController {
   constructor(private readonly carbonService: CarbonService) {}
 
   @Get()
-  @RequirePermissions('admin:settings')
+  @RequirePermissions('manage_carbon')
   getSettings(@CurrentUser() user: any) {
     return this.carbonService.getSettings(user.tenantId);
   }
 
   @Put()
-  @RequirePermissions('admin:settings')
+  @RequirePermissions('manage_carbon')
   updateSettings(@CurrentUser() user: any, @Body() data: any) {
     return this.carbonService.updateSettings(user.tenantId, data);
   }
 
   @Patch('toggle-climatiq')
-  @RequirePermissions('admin:settings')
+  @RequirePermissions('manage_carbon')
   toggleClimatiq(@CurrentUser() user: any, @Body() data: { use_climatiq_api: boolean, climatiq_api_key?: string }) {
     return this.carbonService.toggleClimatiq(user.tenantId, data.use_climatiq_api, data.climatiq_api_key);
   }

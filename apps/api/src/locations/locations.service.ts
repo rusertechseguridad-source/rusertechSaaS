@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 
 @Injectable()
 export class LocationsService {
@@ -24,9 +26,9 @@ export class LocationsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, tenantId: string) {
     const loc = await this.prisma.extended.savedLocation.findUnique({
-      where: { id }
+      where: tenantWhere(tenantId, 'LocationsService.findOne', { id })
     });
     if (!loc) throw new NotFoundException('Location not found');
     return loc;
@@ -39,32 +41,29 @@ export class LocationsService {
       throw new BadRequestException('Coordinates are required');
     }
 
-    // Step 1: Insert with geometry using $executeRawUnsafe (no RETURNING to avoid geography deserialization)
-    const safeName = String(name).replace(/'/g, "''");
-    const safeAddress = address ? `'${String(address).replace(/'/g, "''")}'` : 'NULL';
-    const safeLocType = String(location_type || 'generic').replace(/'/g, "''");
-
-    const safeOperationId = operation_id ? `'${operation_id}'::uuid` : 'NULL';
-    const safeNotes = notes ? `'${String(notes).replace(/'/g, "''")}'` : 'NULL';
-
-    await this.prisma.$executeRawUnsafe(`
+    // INSERT parametrizado. Antes se escapaban las comillas a mano
+    // (`replace(/'/g, "''")`) y se concatenaba: un sanitizador casero es
+    // justamente lo que hay que evitar. La forma tagged-template de
+    // $executeRaw envía los valores como parámetros del driver.
+    await this.prisma.$executeRaw`
       INSERT INTO "saved_locations" (
-        tenant_id, name, address, location_type, latitude, longitude, radius_meters, created_by, geometry, operation_id, is_authorized_stop, notes
+        tenant_id, name, address, location_type, latitude, longitude,
+        radius_meters, created_by, geometry, operation_id, is_authorized_stop, notes
       ) VALUES (
-        '${tenantId}'::uuid, 
-        '${safeName}', 
-        ${safeAddress}, 
-        '${safeLocType}', 
-        ${lat}, 
-        ${lng}, 
-        ${radius_meters}, 
-        '${userId}'::uuid, 
+        ${tenantId}::uuid,
+        ${String(name)},
+        ${address ?? null},
+        ${String(location_type || 'generic')},
+        ${lat},
+        ${lng},
+        ${radius_meters},
+        ${userId}::uuid,
         ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
-        ${safeOperationId},
-        ${is_authorized_stop ? 'true' : 'false'},
-        ${safeNotes}
+        ${operation_id ?? null}::uuid,
+        ${!!is_authorized_stop},
+        ${notes ?? null}
       );
-    `);
+    `;
 
     // Step 2: Fetch the just-created record via Prisma (avoids geography column)
     const created = await this.prisma.extended.savedLocation.findFirst({
@@ -75,7 +74,9 @@ export class LocationsService {
     return created;
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, tenantId: string, data: any) {
+    await assertTenantOwnership(this.prisma.extended.savedLocation, id, tenantId, 'Ubicación');
+
     const { name, address, location_type, lat, lng, radius_meters, operation_id, is_authorized_stop, notes } = data;
 
     const updateData: any = {};
@@ -98,21 +99,24 @@ export class LocationsService {
     if (lat !== undefined || lng !== undefined) {
       const rLat = loc.latitude;
       const rLng = loc.longitude;
-      await this.prisma.$executeRawUnsafe(`
-        UPDATE "saved_locations" 
-        SET geometry = ST_SetSRID(ST_MakePoint(${rLng}, ${rLat}), 4326)::geography 
-        WHERE id = '${id}'
-      `);
+      await this.prisma.$executeRaw`
+        UPDATE "saved_locations"
+        SET geometry = ST_SetSRID(ST_MakePoint(${rLng}, ${rLat}), 4326)::geography
+        WHERE id = ${id}::uuid
+      `;
     }
 
     return loc;
   }
 
-  async remove(id: string) {
+  async remove(id: string, tenantId: string) {
+    await assertTenantOwnership(this.prisma.extended.savedLocation, id, tenantId, 'Ubicación');
     return this.prisma.extended.savedLocation.delete({ where: { id } });
   }
 
-  async toggleActive(id: string, isActive: boolean) {
+  async toggleActive(id: string, tenantId: string, isActive: boolean) {
+    await assertTenantOwnership(this.prisma.extended.savedLocation, id, tenantId, 'Ubicación');
+
     return this.prisma.extended.savedLocation.update({
       where: { id },
       data: { is_active: isActive }

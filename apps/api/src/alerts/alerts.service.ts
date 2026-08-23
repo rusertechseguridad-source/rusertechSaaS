@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AlertsService {
+  private readonly logger = new Logger(AlertsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async findAll(tenantId: string) {
@@ -30,7 +32,13 @@ export class AlertsService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     let currentSettings: any = tenant?.settings_json;
     if (typeof currentSettings === 'string') {
-      try { currentSettings = JSON.parse(currentSettings); } catch(e) {}
+      try {
+        currentSettings = JSON.parse(currentSettings);
+      } catch (e) {
+        // settings_json corrupto: se registra y se sigue con el valor crudo,
+        // en lugar de tragarse el error en silencio.
+        this.logger.warn(`settings_json del tenant no es JSON válido: ${(e as Error).message}`);
+      }
     }
     if (typeof currentSettings !== 'object' || currentSettings === null) {
       currentSettings = {};

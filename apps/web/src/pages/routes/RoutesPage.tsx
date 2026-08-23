@@ -225,7 +225,7 @@ export const RoutesPage: React.FC = () => {
           <RouteIcon className="w-8 h-8 mr-3 text-accentGreen" />
           {t('routes.title')}
         </h1>
-        <RequirePermission permission="routes:edit">
+        <RequirePermission permission="manage_locations">
           <div className="flex gap-4">
             <label className="cursor-pointer bg-bgSurface border border-borderDefault hover:bg-bgSurfaceHigh text-white px-4 py-2 rounded font-bold flex items-center shadow-card transition-colors">
               <Upload className="w-5 h-5 mr-2" /> {t('routes.import_kml')}
@@ -303,7 +303,7 @@ export const RoutesPage: React.FC = () => {
                           </div>
                           <div className="flex gap-1">
                             <button onClick={(e) => { e.stopPropagation(); handleExportDetail(r); }} className="p-1 text-textMuted hover:text-white"><Download className="w-4 h-4" /></button>
-                            <RequirePermission permission="routes:edit">
+                            <RequirePermission permission="manage_locations">
                               <button onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar ruta?')) deleteRoute(r.id); }} className="p-1 text-textMuted hover:text-statusDanger"><Trash2 className="w-4 h-4" /></button>
                             </RequirePermission>
                           </div>

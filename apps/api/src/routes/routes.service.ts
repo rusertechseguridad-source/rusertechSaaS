@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 
 @Injectable()
 export class RoutesService {
@@ -16,9 +17,9 @@ export class RoutesService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, tenantId: string) {
     const route = await this.prisma.extended.route.findUnique({
-      where: { id },
+      where: tenantWhere(tenantId, 'RoutesService.findOne', { id }),
       include: {
         origin_location: true,
         destination_location: true,
@@ -28,9 +29,7 @@ export class RoutesService {
     if (!route) throw new NotFoundException('Route not found');
 
     // Get the GeoJSON separately to avoid geography deserialization
-    const geo: any = await this.prisma.$queryRawUnsafe(`
-      SELECT ST_AsGeoJSON(geometry) as geojson FROM "routes" WHERE id = '${id}'
-    `);
+    const geo: any = await this.prisma.$queryRaw`SELECT ST_AsGeoJSON(geometry) as geojson FROM "routes" WHERE id = ${id}::uuid`;
     
     return {
       ...route,
@@ -43,28 +42,25 @@ export class RoutesService {
     
     if (!geojson) throw new BadRequestException('GeoJSON LineString is required for the route');
 
-    const safeName = String(name).replace(/'/g, "''");
-    const safeDesc = description ? `'${String(description).replace(/'/g, "''")}'` : 'NULL';
-    const geomText = JSON.stringify(geojson).replace(/'/g, "''");
-
-    // Step 1: INSERT with $executeRawUnsafe (no RETURNING * to avoid geography deserialization crash)
-    await this.prisma.$executeRawUnsafe(`
+    // INSERT parametrizado (antes: escapado manual de comillas + concatenación).
+    await this.prisma.$executeRaw`
       INSERT INTO "routes" (
-        tenant_id, name, description, origin_location_id, destination_location_id, operation_id, corridor_meters, distance_km, estimated_minutes, created_by, geometry
+        tenant_id, name, description, origin_location_id, destination_location_id,
+        operation_id, corridor_meters, distance_km, estimated_minutes, created_by, geometry
       ) VALUES (
-        '${tenantId}'::uuid, 
-        '${safeName}', 
-        ${safeDesc}, 
-        ${origin_location_id ? `'${origin_location_id}'::uuid` : 'NULL'}, 
-        ${destination_location_id ? `'${destination_location_id}'::uuid` : 'NULL'}, 
-        ${operation_id ? `'${operation_id}'::uuid` : 'NULL'}, 
-        ${corridor_meters}, 
-        ${distance_km || 'NULL'}, 
-        ${estimated_minutes || 'NULL'}, 
-        '${userId}'::uuid, 
-        ST_SetSRID(ST_GeomFromGeoJSON('${geomText}'), 4326)::geography
+        ${tenantId}::uuid,
+        ${String(name)},
+        ${description ?? null},
+        ${origin_location_id ?? null}::uuid,
+        ${destination_location_id ?? null}::uuid,
+        ${operation_id ?? null}::uuid,
+        ${corridor_meters},
+        ${distance_km ?? null},
+        ${estimated_minutes ?? null},
+        ${userId}::uuid,
+        ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4326)::geography
       );
-    `);
+    `;
 
     // Step 2: Fetch via Prisma (excludes Unsupported geography column)
     const created = await this.prisma.extended.route.findFirst({
@@ -75,7 +71,9 @@ export class RoutesService {
     return created;
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, tenantId: string, data: any) {
+    await assertTenantOwnership(this.prisma.extended.route, id, tenantId, 'Recorrido');
+
     const { name, description, origin_location_id, destination_location_id, corridor_meters, geojson, operation_id, distance_km, estimated_minutes } = data;
 
     const updateData: any = {};
@@ -95,22 +93,24 @@ export class RoutesService {
 
     // Update geometry if geojson changed
     if (geojson) {
-      const geomText = JSON.stringify(geojson).replace(/'/g, "''");
-      await this.prisma.$executeRawUnsafe(`
-        UPDATE "routes" 
-        SET geometry = ST_SetSRID(ST_GeomFromGeoJSON('${geomText}'), 4326)::geography 
-        WHERE id = '${id}'
-      `);
+      await this.prisma.$executeRaw`
+        UPDATE "routes"
+        SET geometry = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4326)::geography
+        WHERE id = ${id}::uuid
+      `;
     }
 
     return route;
   }
 
-  async remove(id: string) {
+  async remove(id: string, tenantId: string) {
+    await assertTenantOwnership(this.prisma.extended.route, id, tenantId, 'Recorrido');
     return this.prisma.extended.route.delete({ where: { id } });
   }
 
-  async toggleActive(id: string, isActive: boolean) {
+  async toggleActive(id: string, tenantId: string, isActive: boolean) {
+    await assertTenantOwnership(this.prisma.extended.route, id, tenantId, 'Recorrido');
+
     return this.prisma.extended.route.update({
       where: { id },
       data: { is_active: isActive }

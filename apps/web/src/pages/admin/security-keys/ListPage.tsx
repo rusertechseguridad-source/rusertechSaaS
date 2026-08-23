@@ -83,7 +83,7 @@ export const SecurityKeysListPage: React.FC = () => {
   };
 
   return (
-    <RequirePermission permission="admin:settings">
+    <RequirePermission permission="manage_settings">
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#1A2346] p-6 rounded-xl border border-[#2D3B6A] shadow-lg">

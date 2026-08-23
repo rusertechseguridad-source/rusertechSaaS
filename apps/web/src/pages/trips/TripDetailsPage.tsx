@@ -464,7 +464,7 @@ export const TripDetailsPage: React.FC = () => {
           </div>
         </div>
         
-        <RequirePermission permission="trips:manage">
+        <RequirePermission permission="manage_trips">
           <div className="flex bg-bgSurface border border-borderDefault rounded-lg overflow-hidden p-1 shadow-card">
             {['PROGRAMADO', 'EN_CURSO', 'FINALIZADO', 'CANCELADO'].map(status => (
               <button

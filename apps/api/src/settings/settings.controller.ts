@@ -96,11 +96,8 @@ export class SettingsController {
   @Get('parameters')
   @UseGuards(JwtAuthGuard)
   async getTenantParameters(@Req() req: Request) {
-    const { tenantId, id, role_code } = (req as any).user;
-    console.log(`[SettingsController] getTenantParameters called for user ${id}, role ${role_code}, tenant ${tenantId}`);
-    const params = await this.settingsService.getTenantParameters(tenantId);
-    console.log(`[SettingsController] Returning ${params.length} parameters`);
-    return params;
+    const { tenantId } = (req as any).user;
+    return this.settingsService.getTenantParameters(tenantId);
   }
 
   @Put('parameters')

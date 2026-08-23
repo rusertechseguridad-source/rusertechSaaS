@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { isAdminRole } from '../common/constants/admin-roles';
+import { assertTenantOwnership } from '../common/tenant/tenant-scope';
 
 @Injectable()
 export class SecurityKeysService {
@@ -23,10 +25,9 @@ export class SecurityKeysService {
     });
     if (!key) throw new NotFoundException('Security key not found');
 
-    if (user.role !== 'super_admin' && user.role !== 'rusertech_admin') {
-      if (key.tenant_id !== user.tenantId) {
-        throw new NotFoundException('Security key not found');
-      }
+    // Roles administrativos: lista única en common/constants/admin-roles.
+    if (!isAdminRole(user.role) && key.tenant_id !== user.tenantId) {
+      throw new NotFoundException('Clave de seguridad no encontrada');
     }
     return key;
   }
@@ -41,11 +42,7 @@ export class SecurityKeysService {
   }
 
   async update(id: string, data: any, tenantId: string) {
-    const existing = await this.prisma.extended.securityKey.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Security key not found');
-    if (existing.tenant_id !== tenantId) {
-      throw new NotFoundException('Security key not found or unauthorized');
-    }
+    await assertTenantOwnership(this.prisma.extended.securityKey, id, tenantId, 'Clave de seguridad');
 
     return this.prisma.extended.securityKey.update({
       where: { id },
@@ -54,11 +51,7 @@ export class SecurityKeysService {
   }
 
   async remove(id: string, tenantId: string) {
-    const existing = await this.prisma.extended.securityKey.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Security key not found');
-    if (existing.tenant_id !== tenantId) {
-      throw new NotFoundException('Security key not found or unauthorized');
-    }
+    await assertTenantOwnership(this.prisma.extended.securityKey, id, tenantId, 'Clave de seguridad');
     return this.prisma.extended.securityKey.delete({
       where: { id }
     });

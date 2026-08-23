@@ -11,30 +11,30 @@ export class OperationsController {
   constructor(private readonly service: OperationsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@CurrentUser() user: any) {
+    return this.service.findAll(user.tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.findOne(id, user.tenantId);
   }
 
   @Post()
-  @RequirePermissions('locations:edit')
+  @RequirePermissions('manage_locations')
   create(@Body() data: any, @CurrentUser() user: any) {
     return this.service.create(data, user.tenantId);
   }
 
   @Put(':id')
-  @RequirePermissions('locations:edit')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.service.update(id, data);
+  @RequirePermissions('manage_locations')
+  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.service.update(id, user.tenantId, data);
   }
 
   @Delete(':id')
-  @RequirePermissions('locations:edit')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @RequirePermissions('manage_locations')
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.remove(id, user.tenantId);
   }
 }

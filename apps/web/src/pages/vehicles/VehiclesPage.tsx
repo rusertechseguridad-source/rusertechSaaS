@@ -235,7 +235,7 @@ export const VehiclesPage: React.FC = () => {
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
           {t('vehicles.title')}
         </h1>
-        <RequirePermission permission="vehicles:manage">
+        <RequirePermission permission="manage_vehicles">
           <button onClick={openCreateModal} className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20">
             <Plus className="w-5 h-5 mr-2" /> {t('vehicles.new_vehicle')}
           </button>
@@ -308,7 +308,7 @@ export const VehiclesPage: React.FC = () => {
                   <th className="px-6 py-4">{t('vehicles.table.provider')}</th>
                   <th className="px-6 py-4">{t('vehicles.table.status')}</th>
                   <th className="px-6 py-4 text-right">
-                    <RequirePermission permission="vehicles:manage">{t('vehicles.table.actions')}</RequirePermission>
+                    <RequirePermission permission="manage_vehicles">{t('vehicles.table.actions')}</RequirePermission>
                   </th>
                 </tr>
               </thead>
@@ -356,7 +356,7 @@ export const VehiclesPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <RequirePermission permission="vehicles:manage">
+                      <RequirePermission permission="manage_vehicles">
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleToggleBlock(v.id, v.is_blocked)}

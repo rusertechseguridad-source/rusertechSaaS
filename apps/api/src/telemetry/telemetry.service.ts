@@ -136,7 +136,14 @@ export class TelemetryService {
         }
       });
       // Set location PostGIS point
-      await tx.$executeRawUnsafe(`UPDATE "telemetry" SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326) WHERE vehicle_id = '${vehicleId}' AND timestamp = '${timestamp.toISOString()}'`);
+      // Consulta parametrizada. Acá los valores llegan del payload del HUB,
+      // así que la interpolación directa era el caso más expuesto del repo.
+      await tx.$executeRaw`
+        UPDATE "telemetry"
+        SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
+        WHERE vehicle_id = ${vehicleId}::uuid
+          AND timestamp = ${timestamp}
+      `;
 
       await (tx as any).outboxMessage.create({
         data: {
@@ -152,7 +159,13 @@ export class TelemetryService {
     await this.redis.set(`vehicle:position:${vehicleId}`, positionData, 3600);
 
     // Fire and forget: Update last data at
-    this.prisma.avlUser.update({ where: { id: avlUserId }, data: { last_data_at: new Date() } }).catch(() => {});
+    // Fire and forget, pero nunca en silencio: antes el `.catch(() => {})`
+    // se tragaba el error sin dejar rastro.
+    this.prisma.avlUser
+      .update({ where: { id: avlUserId }, data: { last_data_at: new Date() } })
+      .catch((err: any) =>
+        this.logger.warn(`No se pudo actualizar last_data_at del avl_user ${avlUserId}: ${err?.message ?? err}`),
+      );
 
     // Fire and forget: Geocoding
     this.geocoding.reverseGeocode(lat, lng).then(async (address) => {

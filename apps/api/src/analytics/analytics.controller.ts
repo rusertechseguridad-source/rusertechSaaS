@@ -11,7 +11,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('fleet')
-  @RequirePermissions('admin:dashboard')
+  @RequirePermissions('view_analytics')
   getFleetAnalytics(
     @CurrentUser() user: any,
     @Query('period') period?: string,
@@ -22,7 +22,7 @@ export class AnalyticsController {
   }
 
   @Get('carbon')
-  @RequirePermissions('admin:dashboard')
+  @RequirePermissions('view_analytics')
   getCarbonAnalytics(
     @CurrentUser() user: any,
     @Query('period') period?: string,
@@ -33,7 +33,7 @@ export class AnalyticsController {
   }
 
   @Get('trips')
-  @RequirePermissions('admin:dashboard')
+  @RequirePermissions('view_analytics')
   getTripsAnalytics(
     @CurrentUser() user: any,
     @Query('period') period?: string,
@@ -44,7 +44,7 @@ export class AnalyticsController {
   }
 
   @Get('alerts')
-  @RequirePermissions('admin:dashboard')
+  @RequirePermissions('view_analytics')
   getAlertsAnalytics(
     @CurrentUser() user: any,
     @Query('period') period?: string,

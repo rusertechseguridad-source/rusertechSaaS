@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { RedisService } from '../common/redis/redis.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as ExcelJS from 'exceljs';
@@ -7,10 +8,24 @@ import { Response } from 'express';
 
 @Injectable()
 export class AvlUsersService {
+  private readonly logger = new Logger(AvlUsersService.name);
+
   constructor(private prisma: PrismaService, private redis: RedisService) {}
 
-  async findAll() {
+  /**
+   * Verifica que el avl_user pertenezca al tenant antes de operar sobre él o
+   * sobre su diccionario. Es el punto más sensible del módulo:
+   * `regenerateApiKey` sobre un avl_user ajeno cortaría la ingesta GPS de otro
+   * cliente.
+   */
+  private async assertAvlUserDelTenant(id: string, tenantId: string) {
+    return assertTenantOwnership(this.prisma.extended.avlUser, id, tenantId, 'AVL User');
+  }
+
+  async findAll(tenantId: string) {
+    // Antes devolvía los avl_users de TODOS los tenants, con su api_key incluida.
     return this.prisma.extended.avlUser.findMany({
+      where: tenantWhere(tenantId, 'AvlUsersService.findAll'),
       include: {
         _count: {
           select: { vehicles: true }
@@ -19,16 +34,16 @@ export class AvlUsersService {
     });
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.extended.avlUser.findUnique({
-      where: { id },
+  async findOne(id: string, tenantId: string) {
+    const user = await this.prisma.extended.avlUser.findFirst({
+      where: tenantWhere(tenantId, 'AvlUsersService.findOne', { id }),
       include: {
         _count: {
           select: { vehicles: true }
         }
       }
     });
-    if (!user) throw new NotFoundException('AVL User not found');
+    if (!user) throw new NotFoundException('AVL User no encontrado');
     return user;
   }
 
@@ -43,25 +58,29 @@ export class AvlUsersService {
     });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, tenantId: string, data: any) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     return this.prisma.extended.avlUser.update({
       where: { id },
       data,
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, tenantId: string) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     return this.prisma.extended.avlUser.delete({ where: { id } });
   }
 
-  async toggleActive(id: string, is_active: boolean) {
+  async toggleActive(id: string, tenantId: string, is_active: boolean) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     return this.prisma.extended.avlUser.update({
       where: { id },
       data: { is_active }
     });
   }
 
-  async regenerateApiKey(id: string) {
+  async regenerateApiKey(id: string, tenantId: string) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     const apiKey = uuidv4();
     return this.prisma.extended.avlUser.update({
       where: { id },
@@ -69,13 +88,15 @@ export class AvlUsersService {
     });
   }
 
-  async getDictionary(id: string) {
+  async getDictionary(id: string, tenantId: string) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     return this.prisma.extended.avlEventDictionary.findMany({
       where: { avl_user_id: id }
     });
   }
 
-  async addDictionaryEntry(id: string, data: any) {
+  async addDictionaryEntry(id: string, tenantId: string, data: any) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     return this.prisma.extended.avlEventDictionary.create({
       data: {
         ...data,
@@ -84,7 +105,15 @@ export class AvlUsersService {
     });
   }
 
-  async updateDictionaryEntry(dictId: string, data: any) {
+  async updateDictionaryEntry(dictId: string, tenantId: string, data: any) {
+    // La entrada no tiene tenant_id propio: se valida contra el avl_user padre.
+    await assertTenantOwnership(
+      this.prisma.extended.avlEventDictionary,
+      dictId,
+      tenantId,
+      'Entrada de diccionario',
+      { via: (t) => ({ avl_user: { tenant_id: t } }) },
+    );
     const updated = await this.prisma.extended.avlEventDictionary.update({
       where: { id: dictId },
       data,
@@ -94,18 +123,27 @@ export class AvlUsersService {
     return updated;
   }
 
-  async deleteDictionaryEntry(dictId: string) {
+  async deleteDictionaryEntry(dictId: string, tenantId: string) {
+    await assertTenantOwnership(
+      this.prisma.extended.avlEventDictionary,
+      dictId,
+      tenantId,
+      'Entrada de diccionario',
+      { via: (t) => ({ avl_user: { tenant_id: t } }) },
+    );
     return this.prisma.extended.avlEventDictionary.delete({
       where: { id: dictId }
     });
   }
 
-  async getUnknownCodes(id: string) {
+  async getUnknownCodes(id: string, tenantId: string) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     const codes = await this.redis.getClient().smembers(`avl:unknown:${id}`);
     return codes;
   }
 
-  async exportDictionary(id: string, res: Response) {
+  async exportDictionary(id: string, tenantId: string, res: Response) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     const dictionary = await this.prisma.extended.avlEventDictionary.findMany({
       where: { avl_user_id: id },
       orderBy: [{ category: 'asc' }, { raw_code: 'asc' }],
@@ -149,7 +187,8 @@ export class AvlUsersService {
     res.end();
   }
 
-  async importDictionary(id: string, fileBuffer: Buffer) {
+  async importDictionary(id: string, tenantId: string, fileBuffer: Buffer) {
+    await this.assertAvlUserDelTenant(id, tenantId);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(fileBuffer as any);
     const worksheet = workbook.getWorksheet(1);
@@ -215,7 +254,12 @@ export class AvlUsersService {
         // Remove from unknown cache if we just mapped it
         await this.redis.getClient().srem(`avl:unknown:${id}`, raw_code);
       } catch (e) {
+        // Antes se contaban los errores sin registrar ninguno: si una
+        // importación fallaba entera, no quedaba rastro del motivo.
         errors++;
+        this.logger.warn(
+          `Error importando fila del diccionario (avl_user ${id}): ${(e as Error).message}`,
+        );
       }
     }
 

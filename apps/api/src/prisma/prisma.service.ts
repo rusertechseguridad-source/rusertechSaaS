@@ -40,7 +40,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               // RLS: Establecer el tenant_id en el contexto de PostgreSQL
               // Utilizamos una transacción interactiva para asegurar que se setee en la misma conexión
               return this.$transaction(async (tx: any) => {
-                await tx.$executeRawUnsafe(`SELECT set_config('request.jwt.claim.tenant_id', '${context.tenantId}', true)`);
+                // Parametrizado: el tenantId viene del JWT, pero no hay motivo
+                // para construir SQL por concatenación.
+                await tx.$executeRaw`SELECT set_config('request.jwt.claim.tenant_id', ${context.tenantId}, true)`;
                 // Ignoramos el error en types temporalmente o usamos "query" que viene del callback
                 return (tx as any)[model][operation](args);
               });

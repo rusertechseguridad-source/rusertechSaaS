@@ -11,41 +11,49 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Get()
-  findAll(@Query('skip') skip?: string, @Query('take') take?: string, @CurrentUser() user?: any) {
-    return this.vehiclesService.findAll(user, skip ? parseInt(skip) : undefined, take ? parseInt(take) : undefined);
+  findAll(@CurrentUser() user: any, @Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.vehiclesService.findAll(
+      user,
+      skip ? parseInt(skip) : undefined,
+      take ? parseInt(take) : undefined,
+    );
   }
 
   @Get('live')
-  getLivePositions() {
-    return this.vehiclesService.getLivePositions();
+  getLivePositions(@CurrentUser() user: any) {
+    return this.vehiclesService.getLivePositions(user.tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.vehiclesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.vehiclesService.findOne(id, user.tenantId);
   }
 
   @Post()
-  @RequirePermissions('vehicles:manage')
+  @RequirePermissions('manage_vehicles')
   create(@Body() data: any, @CurrentUser() user: any) {
     return this.vehiclesService.create(data, user.tenantId);
   }
 
   @Put(':id')
-  @RequirePermissions('vehicles:manage')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.vehiclesService.update(id, data);
+  @RequirePermissions('manage_vehicles')
+  update(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+    return this.vehiclesService.update(id, user.tenantId, data);
   }
 
   @Delete(':id')
-  @RequirePermissions('vehicles:manage')
-  remove(@Param('id') id: string) {
-    return this.vehiclesService.remove(id);
+  @RequirePermissions('manage_vehicles')
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.vehiclesService.remove(id, user.tenantId);
   }
 
   @Patch(':id/block')
-  @RequirePermissions('vehicles:manage')
-  toggleBlock(@Param('id') id: string, @Body() body: { blocked: boolean; reason?: string }) {
-    return this.vehiclesService.toggleBlock(id, body.blocked, body.reason);
+  @RequirePermissions('manage_vehicles')
+  toggleBlock(
+    @Param('id') id: string,
+    @Body() body: { blocked: boolean; reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.vehiclesService.toggleBlock(id, user.tenantId, body.blocked, body.reason);
   }
 }
