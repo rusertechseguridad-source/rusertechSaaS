@@ -36,6 +36,12 @@ export interface SaludCola {
   procesando: number;
   fallidos: number;
   antiguedad_segundos: number | null;
+  /**
+   * Timestamp del pendiente más viejo. Se devuelve además de los segundos
+   * para que el frontend recalcule el atraso con su propio reloj entre
+   * refrescos, en vez de mostrar un número congelado.
+   */
+  pendiente_mas_viejo: Date | null;
 }
 
 /**
@@ -182,11 +188,12 @@ export class ColaService {
 
   /** Estado de la cola, para el monitor y para decidir si hay atraso. */
   async salud(): Promise<SaludCola> {
-    const filas: { estado: string; cantidad: number; antiguedad: number | null }[] =
-      await this.prisma.$queryRaw<{ estado: string; cantidad: number; antiguedad: number | null }[]>`
+    const filas: { estado: string; cantidad: number; antiguedad: number | null; mas_viejo: Date | null }[] =
+      await this.prisma.$queryRaw<{ estado: string; cantidad: number; antiguedad: number | null; mas_viejo: Date | null }[]>`
         SELECT estado,
                count(*)::int AS cantidad,
-               extract(epoch from (now() - min(created_at)))::int AS antiguedad
+               extract(epoch from (now() - min(created_at)))::int AS antiguedad,
+               min(created_at) AS mas_viejo
         FROM motor_cola
         GROUP BY estado
       `;
@@ -199,6 +206,7 @@ export class ColaService {
       procesando: Number(buscar('procesando')?.cantidad ?? 0),
       fallidos: Number(buscar('fallido')?.cantidad ?? 0),
       antiguedad_segundos: pendiente?.antiguedad == null ? null : Number(pendiente.antiguedad),
+      pendiente_mas_viejo: pendiente?.mas_viejo ?? null,
     };
   }
 }

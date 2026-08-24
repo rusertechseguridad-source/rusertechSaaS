@@ -13,6 +13,8 @@ export interface SaludMotor {
   fallidos: number;
   /** Antigüedad del punto más viejo sin procesar. El indicador que importa. */
   antiguedad_segundos: number | null;
+  /** Timestamp del más viejo, para recalcular el atraso con el reloj del cliente. */
+  pendiente_mas_viejo: string | null;
 }
 
 export interface VehiculoMonitoreado {

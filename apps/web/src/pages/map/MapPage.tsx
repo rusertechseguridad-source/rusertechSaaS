@@ -128,7 +128,11 @@ function buildPopupHTML(
   const temp = pos.temperature_c != null ? `${pos.temperature_c}°C` : '--';
   const humedad = pos.humidity_pct != null ? `${pos.humidity_pct}%` : '--';
   const transportista = vehiculo?.carrier?.name ?? '--';
-  const antiguedad = formatearAntiguedad(pos.age_seconds, t);
+  const momentoAbsoluto = new Date(pos.timestamp).toLocaleString();
+  const antiguedad = formatearAntiguedad(
+    Math.max(0, Math.floor((Date.now() - new Date(pos.timestamp).getTime()) / 1000)),
+    t,
+  );
 
   const bloqueViaje = viaje
     ? [
@@ -167,8 +171,13 @@ function buildPopupHTML(
     `text-transform:uppercase;letter-spacing:0.05em;">${etiqueta}</span></div>`,
 
     // Antigüedad del dato: lo primero que hay que saber de una posición
+    // Fecha y hora absolutas + tiempo transcurrido. El span del relativo lleva
+    // data-reloj con el timestamp: un intervalo global (ver abajo) lo
+    // recalcula cada 10 s, así el texto envejece solo aunque el popup quede
+    // abierto entre refrescos de datos.
     `<div style="font-size:10px;color:#94A3B8;margin-bottom:8px;">🕑 ${t('map.last_report')}: `,
-    `<span style="color:${color};font-weight:600;">${antiguedad}</span></div>`,
+    `<span style="color:${color};font-weight:600;">${momentoAbsoluto} `,
+    `(<span data-reloj="${new Date(pos.timestamp).toISOString()}">${antiguedad}</span>)</span></div>`,
 
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;margin-bottom:8px;',
     'border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">',
@@ -282,6 +291,25 @@ export const MapPage: React.FC = () => {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  /**
+   * Reloj de los popups. El HTML del popup es estático (lo genera maplibre a
+   * partir de un string), así que el tiempo relativo no puede ser un
+   * componente React: se actualiza recorriendo los spans [data-reloj] de los
+   * popups abiertos. Sin esto, "hace 41 s" seguiría diciendo 41 segundos dos
+   * minutos después — una afirmación falsa en pantalla.
+   */
+  useEffect(() => {
+    const tick = setInterval(() => {
+      document.querySelectorAll<HTMLElement>('[data-reloj]').forEach((el) => {
+        const ts = new Date(el.dataset.reloj ?? '');
+        if (Number.isNaN(ts.getTime())) return;
+        const segundos = Math.max(0, Math.floor((Date.now() - ts.getTime()) / 1000));
+        el.textContent = formatearAntiguedad(segundos, t);
+      });
+    }, 10_000);
+    return () => clearInterval(tick);
+  }, [t]);
 
   useEffect(() => {
     if (mapContainer.current && !map.current) {

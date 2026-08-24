@@ -56,11 +56,5 @@
     "points": "Points",
     "last_point": "Last data",
     "state": "State"
-  },
-  "ago": {
-    "seconds": "{{n}}s ago",
-    "minutes": "{{n}}m ago",
-    "hours": "{{n}}h ago",
-    "days": "{{n}}d ago"
   }
 }

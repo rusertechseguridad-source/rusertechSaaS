@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Satellite, Smartphone, Radio } from 'lucide-react';
 import type { LivePosition } from '../../types/monitoring';
 import { FRESCURA_COLORS } from '../../constants/freshness';
-import { etiquetaFrescura, formatearAntiguedad } from '../../utils/freshness';
+import { etiquetaFrescura, formatearMomento } from '../../utils/freshness';
+import { useAhora } from '../../hooks/useAhora';
 
 /**
  * POSICIÓN ACTUAL DE UN VEHÍCULO.
@@ -35,6 +36,9 @@ export const PosicionActualCard: React.FC<Props> = ({
   ventanaHoras,
 }) => {
   const { t } = useTranslation();
+  // El relativo envejece solo: se recalcula desde el timestamp en cada tick,
+  // no queda congelado entre refrescos de datos.
+  const ahora = useAhora();
 
   const Contenedor: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0">
@@ -99,10 +103,15 @@ export const PosicionActualCard: React.FC<Props> = ({
         </span>
       </div>
 
+      {/*
+        Fecha y hora absolutas + tiempo transcurrido. El absoluto es lo que el
+        operador anota o cruza con otro registro; el relativo le dice si está
+        fresco. Ninguno reemplaza al otro.
+      */}
       <div className="text-[10px] text-textMuted mb-2">
         {t('livePosition.last_report')}:{' '}
         <span style={{ color }} className="font-bold">
-          {formatearAntiguedad(posicion.age_seconds, t)}
+          {formatearMomento(posicion.timestamp, t, ahora)}
         </span>
       </div>
 

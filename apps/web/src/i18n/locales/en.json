@@ -19,7 +19,8 @@
     "logout": "Log Out",
     "change_language": "Cambiar idioma / Change language",
     "protocols": "Operational Protocols",
-    "securityKeys": "Security Keys"
+    "securityKeys": "Security Keys",
+    "motor": "Event Engine"
   },
   "labels": {
     "alert_types": {
@@ -605,7 +606,8 @@
     "threshold_over": "over {{n}} min without reporting",
     "nodata_detail": "trip IN PROGRESS, no points in {{h}} h",
     "scope_note": "The map shows vehicles under active monitoring: with the driver app running, or with a declared trip IN PROGRESS.",
-    "fleet_total_note": "Active fleet: {{n}} vehicles"
+    "fleet_total_note": "Active fleet: {{n}} vehicles",
+    "ago_days": "{{n}}d ago"
   },
   "auth": {
     "login_title": "Sign In",

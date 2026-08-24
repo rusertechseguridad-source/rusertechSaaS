@@ -19,7 +19,8 @@
     "logout": "Cerrar sesión",
     "change_language": "Cambiar idioma / Change language",
     "protocols": "Protocolos Operativos",
-    "securityKeys": "Claves de Seguridad"
+    "securityKeys": "Claves de Seguridad",
+    "motor": "Motor de Eventos"
   },
   "labels": {
     "alert_types": {
@@ -605,7 +606,8 @@
     "threshold_over": "más de {{n}} min sin reportar",
     "nodata_detail": "viaje EN CURSO, sin puntos en {{h}} h",
     "scope_note": "El mapa muestra los vehículos en monitoreo activo: con la app del conductor encendida, o con un viaje declarado EN CURSO.",
-    "fleet_total_note": "Flota activa: {{n}} vehículos"
+    "fleet_total_note": "Flota activa: {{n}} vehículos",
+    "ago_days": "hace {{n}} d"
   },
   "auth": {
     "login_title": "Iniciar Sesión",

@@ -56,11 +56,5 @@
     "points": "Puntos",
     "last_point": "Último dato",
     "state": "Estado"
-  },
-  "ago": {
-    "seconds": "hace {{n}} s",
-    "minutes": "hace {{n}} min",
-    "hours": "hace {{n}} h",
-    "days": "hace {{n}} d"
   }
 }

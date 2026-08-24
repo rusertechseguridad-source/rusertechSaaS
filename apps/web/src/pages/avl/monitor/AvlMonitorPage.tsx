@@ -7,6 +7,8 @@ import type { CodigoIngesta, EstadoIngesta, ResumenAvlUser } from './types';
 import { VENTANAS_HORAS } from './types';
 import { RequirePermission, SinPermiso } from '../../../components/RequirePermission';
 import { COLOR_SIN_DATOS, FRESCURA_COLORS } from '../../../constants/freshness';
+import { formatearMomento } from '../../../utils/freshness';
+import { useAhora } from '../../../hooks/useAhora';
 import i18n from '../../../i18n/config';
 import esLocales from './locales/es.json';
 import enLocales from './locales/en.json';
@@ -40,21 +42,24 @@ const COLOR_ESTADO: Record<EstadoIngesta, string> = {
 };
 
 /**
- * Antigüedad del último dato.
+ * Último dato: fecha y hora absolutas + tiempo transcurrido.
+ *
+ * El relativo se calcula desde el timestamp con el reloj del cliente
+ * (`ahoraMs`), no desde el `age_seconds` del servidor: así envejece solo entre
+ * refrescos en lugar de quedar congelado.
  *
  * El estado vacío nombra la ventana consultada (`horas`) en lugar de decir
  * "nunca": esta pantalla mira un rango acotado, así que no puede afirmar nada
- * sobre toda la historia del proveedor. Decir "nunca" cuando en realidad es
- * "no en las últimas 24 h" es una afirmación falsa.
+ * sobre toda la historia del proveedor.
  */
-function formatearAntiguedad(segundos: number | null, t: any, horas: number): string {
-  if (segundos === null || segundos === undefined) {
-    return t('avlMonitor.cells.no_data_window', { h: horas });
-  }
-  if (segundos < 60) return t('avlMonitor.ago.seconds', { n: segundos });
-  if (segundos < 3600) return t('avlMonitor.ago.minutes', { n: Math.floor(segundos / 60) });
-  if (segundos < 86400) return t('avlMonitor.ago.hours', { n: Math.floor(segundos / 3600) });
-  return t('avlMonitor.ago.days', { n: Math.floor(segundos / 86400) });
+function formatearUltimoDato(
+  timestamp: string | null,
+  t: any,
+  horas: number,
+  ahoraMs: number,
+): string {
+  if (!timestamp) return t('avlMonitor.cells.no_data_window', { h: horas });
+  return formatearMomento(timestamp, t, ahoraMs);
 }
 
 const ChipEstado: React.FC<{ estado: EstadoIngesta }> = ({ estado }) => {
@@ -137,6 +142,7 @@ const BloqueCodigos: React.FC<{ proveedor: ResumenAvlUser }> = ({ proveedor }) =
 /** Detalle por vehículo. Se monta sólo cuando la fila está abierta. */
 const BloqueVehiculos: React.FC<{ avlUserId: string; horas: number }> = ({ avlUserId, horas }) => {
   const { t } = useTranslation();
+  const ahora = useAhora();
   const { data, isLoading, error } = useAvlMonitorVehiculos(avlUserId, horas);
 
   if (isLoading) return <div className="text-xs text-textMuted py-2">{t('avlMonitor.vehicles.loading')}</div>;
@@ -167,7 +173,7 @@ const BloqueVehiculos: React.FC<{ avlUserId: string; horas: number }> = ({ avlUs
               <td className="px-3 py-2 text-textSecondary">
                 {v.puntos === 0
                   ? t('avlMonitor.cells.no_data_window', { h: horas })
-                  : formatearAntiguedad(v.age_seconds, t, horas)}
+                  : formatearUltimoDato(v.ultimo_punto, t, horas, ahora)}
               </td>
               <td className="px-3 py-2">
                 <ChipEstado estado={v.puntos === 0 ? 'sin_datos' : v.estado} />
@@ -187,6 +193,7 @@ export const AvlMonitorPage: React.FC = () => {
   const [verVehiculos, setVerVehiculos] = useState<Record<string, boolean>>({});
 
   const { data, isLoading, error, refetch, isFetching } = useAvlMonitor(horas);
+  const ahora = useAhora();
 
   const toggleFila = (id: string) => setAbierto((prev) => (prev === id ? null : id));
 
@@ -286,7 +293,7 @@ export const AvlMonitorPage: React.FC = () => {
                           </td>
                           <td className="px-4 py-3"><ChipEstado estado={p.estado} /></td>
                           <td className="px-4 py-3 text-textSecondary text-xs">
-                            {formatearAntiguedad(p.age_seconds, t, horas)}
+                            {formatearUltimoDato(p.ultimo_punto, t, horas, ahora)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="font-mono text-white">{p.puntos}</div>

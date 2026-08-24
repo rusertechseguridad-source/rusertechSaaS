@@ -1,9 +1,35 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicGuard } from './components/PublicGuard';
 import { PrivateGuard } from './components/PrivateGuard';
 import { ToastContainer } from './components/ToastContainer';
+
+/**
+ * ⚠️ CORRECCIÓN DE RAÍZ — este provider NO EXISTÍA en toda la aplicación.
+ *
+ * Siete módulos usan hooks de @tanstack/react-query (protocolos, claves de
+ * seguridad, NDR, parámetros operativos, monitoreo, monitor AVL y el motor).
+ * Sin un QueryClientProvider en el árbol, `useQuery` lanza una excepción al
+ * montarse, el componente crashea, y —sin barrera de errores— React desmonta
+ * el árbol completo: pantalla en blanco, sin mensaje.
+ *
+ * Nadie lo notó antes porque los primeros consumidores (NDR y Operativos)
+ * estaban escritos dentro del modal de edición de usuario y nunca llegaban a
+ * montarse. Cada pantalla nueva con react-query heredaba el crash.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Un reintento y basta: estas pantallas ya manejan su estado de error,
+      // y tres reintentos por defecto solo retrasan el mensaje al usuario.
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 import { HomePage } from './pages/public/HomePage';
 import { NosotrosPage } from './pages/public/NosotrosPage';
@@ -36,8 +62,10 @@ import { SettingsPage } from './pages/settings/SettingsPage';
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <ToastContainer />
+      <ErrorBoundary>
       <Routes>
         
         {/* Rutas Públicas con PublicGuard y PublicLayout */}
@@ -81,7 +109,9 @@ function App() {
         </Route>
 
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

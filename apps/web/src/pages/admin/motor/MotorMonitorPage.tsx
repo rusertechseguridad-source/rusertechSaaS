@@ -5,6 +5,8 @@ import { useSaludMotor, useVehiculosMonitoreados, useDesactivarMonitoreo } from 
 import { useMotorCatalogos } from '../../../hooks/useMotorCatalogos';
 import { RequirePermission, SinPermiso } from '../../../components/RequirePermission';
 import { useToastStore } from '../../../store/toastStore';
+import { useAhora } from '../../../hooks/useAhora';
+import { formatearAntiguedad } from '../../../utils/freshness';
 
 /**
  * MONITOR DEL MOTOR DE EVENTOS.
@@ -48,8 +50,16 @@ export const MotorMonitorPage: React.FC = () => {
   const { data: monitoreados } = useVehiculosMonitoreados();
   const { data: catalogos } = useMotorCatalogos();
   const desactivar = useDesactivarMonitoreo();
+  const ahora = useAhora(5_000);
 
-  const atraso = salud?.antiguedad_segundos ?? null;
+  /*
+    El atraso se recalcula con el reloj del cliente a partir del timestamp del
+    pendiente más viejo: entre refrescos el número envejece solo. Los segundos
+    del servidor quedan como respaldo por si el timestamp no vino.
+  */
+  const atraso = salud?.pendiente_mas_viejo
+    ? Math.max(0, Math.floor((ahora - new Date(salud.pendiente_mas_viejo).getTime()) / 1000))
+    : salud?.antiguedad_segundos ?? null;
   const color = colorAtraso(atraso);
 
   const condicionesPendientes = (catalogos?.tipos_condicion ?? []).filter(
@@ -156,7 +166,10 @@ export const MotorMonitorPage: React.FC = () => {
                         {t(MOTIVO_ETIQUETA[v.motivo] ?? 'motor.motivo.estado')}
                       </td>
                       <td className="px-5 py-2 text-textMuted text-xs">
-                        {new Date(v.desde).toLocaleString()}
+                        {new Date(v.desde).toLocaleString()}{' '}
+                        <span className="text-textMuted/70">
+                          ({formatearAntiguedad(Math.max(0, Math.floor((ahora - new Date(v.desde).getTime()) / 1000)), t)})
+                        </span>
                       </td>
                       <td className="px-5 py-2 text-right">
                         <RequirePermission permission="manage_settings">
