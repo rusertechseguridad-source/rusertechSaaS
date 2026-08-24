@@ -5,7 +5,7 @@ import { Activity, RefreshCw, ChevronDown, ChevronRight, AlertTriangle, BookOpen
 import { useAvlMonitor, useAvlMonitorVehiculos } from './api';
 import type { CodigoIngesta, EstadoIngesta, ResumenAvlUser } from './types';
 import { VENTANAS_HORAS } from './types';
-import { RequirePermission } from '../../../components/RequirePermission';
+import { RequirePermission, SinPermiso } from '../../../components/RequirePermission';
 import { COLOR_SIN_DATOS, FRESCURA_COLORS } from '../../../constants/freshness';
 import i18n from '../../../i18n/config';
 import esLocales from './locales/es.json';
@@ -39,8 +39,18 @@ const COLOR_ESTADO: Record<EstadoIngesta, string> = {
   inactivo_config: COLOR_SIN_DATOS,
 };
 
-function formatearAntiguedad(segundos: number | null, t: any): string {
-  if (segundos === null || segundos === undefined) return t('avlMonitor.cells.never');
+/**
+ * Antigüedad del último dato.
+ *
+ * El estado vacío nombra la ventana consultada (`horas`) en lugar de decir
+ * "nunca": esta pantalla mira un rango acotado, así que no puede afirmar nada
+ * sobre toda la historia del proveedor. Decir "nunca" cuando en realidad es
+ * "no en las últimas 24 h" es una afirmación falsa.
+ */
+function formatearAntiguedad(segundos: number | null, t: any, horas: number): string {
+  if (segundos === null || segundos === undefined) {
+    return t('avlMonitor.cells.no_data_window', { h: horas });
+  }
   if (segundos < 60) return t('avlMonitor.ago.seconds', { n: segundos });
   if (segundos < 3600) return t('avlMonitor.ago.minutes', { n: Math.floor(segundos / 60) });
   if (segundos < 86400) return t('avlMonitor.ago.hours', { n: Math.floor(segundos / 3600) });
@@ -156,8 +166,8 @@ const BloqueVehiculos: React.FC<{ avlUserId: string; horas: number }> = ({ avlUs
               <td className="px-3 py-2 text-right font-mono text-white">{v.puntos}</td>
               <td className="px-3 py-2 text-textSecondary">
                 {v.puntos === 0
-                  ? t('avlMonitor.vehicles.no_data')
-                  : formatearAntiguedad(v.age_seconds, t)}
+                  ? t('avlMonitor.cells.no_data_window', { h: horas })
+                  : formatearAntiguedad(v.age_seconds, t, horas)}
               </td>
               <td className="px-3 py-2">
                 <ChipEstado estado={v.puntos === 0 ? 'sin_datos' : v.estado} />
@@ -181,7 +191,7 @@ export const AvlMonitorPage: React.FC = () => {
   const toggleFila = (id: string) => setAbierto((prev) => (prev === id ? null : id));
 
   return (
-    <RequirePermission permission="view_avl">
+    <RequirePermission permission="view_avl" fallback={<SinPermiso permission="view_avl" />}>
       <div className="p-8 w-full">
         <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
           <div>
@@ -276,7 +286,7 @@ export const AvlMonitorPage: React.FC = () => {
                           </td>
                           <td className="px-4 py-3"><ChipEstado estado={p.estado} /></td>
                           <td className="px-4 py-3 text-textSecondary text-xs">
-                            {formatearAntiguedad(p.age_seconds, t)}
+                            {formatearAntiguedad(p.age_seconds, t, horas)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="font-mono text-white">{p.puntos}</div>

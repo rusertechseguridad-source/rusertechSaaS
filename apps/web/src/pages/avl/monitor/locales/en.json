@@ -13,7 +13,7 @@
     "en_vivo": "Receiving",
     "inactivo": "Delayed",
     "sin_senal": "No signal",
-    "sin_datos": "No data in window",
+    "sin_datos": "No data in the queried window",
     "inactivo_config": "Disabled"
   },
   "columns": {
@@ -25,7 +25,6 @@
     "codes": "Codes"
   },
   "cells": {
-    "never": "No data",
     "of_mobile": "{{n}} from the app",
     "duplicates": "{{n}} duplicates discarded",
     "codes_total": "{{n}} distinct codes",
@@ -33,7 +32,8 @@
     "reporting": "{{n}} reported",
     "assigned": "{{n}} assigned",
     "mismatch": "Inconsistent assignment",
-    "mismatch_help": "Data arrived through this provider from more vehicles than have it assigned on their record. Review the vehicles' GPS provider assignment."
+    "mismatch_help": "Data arrived through this provider from more vehicles than have it assigned on their record. Review the vehicles' GPS provider assignment.",
+    "no_data_window": "No data in {{h}} h"
   },
   "codes": {
     "title": "Received codes",
@@ -55,8 +55,7 @@
     "plate": "Plate",
     "points": "Points",
     "last_point": "Last data",
-    "state": "State",
-    "no_data": "No data"
+    "state": "State"
   },
   "ago": {
     "seconds": "{{n}}s ago",

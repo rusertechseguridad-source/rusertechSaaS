@@ -15,7 +15,17 @@ interface AvlUser {
   provider_notes: string | null;
   api_key: string;
   is_active: boolean;
+  /**
+   * ⚠️ Columna denormalizada que escribe SÓLO el ingest de NestJS. La Mobile API
+   * no la actualiza, así que para los proveedores que reciben datos de la app
+   * queda en `null` para siempre. NO usarla para mostrar el último dato: para
+   * eso está `ultimo_dato`, que el backend calcula contra `telemetry`.
+   */
   last_data_at: string | null;
+  /** Último punto real dentro de `ventana_horas`. `null` = sin datos EN ESA VENTANA. */
+  ultimo_dato: string | null;
+  /** Ventana consultada, en horas. Necesaria para redactar el estado vacío. */
+  ventana_horas: number;
   created_at: string;
   updated_at: string;
   _count?: { vehicles: number };

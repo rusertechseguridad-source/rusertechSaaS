@@ -13,7 +13,7 @@
     "en_vivo": "Recibiendo",
     "inactivo": "Demorado",
     "sin_senal": "Sin señal",
-    "sin_datos": "Sin datos en la ventana",
+    "sin_datos": "Sin datos en la ventana consultada",
     "inactivo_config": "Desactivado"
   },
   "columns": {
@@ -25,7 +25,6 @@
     "codes": "Códigos"
   },
   "cells": {
-    "never": "Sin datos",
     "of_mobile": "{{n}} desde la app",
     "duplicates": "{{n}} duplicados descartados",
     "codes_total": "{{n}} códigos distintos",
@@ -33,7 +32,8 @@
     "reporting": "{{n}} reportaron",
     "assigned": "{{n}} asignados",
     "mismatch": "Asignación inconsistente",
-    "mismatch_help": "Llegaron datos por este proveedor desde más vehículos de los que lo tienen asignado en su ficha. Revisá la asignación de proveedor GPS de los vehículos."
+    "mismatch_help": "Llegaron datos por este proveedor desde más vehículos de los que lo tienen asignado en su ficha. Revisá la asignación de proveedor GPS de los vehículos.",
+    "no_data_window": "Sin datos en {{h}} h"
   },
   "codes": {
     "title": "Códigos recibidos",
@@ -55,8 +55,7 @@
     "plate": "Patente",
     "points": "Puntos",
     "last_point": "Último dato",
-    "state": "Estado",
-    "no_data": "Sin datos"
+    "state": "Estado"
   },
   "ago": {
     "seconds": "hace {{n}} s",

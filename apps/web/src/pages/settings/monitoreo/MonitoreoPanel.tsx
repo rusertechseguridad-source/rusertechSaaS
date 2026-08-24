@@ -5,7 +5,7 @@ import { useMonitoreoSettings, useUpdateMonitoreoSettings } from './api';
 import type { MonitoreoSettings } from './types';
 import { LIMITES_MONITOREO, MONITOREO_POR_DEFECTO } from './types';
 import { useToastStore } from '../../../store/toastStore';
-import { RequirePermission } from '../../../components/RequirePermission';
+import { RequirePermission, SinPermiso } from '../../../components/RequirePermission';
 import i18n from '../../../i18n/config';
 import esLocales from './locales/es.json';
 import enLocales from './locales/en.json';
@@ -161,7 +161,7 @@ export const MonitoreoPanel: React.FC = () => {
   ];
 
   return (
-    <RequirePermission permission="manage_settings">
+    <RequirePermission permission="manage_settings" fallback={<SinPermiso permission="manage_settings" />}>
       <div className="max-w-4xl space-y-6">
         <div className="bg-[#1A2346] p-6 rounded-xl border border-[#2D3B6A] shadow-lg">
           <div className="flex items-center gap-3 mb-2">

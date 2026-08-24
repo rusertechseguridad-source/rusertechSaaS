@@ -33,6 +33,7 @@ import { ForwardingModule } from './forwarding/forwarding.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OperationalProtocolsModule } from './operational-protocols/operational-protocols.module';
 import { SecurityKeysModule } from './security-keys/security-keys.module';
+import { MotorModule } from './motor/motor.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { SecurityKeysModule } from './security-keys/security-keys.module';
     NotificationsModule,
     OperationalProtocolsModule,
     SecurityKeysModule,
+    MotorModule,
   ],
   controllers: [AppController],
   providers: [

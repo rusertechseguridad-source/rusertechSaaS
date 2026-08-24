@@ -4,6 +4,7 @@ import { RedisService } from '../common/redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { LivePositionsService } from '../common/live-positions/live-positions.service';
+import { MonitoringConfigService } from '../common/monitoring/monitoring-config.service';
 
 @Injectable()
 export class VehiclesService {
@@ -12,6 +13,7 @@ export class VehiclesService {
     private redis: RedisService,
     private mailService: MailService,
     private livePositions: LivePositionsService,
+    private monitoringConfig: MonitoringConfigService,
   ) {}
 
   async findAll(user: any, skip?: number, take?: number) {
@@ -56,8 +58,12 @@ export class VehiclesService {
     if (!vehicle) throw new NotFoundException('Vehículo no encontrado');
 
     const lastPosition = await this.livePositions.obtenerPorVehiculo(vehicle.id, tenantId);
+    const { ventana_mapa_horas } = await this.monitoringConfig.obtenerUmbrales(tenantId);
 
-    return { ...vehicle, lastPosition };
+    // La ventana viaja con la respuesta para que la UI pueda decir "sin datos en
+    // las últimas N h" en lugar de afirmar que el vehículo nunca reportó: esta
+    // consulta mira un rango acotado y no puede sostener esa afirmación.
+    return { ...vehicle, lastPosition, lastPositionWindowHours: ventana_mapa_horas };
   }
 
   /**

@@ -1,0 +1,204 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import type { PuntoEvaluable } from './tipos';
+
+/** Cuántos puntos toma el worker por vuelta. */
+const TAMANO_LOTE = 200;
+
+/**
+ * Minutos después de los cuales un arrendamiento se considera huérfano.
+ * Si un worker muere a mitad de un lote, sus filas quedan en 'procesando'
+ * para siempre. Este plazo las devuelve a la cola.
+ */
+const ARRENDAMIENTO_MINUTOS = 5;
+
+/** Intentos antes de dar una fila por fallida. */
+const INTENTOS_MAXIMOS = 5;
+
+interface FilaCola {
+  cola_id: string;
+  telemetry_id: string;
+  tenant_id: string;
+  vehicle_id: string;
+  trip_id: string | null;
+  timestamp: Date;
+  latitude: number;
+  longitude: number;
+  speed_kmh: number | null;
+  ignition: boolean | null;
+  temperature_c: number | null;
+  provider_code: string | null;
+  origen: string;
+}
+
+export interface SaludCola {
+  pendientes: number;
+  procesando: number;
+  fallidos: number;
+  antiguedad_segundos: number | null;
+}
+
+/**
+ * ACCESO A LA COLA DEL MOTOR.
+ *
+ * La cola es una tabla, no Redis ni pg_notify. El motivo está en el diseño:
+ * pg_notify se pierde si el worker está caído, y encolar desde el código de
+ * cada backend es exactamente el error que se repitió tres veces en este
+ * sistema. Una tabla es transaccional con el INSERT que la originó.
+ */
+@Injectable()
+export class ColaService {
+  private readonly logger = new Logger(ColaService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Toma un lote de puntos y los marca como en proceso.
+   *
+   * `FOR UPDATE SKIP LOCKED` es lo que permite que varios workers corran en
+   * paralelo sin pisarse ni bloquearse entre sí: cada uno se lleva filas
+   * distintas y ninguno espera al otro.
+   *
+   * ⚠️ El JOIN con `telemetry` lleva rango temporal CERRADO. Sin el extremo
+   * superior, Postgres no puede descartar las particiones futuras ni la
+   * `default`, y la planificación pasa a costar más que la ejecución
+   * (medido: 30 particiones vs 1, 15,6 ms vs 6,1 ms).
+   */
+  async tomarLote(workerId: string): Promise<PuntoEvaluable[]> {
+    const ahora = Date.now();
+    // La ventana cubre el atraso máximo tolerable del motor. Un punto más
+    // viejo que esto ya no tiene valor operativo y se descarta explícitamente
+    // en `descartarVencidos`, no en silencio acá.
+    const desde = new Date(ahora - 7 * 24 * 60 * 60 * 1000);
+    const hasta = new Date(ahora + 5 * 60 * 1000);
+
+    const filas: FilaCola[] = await this.prisma.$queryRaw<FilaCola[]>`
+      WITH tomadas AS (
+        SELECT id
+        FROM motor_cola
+        WHERE estado = 'pendiente'
+        ORDER BY created_at
+        LIMIT ${TAMANO_LOTE}
+        FOR UPDATE SKIP LOCKED
+      ),
+      marcadas AS (
+        UPDATE motor_cola c
+        SET estado = 'procesando',
+            tomado_at = now(),
+            tomado_por = ${workerId},
+            intentos = c.intentos + 1
+        FROM tomadas
+        WHERE c.id = tomadas.id
+        RETURNING c.id, c.tenant_id, c.vehicle_id, c.trip_id,
+                  c.telemetry_id, c.telemetry_ts, c.origen
+      )
+      SELECT
+        m.id::text        AS cola_id,
+        m.telemetry_id::text AS telemetry_id,
+        m.tenant_id::text AS tenant_id,
+        m.vehicle_id::text AS vehicle_id,
+        m.trip_id::text   AS trip_id,
+        m.telemetry_ts    AS "timestamp",
+        t.latitude,
+        t.longitude,
+        t.speed_kmh,
+        t.ignition,
+        t.temperature_c,
+        t.provider_code,
+        m.origen
+      FROM marcadas m
+      JOIN telemetry t
+        ON t.id = m.telemetry_id
+       AND t."timestamp" = m.telemetry_ts
+       AND t."timestamp" >= ${desde}
+       AND t."timestamp" <= ${hasta}
+      ORDER BY m.vehicle_id, m.telemetry_ts
+    `;
+
+    return filas.map((f) => ({
+      cola_id: f.cola_id,
+      telemetry_id: f.telemetry_id,
+      tenant_id: f.tenant_id,
+      vehicle_id: f.vehicle_id,
+      trip_id: f.trip_id,
+      timestamp: f.timestamp,
+      latitude: Number(f.latitude),
+      longitude: Number(f.longitude),
+      speed_kmh: f.speed_kmh === null ? null : Number(f.speed_kmh),
+      ignition: f.ignition ?? null,
+      temperature_c: f.temperature_c === null ? null : Number(f.temperature_c),
+      provider_code: f.provider_code ?? null,
+      origen: f.origen === 'movil' ? 'movil' : 'hub',
+    }));
+  }
+
+  /** Marca como procesados los puntos que salieron bien. */
+  async marcarListos(colaIds: string[]): Promise<void> {
+    if (colaIds.length === 0) return;
+    await this.prisma.$executeRaw`
+      UPDATE motor_cola
+      SET estado = 'listo', error = null
+      WHERE id = ANY(${colaIds.map((id) => BigInt(id))}::bigint[])
+    `;
+  }
+
+  /**
+   * Devuelve un punto a la cola, o lo da por fallido si agotó los intentos.
+   *
+   * ⚠️ Los fallidos NO se borran: quedan en la tabla con su error. Un fallo
+   * sistemático tiene que ser diagnosticable, no invisible.
+   */
+  async marcarFallido(colaId: string, mensaje: string): Promise<void> {
+    await this.prisma.$executeRaw`
+      UPDATE motor_cola
+      SET estado = CASE WHEN intentos >= ${INTENTOS_MAXIMOS} THEN 'fallido' ELSE 'pendiente' END,
+          error = ${mensaje.slice(0, 2000)},
+          tomado_at = null,
+          tomado_por = null
+      WHERE id = ${BigInt(colaId)}::bigint
+    `;
+  }
+
+  /**
+   * Devuelve a la cola las filas cuyo worker murió a mitad.
+   *
+   * Sin esto, un reinicio del proceso deja filas trabadas en 'procesando'
+   * para siempre y nadie las vuelve a mirar.
+   */
+  async recuperarHuerfanas(): Promise<number> {
+    const vencidas = await this.prisma.$executeRaw`
+      UPDATE motor_cola
+      SET estado = 'pendiente', tomado_at = null, tomado_por = null
+      WHERE estado = 'procesando'
+        AND tomado_at < now() - (${ARRENDAMIENTO_MINUTOS} || ' minutes')::interval
+    `;
+    if (vencidas > 0) {
+      this.logger.warn(
+        `Se devolvieron ${vencidas} filas a la cola: su arrendamiento venció (worker caído a mitad).`,
+      );
+    }
+    return vencidas;
+  }
+
+  /** Estado de la cola, para el monitor y para decidir si hay atraso. */
+  async salud(): Promise<SaludCola> {
+    const filas: { estado: string; cantidad: number; antiguedad: number | null }[] =
+      await this.prisma.$queryRaw<{ estado: string; cantidad: number; antiguedad: number | null }[]>`
+        SELECT estado,
+               count(*)::int AS cantidad,
+               extract(epoch from (now() - min(created_at)))::int AS antiguedad
+        FROM motor_cola
+        GROUP BY estado
+      `;
+
+    const buscar = (e: string) => filas.find((f) => f.estado === e);
+    const pendiente = buscar('pendiente');
+
+    return {
+      pendientes: Number(pendiente?.cantidad ?? 0),
+      procesando: Number(buscar('procesando')?.cantidad ?? 0),
+      fallidos: Number(buscar('fallido')?.cantidad ?? 0),
+      antiguedad_segundos: pendiente?.antiguedad == null ? null : Number(pendiente.antiguedad),
+    };
+  }
+}

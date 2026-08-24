@@ -731,6 +731,32 @@ export const SettingsPage: React.FC = () => {
             </div>
           )}
 
+          {/*
+            Estos tres paneles estaban escritos DENTRO del bloque
+            `{editingUser && (...)}`, es decir dentro del modal de edición de
+            usuario: sólo se montaban si había un usuario abierto para editar.
+            Con el modal cerrado —el caso normal— la solapa quedaba en blanco y
+            sin ningún mensaje. Acá están donde corresponde, en el área de
+            contenido, junto al resto de las solapas.
+          */}
+          {activeTab === 'ndr' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <NdrPanel />
+            </Suspense>
+          )}
+
+          {activeTab === 'operativos' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <OperativosPanel />
+            </Suspense>
+          )}
+
+          {activeTab === 'monitoreo' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <MonitoreoPanel />
+            </Suspense>
+          )}
+
         </div>
       </div>
 
@@ -822,23 +848,6 @@ export const SettingsPage: React.FC = () => {
               </div>
             </form>
           </div>
-          {activeTab === 'ndr' && (
-            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
-              <NdrPanel />
-            </Suspense>
-          )}
-
-          {activeTab === 'operativos' && (
-            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
-              <OperativosPanel />
-            </Suspense>
-          )}
-
-          {activeTab === 'monitoreo' && (
-            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
-              <MonitoreoPanel />
-            </Suspense>
-          )}
         </div>
       )}
     </div>

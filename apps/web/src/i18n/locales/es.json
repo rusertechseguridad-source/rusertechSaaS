@@ -444,11 +444,11 @@
     "hub_code": "Código HUB:",
     "vehicles": "Vehículos:",
     "last_data": "Último dato:",
-    "never": "Nunca",
     "ingestion": "Ingesta",
     "edit": "Editar",
     "dictionary": "Diccionario",
-    "ingest_monitor": "Monitor de Ingesta"
+    "ingest_monitor": "Monitor de Ingesta",
+    "no_data_window": "Sin datos en las últimas {{h}} h"
   },
   "carbon": {
     "title": "Huella de Carbono",
@@ -791,6 +791,51 @@
     "origin": {
       "movil": "App del conductor",
       "hub": "Equipo GPS (HUB)"
+    }
+  },
+  "motor": {
+    "title": "Motor de Eventos",
+    "subtitle": "Si el motor está al día, qué se está evaluando y por qué.",
+    "refrescar": "Actualizar",
+    "error": "No se pudo consultar el motor.",
+    "pendientes": "Pendientes",
+    "procesando": "Procesando",
+    "fallidos": "Fallidos",
+    "atraso": "Atraso",
+    "al_dia": "Al día",
+    "atraso_segundos": "{{n}} s",
+    "atraso_minutos": "{{n}} min",
+    "atraso_horas": "{{n}} h",
+    "nota_atraso": "El atraso es la antigüedad del punto más viejo sin procesar. Un valor alto puntual después de un reinicio es normal; que crezca de forma sostenida significa que el motor no da abasto.",
+    "nota_fallidos": "Hay {{n}} puntos que no se pudieron evaluar tras varios intentos. No se borran a propósito: quedan con su error para poder diagnosticarlos.",
+    "monitoreados": "Vehículos bajo monitoreo",
+    "sin_monitoreados": "Ningún vehículo se está evaluando ahora. Sus puntos se siguen guardando, pero no disparan evaluaciones.",
+    "vehiculo": "Vehículo",
+    "motivo_titulo": "Por qué",
+    "desde": "Desde",
+    "desactivar": "Desactivar el monitoreo",
+    "desactivado_ok": "Monitoreo desactivado",
+    "desactivado_error": "No se pudo desactivar el monitoreo",
+    "motivo": {
+      "estado": "El viaje está en un estado monitoreable",
+      "manual": "Lo activó un operador",
+      "red_seguridad": "Red de seguridad: el viaje está por empezar"
+    },
+    "condiciones_catalogo": "Condiciones que el motor conoce ({{n}})",
+    "condiciones_pendientes": "Pendientes de configuración ({{n}})",
+    "nota_sin_app": "Las marcadas con ·app necesitan la app del conductor. El resto se detecta solo con telemetría, así que funcionan también para un cliente que solo tiene AVL satelital.",
+    "nota_pendientes": "Están en el catálogo pero todavía no se evalúan: falta dónde configurar su parámetro. Se muestran acá para que se sepa que faltan, en vez de que simplemente no existan."
+  },
+  "estadosViaje": {
+    "title": "Línea de tiempo de estados",
+    "vacio": "Todavía no hay cambios de estado registrados. Los viajes anteriores al motor de eventos no tienen historial: no es una falla, es que nadie lo estaba registrando.",
+    "origen": {
+      "geocerca": "Geocerca",
+      "operador": "Operador",
+      "red_seguridad": "Red de seguridad",
+      "api_movil": "App del conductor",
+      "motor": "Motor",
+      "migracion": "Migración"
     }
   }
 }

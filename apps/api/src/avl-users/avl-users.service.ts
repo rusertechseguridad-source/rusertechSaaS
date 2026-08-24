@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { RedisService } from '../common/redis/redis.service';
 import { TOLERANCIA_RELOJ_MINUTOS } from '../common/config/live-positions';
+import { MonitoringConfigService } from '../common/monitoring/monitoring-config.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
@@ -20,7 +21,11 @@ const VENTANA_CODIGOS_DESCONOCIDOS_HORAS = 168;
 export class AvlUsersService {
   private readonly logger = new Logger(AvlUsersService.name);
 
-  constructor(private prisma: PrismaService, private redis: RedisService) {}
+  constructor(
+    private prisma: PrismaService,
+    private redis: RedisService,
+    private monitoringConfig: MonitoringConfigService,
+  ) {}
 
   /**
    * Verifica que el avl_user pertenezca al tenant antes de operar sobre él o
@@ -53,9 +58,26 @@ export class AvlUsersService {
     return assertTenantOwnership(this.prisma.extended.avlUser, id, tenantId, 'AVL User');
   }
 
+  /**
+   * Listado de proveedores GPS del tenant.
+   *
+   * Devuelve además `ultimo_dato` y `ventana_horas`, calculados contra
+   * `telemetry`.
+   *
+   * ⚠️ POR QUÉ NO SE USA `avl_users.last_data_at`: esa columna la escribe
+   * **únicamente** el ingest de NestJS (`telemetry.service.ts`). La Mobile API
+   * escribe directo a `telemetry` sin pasar por ahí, así que el proveedor
+   * `Rusertech_Mobile` tenía `last_data_at = null` para siempre y la pantalla
+   * mostraba "Último dato: Nunca" mientras la base acumulaba decenas de puntos
+   * por día. Es exactamente la misma causa raíz que dejaba el mapa en vivo
+   * vacío: depender de un dato que sólo conoce una de las dos vías de ingreso.
+   *
+   * La columna NO se elimina —el ingest la sigue escribiendo y puede haber
+   * consumidores fuera de este repo—, pero deja de ser lo que se muestra.
+   */
   async findAll(tenantId: string) {
     // Antes devolvía los avl_users de TODOS los tenants, con su api_key incluida.
-    return this.prisma.extended.avlUser.findMany({
+    const usuarios = await this.prisma.extended.avlUser.findMany({
       where: tenantWhere(tenantId, 'AvlUsersService.findAll'),
       include: {
         _count: {
@@ -63,6 +85,58 @@ export class AvlUsersService {
         }
       }
     });
+
+    if (usuarios.length === 0) return usuarios;
+
+    const { ventanaHoras, ultimoPorProveedor } = await this.consultarUltimoDato(tenantId);
+
+    return usuarios.map((u: { id: string }) => ({
+      ...u,
+      ultimo_dato: ultimoPorProveedor.get(u.id) ?? null,
+      ventana_horas: ventanaHoras,
+    }));
+  }
+
+  /**
+   * Último punto real por proveedor, dentro de una ventana acotada.
+   *
+   * ⚠️ Rango CERRADO. Sin el extremo superior Postgres no puede descartar las
+   * particiones futuras de `telemetry` ni la `default`, y la planificación pasa
+   * a costar más que la ejecución.
+   *
+   * La ventana viene de la configuración del tenant. Es deliberado que sea
+   * acotada y no "toda la historia": recorrer 30 particiones para pintar una
+   * fecha en un listado no se justifica. La consecuencia es que la pantalla
+   * sólo puede afirmar "sin datos en las últimas N h" — nunca "nunca", que
+   * sería una afirmación que esta consulta no puede sostener.
+   */
+  private async consultarUltimoDato(tenantId: string): Promise<{
+    ventanaHoras: number;
+    ultimoPorProveedor: Map<string, Date>;
+  }> {
+    const { ventana_mapa_horas: ventanaHoras } =
+      await this.monitoringConfig.obtenerUmbrales(tenantId);
+
+    const ahora = Date.now();
+    const desde = new Date(ahora - ventanaHoras * 60 * 60 * 1000);
+    const hasta = new Date(ahora + TOLERANCIA_RELOJ_MINUTOS * 60 * 1000);
+
+    const filas: { avl_user_id: string; ultimo_dato: Date }[] = await this.prisma.$queryRaw<
+      { avl_user_id: string; ultimo_dato: Date }[]
+    >`
+      SELECT t.avl_user_id, MAX(t."timestamp") AS ultimo_dato
+      FROM telemetry t
+      WHERE t.tenant_id = ${tenantId}::uuid
+        AND t."timestamp" >= ${desde}
+        AND t."timestamp" <= ${hasta}
+        AND t.is_duplicate = false
+      GROUP BY t.avl_user_id
+    `;
+
+    return {
+      ventanaHoras,
+      ultimoPorProveedor: new Map(filas.map((f) => [f.avl_user_id, f.ultimo_dato])),
+    };
   }
 
   async findOne(id: string, tenantId: string) {

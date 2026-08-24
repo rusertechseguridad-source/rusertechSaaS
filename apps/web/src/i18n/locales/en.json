@@ -444,11 +444,11 @@
     "hub_code": "HUB Code:",
     "vehicles": "Vehicles:",
     "last_data": "Last data:",
-    "never": "Never",
     "ingestion": "Ingestion",
     "edit": "Edit",
     "dictionary": "Dictionary",
-    "ingest_monitor": "Ingest Monitor"
+    "ingest_monitor": "Ingest Monitor",
+    "no_data_window": "No data in the last {{h}} h"
   },
   "carbon": {
     "title": "Carbon Footprint",
@@ -791,6 +791,51 @@
     "origin": {
       "movil": "Driver app",
       "hub": "GPS unit (HUB)"
+    }
+  },
+  "motor": {
+    "title": "Event Engine",
+    "subtitle": "Whether the engine is up to date, what is being evaluated and why.",
+    "refrescar": "Refresh",
+    "error": "Could not query the engine.",
+    "pendientes": "Pending",
+    "procesando": "Processing",
+    "fallidos": "Failed",
+    "atraso": "Lag",
+    "al_dia": "Up to date",
+    "atraso_segundos": "{{n}} s",
+    "atraso_minutos": "{{n}} min",
+    "atraso_horas": "{{n}} h",
+    "nota_atraso": "Lag is the age of the oldest unprocessed point. A one-off high value after a restart is normal; sustained growth means the engine cannot keep up.",
+    "nota_fallidos": "{{n}} points could not be evaluated after several attempts. They are kept on purpose, with their error, so they can be diagnosed.",
+    "monitoreados": "Vehicles under monitoring",
+    "sin_monitoreados": "No vehicle is being evaluated right now. Their points are still stored, they just do not trigger evaluations.",
+    "vehiculo": "Vehicle",
+    "motivo_titulo": "Why",
+    "desde": "Since",
+    "desactivar": "Turn monitoring off",
+    "desactivado_ok": "Monitoring turned off",
+    "desactivado_error": "Could not turn monitoring off",
+    "motivo": {
+      "estado": "The trip is in a monitorable state",
+      "manual": "An operator turned it on",
+      "red_seguridad": "Safety net: the trip is about to start"
+    },
+    "condiciones_catalogo": "Conditions the engine knows ({{n}})",
+    "condiciones_pendientes": "Awaiting configuration ({{n}})",
+    "nota_sin_app": "Those marked ·app need the driver app. The rest are detected from telemetry alone, so they also work for a customer with satellite AVL only.",
+    "nota_pendientes": "They are in the catalog but are not evaluated yet: there is nowhere to configure their parameter. They are shown here so it is known they are missing, rather than simply not existing."
+  },
+  "estadosViaje": {
+    "title": "State timeline",
+    "vacio": "No state changes recorded yet. Trips that predate the event engine have no history: that is not a failure, nobody was recording it.",
+    "origen": {
+      "geocerca": "Geofence",
+      "operador": "Operator",
+      "red_seguridad": "Safety net",
+      "api_movil": "Driver app",
+      "motor": "Engine",
+      "migracion": "Migration"
     }
   }
 }

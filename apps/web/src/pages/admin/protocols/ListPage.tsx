@@ -7,6 +7,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import type { OperationalProtocol } from './types';
 import { useToastStore } from '../../../store/toastStore';
 import { RequirePermission } from '../../../components/RequirePermission';
+import { useMotorCatalogos } from '../../../hooks/useMotorCatalogos';
 import i18n from '../../../i18n/config';
 
 import esLocales from './locales/es.json';
@@ -20,6 +21,16 @@ export const ProtocolsListPage: React.FC = () => {
   const { t } = useTranslation();
   const { addToast } = useToastStore();
   
+  /*
+    Los valores de los filtros salen del catálogo del motor, no de una lista
+    escrita a mano. Antes esta pantalla mandaba `en_curso` y `critico` mientras
+    la base tenía `in_progress` y `riesgo_critico`: TODOS los filtros devolvían
+    cero filas, y nadie lo notaba porque "sin resultados" parece una respuesta
+    legítima. Ahora los valores vienen de la misma tabla contra la que se
+    filtra, así que no pueden desincronizarse.
+  */
+  const { data: catalogos } = useMotorCatalogos();
+
   const [filters, setFilters] = useState<{ trip_status?: string; risk_level?: string; is_active?: boolean }>({});
   const { data, isLoading, error } = useProtocols(filters);
   const protocols = data?.data || [];
@@ -82,25 +93,35 @@ export const ProtocolsListPage: React.FC = () => {
     }
   };
 
+  /** Situaciones presentes en los datos. Sale de las filas, no de una lista fija. */
+  const situacionesDisponibles = React.useMemo(
+    () => Array.from(new Set(protocols.map((p) => p.trip_status).filter(Boolean))).sort(),
+    [protocols],
+  );
+
+  /*
+    El color del nivel de riesgo sale del catálogo (`motor_niveles_riesgo.color`),
+    no de un if por nombre. Cuando el cliente agregue un nivel propio, va a
+    tener su color sin que haya que tocar esta pantalla.
+  */
   const renderBadge = (enumValue: string, enumGroup: string) => {
-    const label = t(`protocols.enums.${enumGroup}.${enumValue}`) || enumValue;
-    let bgClass = 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-    
     if (enumGroup === 'risk_level') {
-      if (enumValue === 'bajo') bgClass = 'bg-green-500/20 text-green-400 border-green-500/30';
-      if (enumValue === 'medio') bgClass = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      if (enumValue === 'alto') bgClass = 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-      if (enumValue === 'critico') bgClass = 'bg-red-500/20 text-red-400 border-red-500/30';
-    }
-    
-    if (enumGroup === 'trip_status') {
-      if (enumValue === 'en_curso') bgClass = 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
-      if (enumValue === 'programado') bgClass = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      const nivel = (catalogos?.niveles_riesgo ?? []).find((n) => n.codigo === enumValue);
+      const color = nivel?.color ?? '#6B7280';
+      return (
+        <span
+          className="px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap"
+          style={{ background: `${color}22`, color, borderColor: `${color}55` }}
+          title={nivel?.descripcion ?? undefined}
+        >
+          {nivel?.nombre ?? enumValue}
+        </span>
+      );
     }
 
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${bgClass}`}>
-        {label}
+      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-500/20 text-gray-300 border-gray-500/30 whitespace-nowrap">
+        {enumValue}
       </span>
     );
   };
@@ -137,9 +158,9 @@ export const ProtocolsListPage: React.FC = () => {
             onChange={e => setFilters(prev => ({ ...prev, trip_status: e.target.value || undefined }))}
           >
             <option value="">{t('protocols.filters.tripStatus')}: {t('protocols.filters.all')}</option>
-            <option value="en_curso">{t('protocols.enums.trip_status.en_curso')}</option>
-            <option value="programado">{t('protocols.enums.trip_status.programado')}</option>
-            <option value="finalizado">{t('protocols.enums.trip_status.finalizado')}</option>
+            {situacionesDisponibles.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
 
           <select 
@@ -148,10 +169,9 @@ export const ProtocolsListPage: React.FC = () => {
             onChange={e => setFilters(prev => ({ ...prev, risk_level: e.target.value || undefined }))}
           >
             <option value="">{t('protocols.filters.riskLevel')}: {t('protocols.filters.all')}</option>
-            <option value="bajo">{t('protocols.enums.risk_level.bajo')}</option>
-            <option value="medio">{t('protocols.enums.risk_level.medio')}</option>
-            <option value="alto">{t('protocols.enums.risk_level.alto')}</option>
-            <option value="critico">{t('protocols.enums.risk_level.critico')}</option>
+            {(catalogos?.niveles_riesgo ?? []).map((n) => (
+              <option key={n.codigo} value={n.codigo}>{n.nombre}</option>
+            ))}
           </select>
 
           <select 

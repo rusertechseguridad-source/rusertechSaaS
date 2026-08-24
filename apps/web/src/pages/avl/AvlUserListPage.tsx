@@ -34,7 +34,9 @@ export const AvlUserListPage: React.FC = () => {
       user.description || '',
       user.user_avl_code,
       user._count?.vehicles || 0,
-      user.last_data_at ? new Date(user.last_data_at).toLocaleString() : t('avl.never'),
+      user.ultimo_dato
+        ? new Date(user.ultimo_dato).toLocaleString()
+        : t('avl.no_data_window', { h: user.ventana_horas ?? 24 }),
       user.is_active ? t('avl.active') : t('avl.inactive')
     ]);
     exportToCsv('ProveedoresGPS', headers, rows);
@@ -112,9 +114,26 @@ export const AvlUserListPage: React.FC = () => {
                     <span>{t('avl.vehicles')}</span>
                     <span className="font-medium text-white">{user._count?.vehicles || 0}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t('avl.last_data')}</span>
-                    <span className="text-white">{user.last_data_at ? new Date(user.last_data_at).toLocaleString() : t('avl.never')}</span>
+                  {/*
+                    "Nunca" era una afirmación falsa: salía de `last_data_at`,
+                    que sólo escribe el ingest de NestJS, así que los
+                    proveedores que reciben datos de la app móvil figuraban sin
+                    datos aunque la base tuviera decenas de puntos por día.
+                    Ahora el valor lo calcula el backend contra `telemetry`, y
+                    el estado vacío dice cuál fue la ventana consultada en lugar
+                    de afirmar algo sobre toda la historia.
+                  */}
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0">{t('avl.last_data')}</span>
+                    <span className="text-white text-right">
+                      {user.ultimo_dato
+                        ? new Date(user.ultimo_dato).toLocaleString()
+                        : (
+                          <span className="text-textMuted">
+                            {t('avl.no_data_window', { h: user.ventana_horas ?? 24 })}
+                          </span>
+                        )}
+                    </span>
                   </div>
                 </div>
               </div>

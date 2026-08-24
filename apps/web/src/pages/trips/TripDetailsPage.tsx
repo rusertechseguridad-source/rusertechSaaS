@@ -10,6 +10,7 @@ import { LinkVehicleModal } from './LinkVehicleModal';
 import { exportToCsv } from '../../utils/export';
 import { VehicleCard } from '../../components/map/VehicleCard';
 import { PosicionActualCard } from '../../components/monitoring/PosicionActualCard';
+import { LineaDeTiempoEstados } from '../../components/monitoring/LineaDeTiempoEstados';
 import type { LivePosition } from '../../types/monitoring';
 import { FRESCURA_COLORS } from '../../constants/freshness';
 import maplibregl from 'maplibre-gl';
@@ -55,6 +56,8 @@ export const TripDetailsPage: React.FC = () => {
    */
   const [posicionVehiculo, setPosicionVehiculo] = useState<LivePosition | null>(null);
   const [cargandoPosicion, setCargandoPosicion] = useState(false);
+  /** Ventana que usó el backend, para redactar el estado vacío con precisión. */
+  const [ventanaPosicionHoras, setVentanaPosicionHoras] = useState<number | undefined>();
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -126,6 +129,9 @@ export const TripDetailsPage: React.FC = () => {
       }
       const data = await res.json();
       setPosicionVehiculo((data?.lastPosition as LivePosition) ?? null);
+      if (typeof data?.lastPositionWindowHours === 'number') {
+        setVentanaPosicionHoras(data.lastPositionWindowHours);
+      }
     } catch (e) {
       // No se vacía la posición ante un error de red: se conserva la última
       // conocida en lugar de mostrar "sin datos", que sería una afirmación
@@ -726,7 +732,15 @@ export const TripDetailsPage: React.FC = () => {
             posicion={posicionVehiculo}
             cargando={cargandoPosicion && !posicionVehiculo}
             tieneVehiculo={Boolean((trip as any)?.vehicle?.id ?? (trip as any)?.vehicle_id)}
+            ventanaHoras={ventanaPosicionHoras}
           />
+
+          {/*
+            Por qué el viaje está en el estado en el que está. Va junto a la
+            posición actual porque son las dos preguntas que trae al operador
+            a esta pantalla.
+          */}
+          <LineaDeTiempoEstados tripId={trip?.id} />
 
           {weather && (
             <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0">
