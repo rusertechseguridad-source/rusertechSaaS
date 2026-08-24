@@ -8,6 +8,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
+import { MonitoringModule } from './common/monitoring/monitoring.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
@@ -51,6 +52,7 @@ import { SecurityKeysModule } from './security-keys/security-keys.module';
     }),
     PrismaModule,
     RedisModule,
+    MonitoringModule,
     AuthModule,
     UsersModule,
     TelemetryModule,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, Download } from 'lucide-react';
+import { Radio, Download, Activity } from 'lucide-react';
 import { useAvlStore } from '../../store/avlStore';
 import { AvlUserForm } from './AvlUserForm';
 import { RequirePermission } from '../../components/RequirePermission';
@@ -57,6 +57,18 @@ export const AvlUserListPage: React.FC = () => {
           <p className="text-textMuted mt-2">{t('avl.subtitle')}</p>
         </div>
         <div className="flex items-center gap-4">
+          {/*
+            Acceso al monitor de ingesta desde su módulo natural. No se agregó
+            una entrada propia en la navegación lateral para no reorganizarla:
+            si más adelante se decide subirla, el destino ya existe.
+          */}
+          <Link
+            to="/avl/monitor"
+            className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-2 text-sm rounded-lg border border-borderDefault transition-colors"
+          >
+            <Activity size={16} className="text-accentGreen" />
+            {t('avl.ingest_monitor')}
+          </Link>
           <button 
             onClick={handleExport}
             className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-2 text-sm rounded-lg border border-borderDefault transition-colors"

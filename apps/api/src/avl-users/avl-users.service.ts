@@ -2,9 +2,19 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { RedisService } from '../common/redis/redis.service';
+import { TOLERANCIA_RELOJ_MINUTOS } from '../common/config/live-positions';
 import { v4 as uuidv4 } from 'uuid';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
+
+/**
+ * Cuánto hacia atrás se buscan códigos sin diccionario.
+ *
+ * Es más ancha que la ventana del mapa a propósito: un código raro que llegó
+ * anteayer sigue siendo un código que hay que mapear, aunque el vehículo ya no
+ * esté en pantalla. El techo lo sigue imponiendo el particionado mensual.
+ */
+const VENTANA_CODIGOS_DESCONOCIDOS_HORAS = 168;
 
 @Injectable()
 export class AvlUsersService {
@@ -18,7 +28,16 @@ export class AvlUsersService {
    * `regenerateApiKey` sobre un avl_user ajeno cortaría la ingesta GPS de otro
    * cliente.
    */
-  /** Quita un código del registro auxiliar de "desconocidos" (sólo en Redis). */
+  /**
+   * Quita un código del registro auxiliar de "desconocidos" en Redis.
+   *
+   * ⚠️ Ese set YA NO es la fuente de los códigos desconocidos: desde esta tanda
+   * `getUnknownCodes` los calcula contra `telemetry` y `avl_event_dictionary`.
+   * El set lo sigue escribiendo el ingest de NestJS, así que se mantiene la
+   * limpieza para no dejarlo creciendo con códigos ya mapeados. No se eliminó
+   * la pieza porque el ingest todavía la escribe: sacarla es una decisión
+   * aparte, que corresponde a la tanda que revise el ingest.
+   */
   private async olvidarCodigoDesconocido(avlUserId: string, rawCode: string): Promise<void> {
     if (!this.redis.isConfigured()) return;
     try {
@@ -150,17 +169,54 @@ export class AvlUsersService {
     });
   }
 
-  async getUnknownCodes(id: string, tenantId: string) {
+  /**
+   * Códigos que llegaron de este proveedor y no están en su diccionario.
+   *
+   * Se calcula contra `telemetry` y `avl_event_dictionary`. Antes salía de un
+   * set en Redis (`avl:unknown:{id}`) que escribía el ingest: ese registro se
+   * pierde cuando se vacía la caché, y en las instalaciones sin Redis —la
+   * actual incluida— la pantalla mostraba siempre cero códigos desconocidos,
+   * que es peor que no mostrar nada porque afirma algo falso.
+   *
+   * ⚠️ Rango CERRADO, igual que el resto de las consultas sobre `telemetry`:
+   * sin el extremo superior Postgres no puede podar las particiones futuras ni
+   * la `default`.
+   *
+   * ⚠️ EXISTS y no un JOIN contra el diccionario: su clave única es
+   * (avl_user_id, category, raw_code), así que un mismo código puede tener una
+   * fila por categoría y el JOIN multiplicaría el resultado.
+   */
+  async getUnknownCodes(id: string, tenantId: string): Promise<string[]> {
     await this.assertAvlUserDelTenant(id, tenantId);
-    // Sin Redis no hay registro de códigos desconocidos: se devuelve vacío en
-    // lugar de romper la pantalla del diccionario.
-    if (!this.redis.isConfigured()) return [];
-    try {
-      return await this.redis.getClient().smembers(`avl:unknown:${id}`);
-    } catch (error) {
-      this.logger.warn(`No se pudieron leer los códigos desconocidos: ${(error as Error).message}`);
-      return [];
-    }
+
+    const ahora = Date.now();
+    const desde = new Date(ahora - VENTANA_CODIGOS_DESCONOCIDOS_HORAS * 60 * 60 * 1000);
+    const hasta = new Date(ahora + TOLERANCIA_RELOJ_MINUTOS * 60 * 1000);
+
+    const filas: { provider_code: string }[] = await this.prisma.$queryRaw<{ provider_code: string }[]>`
+      SELECT t.provider_code
+      FROM telemetry t
+      WHERE t.tenant_id = ${tenantId}::uuid
+        AND t.avl_user_id = ${id}::uuid
+        AND t."timestamp" >= ${desde}
+        AND t."timestamp" <= ${hasta}
+        AND t.is_duplicate = false
+        AND t.provider_code IS NOT NULL
+        -- Los códigos de la app del conductor no se esperan en el diccionario
+        -- del proveedor GPS: marcarlos como "desconocidos" sería ruido.
+        AND NOT jsonb_exists(t.raw_payload, 'MobileCode')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM avl_event_dictionary d
+          WHERE d.avl_user_id = t.avl_user_id
+            AND d.raw_code = t.provider_code
+            AND d.is_active = true
+        )
+      GROUP BY t.provider_code
+      ORDER BY COUNT(*) DESC
+    `;
+
+    return filas.map((f) => f.provider_code);
   }
 
   async exportDictionary(id: string, tenantId: string, res: Response) {

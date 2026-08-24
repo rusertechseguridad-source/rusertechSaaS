@@ -28,7 +28,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
         <div className="flex justify-between items-center p-5 border-b border-[#2D3B6A]">
           <div className="flex items-center gap-3 text-red-400">
             <AlertTriangle className="w-5 h-5" />
-            <h2 className="text-lg font-semibold tracking-wide">{t('deleteModal.title')}</h2>
+            <h2 className="text-lg font-semibold tracking-wide">{t('protocols.deleteModal.title')}</h2>
           </div>
           <button 
             onClick={onClose}
@@ -41,7 +41,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 
         <div className="p-5 text-gray-300">
           <p>
-            {t('deleteModal.message').replace('{{name}}', protocol.name)}
+            {t('protocols.deleteModal.message').replace('{{name}}', protocol.name)}
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             disabled={isDeleting}
             className="px-4 py-2 bg-[#2D3B6A] hover:bg-[#3A4C8A] text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
           >
-            {t('deleteModal.cancel')}
+            {t('protocols.deleteModal.cancel')}
           </button>
           <button
             onClick={onConfirm}
@@ -64,7 +64,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
                 Eliminando...
               </>
             ) : (
-              t('deleteModal.confirm')
+              t('protocols.deleteModal.confirm')
             )}
           </button>
         </div>

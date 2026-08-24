@@ -1,5 +1,9 @@
 import { Controller, Get, Put, Patch, Post, Delete, Body, Param, UseGuards, Request, Req, ForbiddenException } from '@nestjs/common';
 import { SettingsService } from './settings.service';
+import {
+  MonitoringConfigService,
+  type UmbralesMonitoreo,
+} from '../common/monitoring/monitoring-config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -7,7 +11,10 @@ import { Roles } from '../common/decorators/roles.decorator';
 @Controller('api/v1/settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly monitoringConfig: MonitoringConfigService,
+  ) {}
 
   @Get('profile')
   getProfile(@Request() req: any) {
@@ -90,6 +97,34 @@ export class SettingsController {
   async updateCarbonConfig(@Req() req: Request, @Body() body: any) {
     const { tenantId } = (req as any).user;
     return this.settingsService.updateCarbonConfig(tenantId, body);
+  }
+
+  // --- MONITOREO (umbrales de frescura y ventana del mapa) ---
+
+  /**
+   * Umbrales efectivos del tenant. Lo puede leer cualquier usuario autenticado:
+   * el mapa necesita estos valores para explicar qué significa cada color, y
+   * ocultárselos a un operador convertiría la leyenda en un misterio.
+   */
+  @Get('monitoring')
+  @UseGuards(JwtAuthGuard)
+  async getMonitoringConfig(@Req() req: Request) {
+    const { tenantId } = (req as any).user;
+    return this.monitoringConfig.obtenerUmbrales(tenantId);
+  }
+
+  /**
+   * Cambia los umbrales del tenant. Escribir sí es privilegiado: mover la
+   * ventana o los umbrales cambia lo que ve toda la operación.
+   *
+   * El servicio acota los valores en lugar de rechazarlos, así que la respuesta
+   * devuelve lo que quedó realmente guardado — que puede no ser lo enviado.
+   */
+  @Put('monitoring')
+  @Roles('account_owner', 'manager', 'rusertech_admin')
+  async updateMonitoringConfig(@Req() req: Request, @Body() body: Partial<UmbralesMonitoreo>) {
+    const { tenantId } = (req as any).user;
+    return this.monitoringConfig.guardarUmbrales(tenantId, body);
   }
 
   // --- PARAMETERS ---

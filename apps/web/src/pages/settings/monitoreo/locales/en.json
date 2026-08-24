@@ -1,0 +1,40 @@
+{
+  "title": "Monitoring & Freshness",
+  "subtitle": "Defines when a vehicle counts as reporting and how far back the map looks. These values drive the colours and counters the whole operation sees.",
+  "save": "Save Changes",
+  "fields": {
+    "en_vivo": {
+      "label": "\"Live\" threshold (minutes)",
+      "tooltip": "A vehicle whose last point is newer than this shows green and pulsing. Lowering it makes the map stricter."
+    },
+    "inactivo": {
+      "label": "\"Idle\" threshold (minutes)",
+      "tooltip": "Between the \"Live\" threshold and this value the vehicle shows amber. Past this value it turns grey as \"No signal\"."
+    },
+    "ventana": {
+      "label": "Map window (hours)",
+      "tooltip": "How far back the map looks for each vehicle's last position. A vehicle with no points in this period does not appear on the map."
+    }
+  },
+  "preview": {
+    "title": "Resulting scale",
+    "live": "Live: up to {{n}} min",
+    "idle": "Idle: from {{from}} to {{to}} min",
+    "offline": "No signal: over {{n}} min",
+    "window": "Off the map: no points in {{h}} h"
+  },
+  "notes": {
+    "window_cap": "The cap is 168 h (7 days). It is not arbitrary: the telemetry table is partitioned by month and a longer window forces the database to read whole partitions on every map query.",
+    "order": "The \"Idle\" threshold must be greater than the \"Live\" one, otherwise no vehicle would ever reach that state.",
+    "adjusted": "Values were adjusted to the allowed limits."
+  },
+  "validation": {
+    "range": "Must be between {{min}} and {{max}}",
+    "order": "Must be greater than the \"Live\" threshold ({{n}})"
+  },
+  "toasts": {
+    "success": "Monitoring settings updated",
+    "error": "Could not save the monitoring settings"
+  },
+  "error_load": "Could not load the monitoring settings. Please try again later."
+}

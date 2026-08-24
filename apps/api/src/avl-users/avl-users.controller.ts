@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Patch, Body, Param, UseGuards, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Patch, Body, Param, Query, UseGuards, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { AvlUsersService } from './avl-users.service';
+import { AvlMonitorService } from './avl-monitor.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -10,11 +11,35 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('api/v1/avl-users')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AvlUsersController {
-  constructor(private readonly service: AvlUsersService) {}
+  constructor(
+    private readonly service: AvlUsersService,
+    private readonly monitor: AvlMonitorService,
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: any) {
     return this.service.findAll(user.tenantId);
+  }
+
+  /**
+   * Estado de ingesta de todos los proveedores GPS.
+   *
+   * ⚠️ Declarado ANTES de `@Get(':id')` a propósito: Nest resuelve las rutas en
+   * orden de declaración y, al revés, `monitor` entraría como si fuera un id.
+   */
+  @Get('monitor')
+  getMonitor(@CurrentUser() user: any, @Query('horas') horas?: string) {
+    return this.monitor.obtenerResumen(user.tenantId, horas ? Number(horas) : undefined);
+  }
+
+  /** Detalle por vehículo de un proveedor: incluye los que no reportan. */
+  @Get('monitor/:id/vehicles')
+  getMonitorVehicles(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Query('horas') horas?: string,
+  ) {
+    return this.monitor.obtenerVehiculos(id, user.tenantId, horas ? Number(horas) : undefined);
   }
 
   @Get(':id')

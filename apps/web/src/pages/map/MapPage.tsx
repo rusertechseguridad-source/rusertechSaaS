@@ -3,6 +3,15 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Map as MapIcon, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { Frescura } from '../../constants/freshness';
+import {
+  COLOR_ANILLO_VIAJE,
+  COLOR_SIN_DATOS,
+  FRESCURA_COLORS,
+} from '../../constants/freshness';
+import { etiquetaFrescura, formatearAntiguedad } from '../../utils/freshness';
+import type { LivePosition, LiveResponse, MonitoringSummary, MonitoringThresholds } from '../../types/monitoring';
+import { SUMMARY_VACIO, THRESHOLDS_POR_DEFECTO } from '../../types/monitoring';
 
 /**
  * MAPA GLOBAL DE FLOTA.
@@ -16,35 +25,24 @@ import { useTranslation } from 'react-i18next';
  *
  * Ahora la posición del marcador sale de la telemetría
  * (`GET /api/v1/vehicles/live`, que lee de Postgres). Los viajes se siguen
- * consultando, pero sólo como **contexto**: indican qué vehículo tiene un
- * viaje declarado en curso y aportan datos al popup.
+ * consultando, pero sólo como **contexto**: aportan nombre, código y conductor
+ * al popup. Quién tiene viaje en curso lo informa el backend en cada posición
+ * (`con_viaje_activo`), que es la misma consulta que decide el alcance.
+ *
+ * ALCANCE: el backend ya devuelve sólo lo que corresponde al monitoreo activo
+ * —vehículos con la app del conductor encendida en la ventana, o con viaje
+ * declarado EN_CURSO—. El filtro vive en la consulta y no acá: traer
+ * posiciones para descartarlas es trabajo que crece con la flota.
+ *
+ * El resumen también llega del backend. `sin_datos` (viaje en curso sin ningún
+ * punto) no se puede calcular en el frontend: son justamente los vehículos que
+ * NO están en `positions`, y restarlos contra el listado completo de la flota
+ * inflaba el número de forma permanente.
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos
 // ─────────────────────────────────────────────────────────────────────────────
-
-type Frescura = 'en_vivo' | 'inactivo' | 'sin_senal';
-
-/** Respuesta de GET /api/v1/vehicles/live */
-interface LivePosition {
-  vehicle_id: string;
-  plate: string | null;
-  alias: string | null;
-  timestamp: string;
-  latitude: number;
-  longitude: number;
-  speed_kmh: number | null;
-  heading_degrees: number | null;
-  ignition: boolean | null;
-  temperature_c: number | null;
-  humidity_pct: number | null;
-  event_type: string | null;
-  provider_code: string | null;
-  age_seconds: number;
-  freshness: Frescura;
-  source: 'postgres' | 'redis';
-}
 
 /** Respuesta de GET /api/v1/vehicles */
 interface VehicleRow {
@@ -71,28 +69,9 @@ interface TripContext {
 // Frescura: colores y etiquetas
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * El color del marcador responde "¿está reportando?", que es la señal de
- * seguridad que le importa al operador. El modo operativo (viaje declarado vs
- * Tracking Libre) se distingue con un anillo, sin competir por el color.
- */
-const FRESCURA_COLORS: Record<Frescura, string> = {
-  en_vivo: '#2BF4B6',
-  inactivo: '#F59E0B',
-  sin_senal: '#6B7280',
-};
-
-/** Color de los vehículos que no reportan hace más de la ventana (no van al mapa). */
-const COLOR_SIN_DATOS = '#4B5563';
-
-/** Anillo que marca "este vehículo tiene un viaje declarado en curso". */
-const COLOR_ANILLO_VIAJE = '#2AB3FF';
-
-function formatearAntiguedad(segundos: number, t: any): string {
-  if (segundos < 60) return t('map.ago_seconds', { n: segundos });
-  if (segundos < 3600) return t('map.ago_minutes', { n: Math.floor(segundos / 60) });
-  return t('map.ago_hours', { n: Math.floor(segundos / 3600) });
-}
+// Los colores y el formateo de antigüedad viven en `constants/freshness` y
+// `utils/freshness`: el detalle de viaje y el monitor de ingesta muestran la
+// misma señal y tienen que hablar el mismo idioma visual.
 
 /**
  * Crea el elemento del marcador.
@@ -141,12 +120,7 @@ function buildPopupHTML(
   t: any,
 ): string {
   const color = FRESCURA_COLORS[pos.freshness];
-  const etiquetaFrescura =
-    pos.freshness === 'en_vivo'
-      ? t('map.freshness_live')
-      : pos.freshness === 'inactivo'
-        ? t('map.freshness_idle')
-        : t('map.freshness_offline');
+  const etiqueta = etiquetaFrescura(pos.freshness, t);
 
   const patente = pos.plate ?? vehiculo?.plate ?? 'N/A';
   const alias = pos.alias ?? vehiculo?.alias ?? '';
@@ -190,7 +164,7 @@ function buildPopupHTML(
     '</div>',
     '<span style="flex-shrink:0;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;',
     `background:${color}22;color:${color};border:1px solid ${color}44;`,
-    `text-transform:uppercase;letter-spacing:0.05em;">${etiquetaFrescura}</span></div>`,
+    `text-transform:uppercase;letter-spacing:0.05em;">${etiqueta}</span></div>`,
 
     // Antigüedad del dato: lo primero que hay que saber de una posición
     `<div style="font-size:10px;color:#94A3B8;margin-bottom:8px;">🕑 ${t('map.last_report')}: `,
@@ -220,6 +194,8 @@ export const MapPage: React.FC = () => {
   const markersRef = useRef<maplibregl.Marker[]>([]);
 
   const [positions, setPositions] = useState<LivePosition[]>([]);
+  const [summary, setSummary] = useState<MonitoringSummary>(SUMMARY_VACIO);
+  const [thresholds, setThresholds] = useState<MonitoringThresholds>(THRESHOLDS_POR_DEFECTO);
   const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [trips, setTrips] = useState<TripContext[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,16 +209,18 @@ export const MapPage: React.FC = () => {
 
   /**
    * Tres consultas con propósitos distintos:
-   *  · /vehicles/live → posición del marcador (telemetría, fuente de verdad)
-   *  · /vehicles      → flota completa: permite contar los que NO reportan y
-   *                     poblar los filtros de transportista y proveedor GPS
-   *  · /trips         → contexto: qué vehículo tiene viaje declarado en curso
+   *  · /vehicles/live → posiciones en alcance + resumen + umbrales (fuente de
+   *                     verdad; ya viene filtrado y contado por el backend)
+   *  · /vehicles      → catálogo de la flota, sólo para poblar los filtros de
+   *                     transportista y proveedor GPS y completar el popup
+   *  · /trips         → contexto del viaje declarado (nombre, código, conductor)
    */
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem('rusertech_token');
     const headers = { Authorization: `Bearer ${token}` };
 
-    const pedir = async <T,>(ruta: string): Promise<T[]> => {
+    /** Consulta que espera un arreglo. Devuelve `[]` ante cualquier fallo. */
+    const pedirLista = async <T,>(ruta: string): Promise<T[]> => {
       try {
         const res = await fetch(`${API_BASE}${ruta}`, { headers });
         if (!res.ok) {
@@ -259,13 +237,41 @@ export const MapPage: React.FC = () => {
       }
     };
 
-    const [pos, vehs, trps] = await Promise.all([
-      pedir<LivePosition>('/vehicles/live'),
-      pedir<VehicleRow>('/vehicles'),
-      pedir<TripContext>('/trips'),
+    /**
+     * Posiciones en vivo. Devuelve `null` si no se pudo consultar, para
+     * distinguir "no hay nada que mostrar" de "no pudimos preguntar": ante un
+     * fallo se conserva la última foto en pantalla en lugar de vaciar el mapa.
+     */
+    const pedirEnVivo = async (): Promise<LiveResponse | null> => {
+      try {
+        const res = await fetch(`${API_BASE}/vehicles/live`, { headers });
+        if (!res.ok) {
+          console.warn(`[MapPage] /vehicles/live respondió ${res.status}`);
+          return null;
+        }
+        const data = await res.json();
+        if (!data || !Array.isArray(data.positions)) {
+          console.warn('[MapPage] /vehicles/live devolvió un formato inesperado');
+          return null;
+        }
+        return data as LiveResponse;
+      } catch (e) {
+        console.error('[MapPage] Error consultando /vehicles/live:', e);
+        return null;
+      }
+    };
+
+    const [live, vehs, trps] = await Promise.all([
+      pedirEnVivo(),
+      pedirLista<VehicleRow>('/vehicles'),
+      pedirLista<TripContext>('/trips'),
     ]);
 
-    setPositions(pos);
+    if (live) {
+      setPositions(live.positions);
+      setSummary(live.summary ?? SUMMARY_VACIO);
+      if (live.thresholds) setThresholds(live.thresholds);
+    }
     setVehicles(vehs);
     setTrips(trps);
     setLoading(false);
@@ -347,7 +353,10 @@ export const MapPage: React.FC = () => {
       const veh = vehiclesById.get(pos.vehicle_id);
       const viaje = viajeActivoPorVehiculo.get(pos.vehicle_id);
 
-      const el = createMarkerEl(pos.freshness, Boolean(viaje));
+      // El anillo sale de `con_viaje_activo`, no de la lista de viajes: es la
+      // misma consulta que decidió el alcance, así que marcador y filtro nunca
+      // se contradicen aunque /trips llegue incompleto o falle.
+      const el = createMarkerEl(pos.freshness, pos.con_viaje_activo);
       const popup = new maplibregl.Popup({
         offset: 14,
         closeButton: true,
@@ -364,23 +373,11 @@ export const MapPage: React.FC = () => {
   }, [filtered, mapReady, vehiclesById, viajeActivoPorVehiculo, t]);
 
   // ── Resumen de flota ───────────────────────────────────────────────────────
-  // Cuenta VEHÍCULOS por frescura, más la categoría que antes no existía: los
-  // que no reportan hace más de la ventana y por eso no están en el mapa. Es el
-  // dato operativo más importante del panel ("3 de 15 no reportan").
-
-  const resumen = useMemo(() => {
-    const porFrescura = { en_vivo: 0, inactivo: 0, sin_senal: 0 };
-    positions.forEach((p) => {
-      porFrescura[p.freshness] = (porFrescura[p.freshness] ?? 0) + 1;
-    });
-    const conPosicion = positions.length;
-    // La flota de referencia excluye los vehículos dados de baja: no reportan
-    // porque están fuera de servicio, no porque haya un problema.
-    const totalFlota = vehicles.filter((v) => v.status !== 'inactive').length;
-    // Si el listado de vehículos falló, no se inventa un negativo.
-    const sinDatos = Math.max(0, totalFlota - conPosicion);
-    return { ...porFrescura, conPosicion, totalFlota, sinDatos };
-  }, [positions, vehicles]);
+  // Ya no se calcula acá. Antes se derivaba restando `positions` contra el
+  // listado completo de vehículos, y esa cuenta dejó de tener sentido cuando el
+  // mapa pasó a mostrar sólo la flota en monitoreo activo: los vehículos fuera
+  // de alcance caían en "sin datos" para siempre. Ahora el backend cuenta con
+  // el mismo criterio con el que filtra.
 
   const filterOpts = [
     { value: '', label: t('map.freshness_all'), color: '#94A3B8' },
@@ -389,12 +386,40 @@ export const MapPage: React.FC = () => {
     { value: 'sin_senal', label: t('map.freshness_offline'), color: FRESCURA_COLORS.sin_senal },
   ];
 
+  // Cada fila declara su umbral: sin eso, "Inactivos" es una palabra sin
+  // unidad, y peor todavía cuando el valor lo puede cambiar el cliente.
   const legendRows = [
-    { label: t('map.freshness_live'), color: FRESCURA_COLORS.en_vivo, glow: true, count: resumen.en_vivo, enMapa: true },
-    { label: t('map.freshness_idle'), color: FRESCURA_COLORS.inactivo, glow: false, count: resumen.inactivo, enMapa: true },
-    { label: t('map.freshness_offline'), color: FRESCURA_COLORS.sin_senal, glow: false, count: resumen.sin_senal, enMapa: true },
-    { label: t('map.freshness_nodata'), color: COLOR_SIN_DATOS, glow: false, count: resumen.sinDatos, enMapa: false },
+    {
+      label: t('map.freshness_live'), color: FRESCURA_COLORS.en_vivo, glow: true,
+      count: summary.en_vivo, enMapa: true,
+      detalle: t('map.threshold_upto', { n: thresholds.umbral_en_vivo_minutos }),
+    },
+    {
+      label: t('map.freshness_idle'), color: FRESCURA_COLORS.inactivo, glow: false,
+      count: summary.inactivo, enMapa: true,
+      detalle: t('map.threshold_upto', { n: thresholds.umbral_inactivo_minutos }),
+    },
+    {
+      label: t('map.freshness_offline'), color: FRESCURA_COLORS.sin_senal, glow: false,
+      count: summary.sin_senal, enMapa: true,
+      detalle: t('map.threshold_over', { n: thresholds.umbral_inactivo_minutos }),
+    },
+    {
+      label: t('map.freshness_nodata'), color: COLOR_SIN_DATOS, glow: false,
+      count: summary.sin_datos, enMapa: false,
+      detalle: t('map.nodata_detail', { h: thresholds.ventana_mapa_horas }),
+    },
   ];
+
+  /**
+   * Tamaño de la flota activa. Ya no define el resumen —el alcance del mapa lo
+   * decide el backend—, pero sirve como referencia: deja ver cuántos vehículos
+   * existen contra cuántos se están monitoreando ahora.
+   */
+  const totalFlota = useMemo(
+    () => vehicles.filter((v) => v.status !== 'inactive').length,
+    [vehicles],
+  );
 
   const uniqueCarriers = useMemo(
     () => Array.from(new Map(vehicles.map((v) => v.carrier).filter(Boolean).map((c: any) => [c.id, c])).values()),
@@ -514,12 +539,14 @@ export const MapPage: React.FC = () => {
 
           <div className="flex flex-col gap-2 mb-3">
             {legendRows.map((row) => (
-              <div key={row.label} className="flex items-center justify-between text-[11px]">
-                <div className="flex items-center gap-2">
+              <div key={row.label} className="flex items-start justify-between text-[11px] gap-2">
+                <div className="flex items-start gap-2 min-w-0">
                   <span
                     style={{
                       width: '10px',
                       height: '10px',
+                      marginTop: '3px',
+                      flexShrink: 0,
                       borderRadius: '50%',
                       background: row.color,
                       boxShadow: row.glow ? `0 0 6px ${row.color}` : undefined,
@@ -529,27 +556,41 @@ export const MapPage: React.FC = () => {
                       opacity: row.enMapa ? 1 : 0.7,
                     }}
                   />
-                  <span className="text-textSecondary">{row.label}</span>
+                  <span className="min-w-0">
+                    <span className="text-textSecondary block truncate">{row.label}</span>
+                    <span className="text-[9px] text-textMuted block">{row.detalle}</span>
+                  </span>
                 </div>
-                <span style={{ color: row.color }} className="font-bold">{row.count}</span>
+                <span style={{ color: row.color }} className="font-bold flex-shrink-0">{row.count}</span>
               </div>
             ))}
           </div>
-
-          {resumen.sinDatos > 0 && (
-            <div className="text-[9px] text-textMuted mb-2 pl-4 -mt-1">
-              {t('map.not_on_map')}
-            </div>
-          )}
 
           <div
             className="text-center text-[11px] rounded-lg py-2 mb-2"
             style={{ background: 'rgba(43,244,182,0.08)', border: '1px solid rgba(43,244,182,0.15)' }}
           >
-            <span className="text-accentGreen font-bold text-sm">{resumen.conPosicion}</span>
+            <span className="text-accentGreen font-bold text-sm">{summary.con_posicion}</span>
             <span className="text-textMuted"> / </span>
-            <span className="text-white font-bold text-sm">{resumen.totalFlota}</span>
+            <span className="text-white font-bold text-sm">{summary.total_en_alcance}</span>
             <span className="text-textMuted"> {t('map.reporting_ratio')}</span>
+          </div>
+
+          {/*
+            El alcance se explica siempre, no sólo cuando falta alguien: un
+            operador que no encuentra un vehículo en el mapa tiene que poder
+            leer por qué no está, en lugar de concluir que el sistema falla.
+          */}
+          <div className="text-[9px] text-textMuted leading-relaxed mb-2">
+            {t('map.scope_note')}
+          </div>
+
+          {/*
+            Denominador honesto: cuántos vehículos tiene el cliente en total,
+            para que "8 / 8 reportando" no se confunda con "toda la flota".
+          */}
+          <div className="text-[9px] text-textMuted text-center mb-1">
+            {t('map.fleet_total_note', { n: totalFlota })}
           </div>
 
           <div className="text-[9px] text-textMuted text-center">

@@ -6,7 +6,8 @@ import { LivePositionsService } from './live-positions.service';
  * dónde está cada vehículo (vehicles, sensors), en lugar de que cada uno
  * resuelva la consulta por su cuenta.
  *
- * PrismaModule y RedisModule son @Global, así que no hace falta importarlos.
+ * PrismaModule, RedisModule y MonitoringModule son @Global, así que no hace
+ * falta importarlos.
  */
 @Module({
   providers: [LivePositionsService],

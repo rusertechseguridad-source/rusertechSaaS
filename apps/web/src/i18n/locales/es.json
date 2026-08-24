@@ -17,7 +17,9 @@
     "settings": "Configuración",
     "admin": "Administración",
     "logout": "Cerrar sesión",
-    "change_language": "Cambiar idioma / Change language"
+    "change_language": "Cambiar idioma / Change language",
+    "protocols": "Protocolos Operativos",
+    "securityKeys": "Claves de Seguridad"
   },
   "labels": {
     "alert_types": {
@@ -445,7 +447,8 @@
     "never": "Nunca",
     "ingestion": "Ingesta",
     "edit": "Editar",
-    "dictionary": "Diccionario"
+    "dictionary": "Diccionario",
+    "ingest_monitor": "Monitor de Ingesta"
   },
   "carbon": {
     "title": "Huella de Carbono",
@@ -584,10 +587,9 @@
     "freshness_live": "En vivo",
     "freshness_idle": "Inactivos",
     "freshness_offline": "Sin señal",
-    "freshness_nodata": "Sin datos >24h",
+    "freshness_nodata": "En viaje, sin datos",
     "freshness_all": "Toda la flota",
     "reporting_ratio": "reportando",
-    "not_on_map": "no aparecen en el mapa",
     "declared_trip": "Viaje declarado",
     "free_tracking": "Tracking Libre",
     "last_report": "Último reporte",
@@ -595,7 +597,15 @@
     "ago_minutes": "hace {{n}} min",
     "ago_hours": "hace {{n}} h",
     "no_position": "Sin posición reciente",
-    "vehicles_with_position": "vehículos con posición"
+    "vehicles_with_position": "vehículos con posición",
+    "dark_mode": "Oscuro",
+    "light_mode": "Claro",
+    "km": "km",
+    "threshold_upto": "hasta {{n}} min sin reportar",
+    "threshold_over": "más de {{n}} min sin reportar",
+    "nodata_detail": "viaje EN CURSO, sin puntos en {{h}} h",
+    "scope_note": "El mapa muestra los vehículos en monitoreo activo: con la app del conductor encendida, o con un viaje declarado EN CURSO.",
+    "fleet_total_note": "Flota activa: {{n}} vehículos"
   },
   "auth": {
     "login_title": "Iniciar Sesión",
@@ -660,7 +670,8 @@
     "params_empty": "No hay parámetros configurables disponibles.",
     "carbon_enable": "Activar cálculos de emisiones por consumo",
     "carbon_save": "Guardar Integración",
-    "users_invite_btn": "Enviar Invitación"
+    "users_invite_btn": "Enviar Invitación",
+    "tab_monitoring": "Monitoreo y Frescura"
   },
   "admin_params": {
     "title": "Parámetros Globales del Sistema",
@@ -740,5 +751,46 @@
     "form_dest": "Destino (Email, Teléfono, URL)",
     "form_events": "Eventos Suscritos",
     "form_desc": "Ej: Reportes E-Mail"
+  },
+  "vehicle": {
+    "callDriver": "Llamar Chofer",
+    "driverCalled": "Llamando...",
+    "callDriverSuccess": "Solicitud de contacto enviada al chofer."
+  },
+  "operations": {
+    "flows": {
+      "pronta_respuesta": {
+        "label": "Pronta Respuesta",
+        "tooltip": "Eventos de PÁNICO/SOS o solicitudes específicas del cliente."
+      },
+      "geocerca_repartos": {
+        "label": "Geocerca Repartos",
+        "tooltip": "Repartos con geocerca configurada. Útil para última milla."
+      },
+      "seguimiento_inteligente": {
+        "label": "Seguimiento Inteligente",
+        "tooltip": "Monitoreo adaptativo con RiskLevel reactivo. Operación estándar."
+      },
+      "interplanta": {
+        "label": "Interplanta",
+        "tooltip": "Viajes de planta a planta del cliente, generalmente larga distancia."
+      },
+      "estandar": {
+        "label": "Estándar",
+        "tooltip": "Operación sin categoría específica. Default."
+      }
+    }
+  },
+  "livePosition": {
+    "title": "Posición actual del vehículo",
+    "last_report": "Último reporte",
+    "coordinates": "Coordenadas",
+    "no_vehicle": "Este viaje todavía no tiene un vehículo asignado, así que no hay posición que seguir.",
+    "no_data": "El vehículo no reportó ninguna posición reciente.",
+    "no_data_window": "El vehículo no reportó ninguna posición en las últimas {{h}} h. Puede estar sin cobertura, con la app cerrada o con el equipo GPS apagado.",
+    "origin": {
+      "movil": "App del conductor",
+      "hub": "Equipo GPS (HUB)"
+    }
   }
 }

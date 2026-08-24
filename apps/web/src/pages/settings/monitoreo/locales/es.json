@@ -1,0 +1,40 @@
+{
+  "title": "Monitoreo y Frescura",
+  "subtitle": "Define cuándo un vehículo se considera reportando y cuánto hacia atrás mira el mapa. Estos valores cambian los colores y los contadores que ve toda la operación.",
+  "save": "Guardar Cambios",
+  "fields": {
+    "en_vivo": {
+      "label": "Umbral \"En vivo\" (minutos)",
+      "tooltip": "Un vehículo cuyo último punto es más reciente que este valor se muestra en verde y con pulso. Bajarlo hace el mapa más exigente."
+    },
+    "inactivo": {
+      "label": "Umbral \"Inactivo\" (minutos)",
+      "tooltip": "Entre el umbral \"En vivo\" y este valor, el vehículo se muestra en ámbar. Pasado este valor queda en gris como \"Sin señal\"."
+    },
+    "ventana": {
+      "label": "Ventana del mapa (horas)",
+      "tooltip": "Cuánto hacia atrás busca el mapa la última posición de cada vehículo. Un vehículo sin puntos en este período no aparece en el mapa."
+    }
+  },
+  "preview": {
+    "title": "Cómo queda la escala",
+    "live": "En vivo: hasta {{n}} min",
+    "idle": "Inactivo: de {{from}} a {{to}} min",
+    "offline": "Sin señal: más de {{n}} min",
+    "window": "Fuera del mapa: sin puntos en {{h}} h"
+  },
+  "notes": {
+    "window_cap": "El máximo es de 168 h (7 días). No es una restricción arbitraria: la tabla de telemetría está particionada por mes y una ventana más larga obliga a la base a leer particiones completas en cada consulta del mapa.",
+    "order": "El umbral \"Inactivo\" tiene que ser mayor que el de \"En vivo\": si no, ningún vehículo pasaría nunca por ese estado.",
+    "adjusted": "Los valores se ajustaron a los límites permitidos."
+  },
+  "validation": {
+    "range": "Debe estar entre {{min}} y {{max}}",
+    "order": "Tiene que ser mayor que el umbral \"En vivo\" ({{n}})"
+  },
+  "toasts": {
+    "success": "Configuración de monitoreo actualizada",
+    "error": "No se pudo guardar la configuración de monitoreo"
+  },
+  "error_load": "No se pudo cargar la configuración de monitoreo. Reintentá más tarde."
+}

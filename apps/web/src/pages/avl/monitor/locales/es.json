@@ -1,0 +1,67 @@
+{
+  "title": "Monitor de Ingesta AVL",
+  "subtitle": "Qué está entrando desde cada proveedor GPS, y qué tan reciente es.",
+  "window_label": "Ventana",
+  "window_hours": "{{n}} h",
+  "refresh": "Actualizar",
+  "auto_refresh": "Se actualiza solo cada 60 s",
+  "loading": "Consultando la ingesta...",
+  "error": "No se pudo consultar el monitor de ingesta.",
+  "empty": "Este cliente no tiene proveedores GPS cargados.",
+  "thresholds_note": "Los estados usan los umbrales del tenant: en vivo hasta {{live}} min, inactivo hasta {{idle}} min. Se cambian en Configuración → Monitoreo y Frescura.",
+  "estado": {
+    "en_vivo": "Recibiendo",
+    "inactivo": "Demorado",
+    "sin_senal": "Sin señal",
+    "sin_datos": "Sin datos en la ventana",
+    "inactivo_config": "Desactivado"
+  },
+  "columns": {
+    "provider": "Proveedor",
+    "state": "Estado",
+    "last_point": "Último dato",
+    "points": "Puntos",
+    "vehicles": "Vehículos",
+    "codes": "Códigos"
+  },
+  "cells": {
+    "never": "Sin datos",
+    "of_mobile": "{{n}} desde la app",
+    "duplicates": "{{n}} duplicados descartados",
+    "codes_total": "{{n}} códigos distintos",
+    "codes_unknown": "{{n}} sin diccionario",
+    "reporting": "{{n}} reportaron",
+    "assigned": "{{n}} asignados",
+    "mismatch": "Asignación inconsistente",
+    "mismatch_help": "Llegaron datos por este proveedor desde más vehículos de los que lo tienen asignado en su ficha. Revisá la asignación de proveedor GPS de los vehículos."
+  },
+  "codes": {
+    "title": "Códigos recibidos",
+    "recognized": "En diccionario",
+    "mobile": "App del conductor",
+    "unknown": "Sin diccionario",
+    "count": "{{n}} puntos",
+    "empty": "No llegaron códigos de evento en esta ventana.",
+    "unknown_help": "Un código sin diccionario entra igual a la base, pero la plataforma no sabe qué significa: no dispara alertas ni se traduce en pantalla. Cargalo en el diccionario del proveedor.",
+    "open_dictionary": "Abrir diccionario"
+  },
+  "vehicles": {
+    "title": "Detalle por vehículo",
+    "show": "Ver vehículos",
+    "hide": "Ocultar vehículos",
+    "loading": "Cargando vehículos...",
+    "error": "No se pudo cargar el detalle por vehículo.",
+    "empty": "Este proveedor no tiene vehículos asignados.",
+    "plate": "Patente",
+    "points": "Puntos",
+    "last_point": "Último dato",
+    "state": "Estado",
+    "no_data": "Sin datos"
+  },
+  "ago": {
+    "seconds": "hace {{n}} s",
+    "minutes": "hace {{n}} min",
+    "hours": "hace {{n}} h",
+    "days": "hace {{n}} d"
+  }
+}

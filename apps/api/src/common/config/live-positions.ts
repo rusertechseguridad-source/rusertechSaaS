@@ -33,13 +33,17 @@ export function getLivePositionsSource(): LivePositionsSource {
 /**
  * Ventana temporal de la consulta, en horas.
  *
- * ⚠️ No es cosmética: `telemetry` está particionada por mes. Sin filtro de
- * fecha, Postgres escanearía las 30 particiones existentes. Con el filtro poda
- * y va sólo a la del mes en curso.
+ * ⚠️ No es cosmética: `telemetry` está particionada por mes y la consulta usa
+ * un rango CERRADO para que Postgres pode particiones al planificar.
+ *
+ * La ventana efectiva la define ahora `tenant_monitoring_config`
+ * (`ventana_mapa_horas`), acotada a 168 h. Esta variable de entorno queda
+ * únicamente como valor por defecto de la instalación, para los tenants que no
+ * tengan fila propia.
  */
 export function getLivePositionsWindowHours(): number {
   const crudo = Number(process.env.LIVE_POSITIONS_WINDOW_HOURS);
-  if (!Number.isFinite(crudo) || crudo <= 0 || crudo > 720) return 24;
+  if (!Number.isFinite(crudo) || crudo <= 0 || crudo > 168) return 24;
   return Math.floor(crudo);
 }
 
@@ -53,22 +57,25 @@ export function getLivePositionsWindowHours(): number {
  */
 export const TOLERANCIA_RELOJ_MINUTOS = 5;
 
-/**
- * Umbrales de frescura, en segundos. Un punto de hace 20 horas entra en la
- * ventana pero no es "en vivo": la UI necesita poder distinguir un vehículo
- * que está reportando de uno que dejó de hacerlo.
- *
- * La app envía cada 15-30 s en movimiento y un heartbeat cada pocos minutos,
- * así que 5 minutos sin datos ya es señal de algo.
- */
-export const FRESCURA_EN_VIVO_SEGUNDOS = 5 * 60;
-export const FRESCURA_INACTIVO_SEGUNDOS = 30 * 60;
-
 export type Frescura = 'en_vivo' | 'inactivo' | 'sin_senal';
 
-/** Traduce la antigüedad de un punto a una etiqueta estable para la UI. */
-export function clasificarFrescura(antiguedadSegundos: number): Frescura {
-  if (antiguedadSegundos <= FRESCURA_EN_VIVO_SEGUNDOS) return 'en_vivo';
-  if (antiguedadSegundos <= FRESCURA_INACTIVO_SEGUNDOS) return 'inactivo';
+/**
+ * Traduce la antigüedad de un punto a una etiqueta estable para la UI.
+ *
+ * Los umbrales llegan por parámetro porque son **configurables por tenant**
+ * (tabla `tenant_monitoring_config`): una operación urbana de reparto y un
+ * transporte de larga distancia tienen ritmos distintos, y un umbral único
+ * convierte la señal en ruido para uno de los dos.
+ *
+ * Antes estaban fijos acá en 5 y 30 minutos; esos valores siguen siendo el
+ * default, pero ahora viven en `MonitoringConfigService.UMBRALES_POR_DEFECTO`.
+ */
+export function clasificarFrescura(
+  antiguedadSegundos: number,
+  umbralEnVivoMinutos: number,
+  umbralInactivoMinutos: number,
+): Frescura {
+  if (antiguedadSegundos <= umbralEnVivoMinutos * 60) return 'en_vivo';
+  if (antiguedadSegundos <= umbralInactivoMinutos * 60) return 'inactivo';
   return 'sin_senal';
 }

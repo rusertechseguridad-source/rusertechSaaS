@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User, Sliders, Bell } from 'lucide-react';
+import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User, Sliders, Bell, Radar } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
@@ -7,12 +7,13 @@ import { translateParameterKey } from '../../utils/labels';
 
 const NdrPanel = lazy(() => import('./ndr/NdrPanel').then(m => ({ default: m.NdrPanel })));
 const OperativosPanel = lazy(() => import('./operativos/OperativosPanel').then(m => ({ default: m.OperativosPanel })));
+const MonitoreoPanel = lazy(() => import('./monitoreo/MonitoreoPanel').then(m => ({ default: m.MonitoreoPanel })));
 import { useTranslation } from 'react-i18next';
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'users' | 'parameters' | 'notifications' | 'carbon' | 'forwarding' | 'ndr' | 'operativos'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'users' | 'parameters' | 'notifications' | 'carbon' | 'forwarding' | 'ndr' | 'operativos' | 'monitoreo'>('profile');
   const navigate = useNavigate();
   
   // Profile
@@ -375,6 +376,15 @@ export const SettingsPage: React.FC = () => {
                 }`}
               >
                 <Settings className="w-5 h-5" /> Parámetros Operativos
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('monitoreo')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left w-full ${
+                  activeTab === 'monitoreo' ? 'bg-accentGreen/20 text-accentGreen border border-accentGreen/50' : 'bg-bgSurface text-textMuted hover:bg-bgSurfaceHigh hover:text-white border border-borderDefault'
+                }`}
+              >
+                <Radar className="w-5 h-5" /> {t('settings.tab_monitoring')}
               </button>
             </>
           )}
@@ -821,6 +831,12 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'operativos' && (
             <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
               <OperativosPanel />
+            </Suspense>
+          )}
+
+          {activeTab === 'monitoreo' && (
+            <Suspense fallback={<div className="animate-pulse bg-[#2D3B6A] h-64 rounded-xl"></div>}>
+              <MonitoreoPanel />
             </Suspense>
           )}
         </div>

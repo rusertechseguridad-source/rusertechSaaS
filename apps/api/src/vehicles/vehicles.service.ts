@@ -61,10 +61,13 @@ export class VehiclesService {
   }
 
   /**
-   * Últimas posiciones conocidas de los vehículos del tenant.
+   * Posiciones del mapa de monitoreo, con su resumen y los umbrales del tenant.
    *
-   * Delega en LivePositionsService, que lee de Postgres (fuente de verdad) y
-   * usa Redis sólo si `LIVE_POSITIONS_SOURCE=redis`, con caída a Postgres.
+   * Delega en LivePositionsService, que lee de Postgres (fuente de verdad).
+   * Devuelve `{ positions, summary, thresholds }` y no un arreglo suelto:
+   * `summary.sin_datos` cuenta los vehículos con viaje EN_CURSO que **no**
+   * tienen posición, un dato que por definición no viaja dentro de `positions`
+   * y que el frontend no puede calcular sin repetir el criterio de alcance.
    *
    * Historial de este método, que explica por qué terminó así:
    *  1. Usaba `redis.keys('vehicle:pos:*')` → devolvía posiciones de todos los
@@ -78,7 +81,7 @@ export class VehiclesService {
    * una de las dos vías de ingreso de datos.
    */
   async getLivePositions(tenantId: string) {
-    return this.livePositions.obtenerPorTenant(tenantId);
+    return this.livePositions.obtenerParaMapa(tenantId);
   }
 
   async create(data: any, tenantId: string) {

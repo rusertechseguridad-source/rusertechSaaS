@@ -17,7 +17,9 @@
     "settings": "Settings",
     "admin": "Administration",
     "logout": "Log Out",
-    "change_language": "Cambiar idioma / Change language"
+    "change_language": "Cambiar idioma / Change language",
+    "protocols": "Operational Protocols",
+    "securityKeys": "Security Keys"
   },
   "labels": {
     "alert_types": {
@@ -445,7 +447,8 @@
     "never": "Never",
     "ingestion": "Ingestion",
     "edit": "Edit",
-    "dictionary": "Dictionary"
+    "dictionary": "Dictionary",
+    "ingest_monitor": "Ingest Monitor"
   },
   "carbon": {
     "title": "Carbon Footprint",
@@ -584,10 +587,9 @@
     "freshness_live": "Live",
     "freshness_idle": "Idle",
     "freshness_offline": "No signal",
-    "freshness_nodata": "No data >24h",
+    "freshness_nodata": "On trip, no data",
     "freshness_all": "Whole fleet",
     "reporting_ratio": "reporting",
-    "not_on_map": "not shown on map",
     "declared_trip": "Declared trip",
     "free_tracking": "Free Tracking",
     "last_report": "Last report",
@@ -595,7 +597,15 @@
     "ago_minutes": "{{n}}m ago",
     "ago_hours": "{{n}}h ago",
     "no_position": "No recent position",
-    "vehicles_with_position": "vehicles with position"
+    "vehicles_with_position": "vehicles with position",
+    "dark_mode": "Dark",
+    "light_mode": "Light",
+    "km": "km",
+    "threshold_upto": "up to {{n}} min without reporting",
+    "threshold_over": "over {{n}} min without reporting",
+    "nodata_detail": "trip IN PROGRESS, no points in {{h}} h",
+    "scope_note": "The map shows vehicles under active monitoring: with the driver app running, or with a declared trip IN PROGRESS.",
+    "fleet_total_note": "Active fleet: {{n}} vehicles"
   },
   "auth": {
     "login_title": "Sign In",
@@ -660,7 +670,8 @@
     "params_empty": "No configurable parameters available.",
     "carbon_enable": "Enable consumption emission calculations",
     "carbon_save": "Save Integration",
-    "users_invite_btn": "Send Invitation"
+    "users_invite_btn": "Send Invitation",
+    "tab_monitoring": "Monitoring & Freshness"
   },
   "admin_params": {
     "title": "Global System Parameters",
@@ -740,5 +751,46 @@
     "form_dest": "Target (Email, Phone, URL)",
     "form_events": "Subscribed Events",
     "form_desc": "Ex: E-Mail Reports"
+  },
+  "vehicle": {
+    "callDriver": "Call Driver",
+    "driverCalled": "Calling...",
+    "callDriverSuccess": "Contact request sent to the driver."
+  },
+  "operations": {
+    "flows": {
+      "pronta_respuesta": {
+        "label": "Rapid Response",
+        "tooltip": "PANIC/SOS events or specific customer requests."
+      },
+      "geocerca_repartos": {
+        "label": "Delivery Geofence",
+        "tooltip": "Deliveries with a configured geofence. Useful for last mile."
+      },
+      "seguimiento_inteligente": {
+        "label": "Smart Tracking",
+        "tooltip": "Adaptive monitoring with reactive RiskLevel. Standard operation."
+      },
+      "interplanta": {
+        "label": "Inter-plant",
+        "tooltip": "Plant-to-plant trips, usually long distance."
+      },
+      "estandar": {
+        "label": "Standard",
+        "tooltip": "No specific category. Default."
+      }
+    }
+  },
+  "livePosition": {
+    "title": "Current vehicle position",
+    "last_report": "Last report",
+    "coordinates": "Coordinates",
+    "no_vehicle": "This trip has no vehicle assigned yet, so there is no position to follow.",
+    "no_data": "The vehicle has not reported any recent position.",
+    "no_data_window": "The vehicle has not reported any position in the last {{h}} h. It may be out of coverage, with the app closed, or with the GPS unit off.",
+    "origin": {
+      "movil": "Driver app",
+      "hub": "GPS unit (HUB)"
+    }
   }
 }

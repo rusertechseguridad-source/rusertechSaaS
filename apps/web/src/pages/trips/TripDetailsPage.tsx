@@ -9,6 +9,9 @@ import { TripModal } from './TripModal';
 import { LinkVehicleModal } from './LinkVehicleModal';
 import { exportToCsv } from '../../utils/export';
 import { VehicleCard } from '../../components/map/VehicleCard';
+import { PosicionActualCard } from '../../components/monitoring/PosicionActualCard';
+import type { LivePosition } from '../../types/monitoring';
+import { FRESCURA_COLORS } from '../../constants/freshness';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -43,9 +46,21 @@ export const TripDetailsPage: React.FC = () => {
   const [selectedSensorType, setSelectedSensorType] = useState<'temperature' | 'humidity'>('temperature');
   const [configModalOpen, setConfigModalOpen] = useState(false);
 
+  /**
+   * CAPA 1 — Posición actual del vehículo (telemetría).
+   *
+   * Es independiente del viaje: existe mientras el vehículo reporte, tenga o no
+   * eventos declarados. Antes esta pantalla mostraba únicamente `trip_events`,
+   * así que un viaje sin eventos se veía idéntico a un vehículo desaparecido.
+   */
+  const [posicionVehiculo, setPosicionVehiculo] = useState<LivePosition | null>(null);
+  const [cargandoPosicion, setCargandoPosicion] = useState(false);
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const alertMarkers = useRef<maplibregl.Marker[]>([]);
+  /** Marcador de la posición actual. Se guarda aparte para poder moverlo. */
+  const vehicleMarker = useRef<maplibregl.Marker | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -90,6 +105,54 @@ export const TripDetailsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  /**
+   * Consulta la última posición del vehículo del viaje.
+   *
+   * Usa `GET /vehicles/:id`, que devuelve `lastPosition` **sin** el filtro de
+   * alcance del mapa: si alguien abrió este viaje, quiere ver dónde está su
+   * vehículo aunque el mapa global no lo esté mostrando.
+   */
+  const loadPosicionVehiculo = async (vehicleId: string) => {
+    setCargandoPosicion(true);
+    try {
+      const token = localStorage.getItem('rusertech_token');
+      const res = await fetch(`http://localhost:3000/api/v1/vehicles/${vehicleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        console.warn(`[TripDetails] /vehicles/${vehicleId} respondió ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      setPosicionVehiculo((data?.lastPosition as LivePosition) ?? null);
+    } catch (e) {
+      // No se vacía la posición ante un error de red: se conserva la última
+      // conocida en lugar de mostrar "sin datos", que sería una afirmación
+      // falsa sobre el vehículo.
+      console.error('[TripDetails] Error consultando la posición del vehículo:', e);
+    } finally {
+      setCargandoPosicion(false);
+    }
+  };
+
+  /**
+   * Refresco periódico mientras el viaje está EN CURSO. Un viaje finalizado no
+   * necesita polling: su vehículo ya no forma parte de esa operación.
+   */
+  useEffect(() => {
+    const vehicleId = (trip as any)?.vehicle?.id ?? (trip as any)?.vehicle_id;
+    if (!vehicleId) {
+      setPosicionVehiculo(null);
+      return;
+    }
+
+    loadPosicionVehiculo(vehicleId);
+    if (trip?.status !== 'EN_CURSO') return;
+
+    const intervalo = setInterval(() => loadPosicionVehiculo(vehicleId), 30000);
+    return () => clearInterval(intervalo);
+  }, [(trip as any)?.vehicle?.id, (trip as any)?.vehicle_id, trip?.status]);
 
   const loadLinkedVehicles = async (tripId: string) => {
     try {
@@ -389,6 +452,61 @@ export const TripDetailsPage: React.FC = () => {
     }
   }, [showTrace, trip]);
 
+  /**
+   * Marcador de la posición actual del vehículo.
+   *
+   * Va en su propio efecto y con su propio ref: se actualiza cada 30 s y no
+   * debe recrear ni desplazar los marcadores de origen/destino, que sólo
+   * dependen del viaje.
+   *
+   * El color repite la escala de frescura del mapa global. La primera vez
+   * centra el mapa en el vehículo —es lo que el operador vino a ver— pero no
+   * en cada refresco, para no pelear con el zoom que el usuario haya elegido.
+   */
+  useEffect(() => {
+    if (!map.current) return;
+
+    if (!posicionVehiculo) {
+      vehicleMarker.current?.remove();
+      vehicleMarker.current = null;
+      return;
+    }
+
+    const { longitude, latitude, freshness } = posicionVehiculo;
+    const color = FRESCURA_COLORS[freshness];
+
+    const aplicar = () => {
+      if (!map.current) return;
+      const esPrimera = !vehicleMarker.current;
+
+      if (!vehicleMarker.current) {
+        const el = document.createElement('div');
+        el.style.cssText = [
+          'width:20px', 'height:20px', 'border-radius:50%', 'box-sizing:border-box',
+          'border:3px solid #0B1120', `background:${color}`,
+          `box-shadow:0 0 0 3px ${color}55`,
+        ].join(';');
+        el.title = posicionVehiculo.plate ?? '';
+        vehicleMarker.current = new maplibregl.Marker({ element: el })
+          .setLngLat([longitude, latitude])
+          .addTo(map.current);
+      } else {
+        const el = vehicleMarker.current.getElement();
+        el.style.background = color;
+        el.style.boxShadow = `0 0 0 3px ${color}55`;
+        vehicleMarker.current.setLngLat([longitude, latitude]);
+      }
+
+      if (esPrimera) map.current.easeTo({ center: [longitude, latitude], zoom: 13 });
+    };
+
+    if (map.current.loaded()) {
+      aplicar();
+    } else {
+      map.current.once('load', aplicar);
+    }
+  }, [posicionVehiculo]);
+
   // Alert markers effect
   useEffect(() => {
     if (!map.current) return;
@@ -598,6 +716,18 @@ export const TripDetailsPage: React.FC = () => {
             </div>
           </div>
 
+          {/*
+            CAPA 1 — dónde está el vehículo ahora. Va antes del clima y de los
+            sensores porque es la pregunta que trae al operador a esta pantalla,
+            y porque las otras dos tarjetas se alimentan de `trip_events`, que
+            puede estar vacío sin que eso signifique nada malo.
+          */}
+          <PosicionActualCard
+            posicion={posicionVehiculo}
+            cargando={cargandoPosicion && !posicionVehiculo}
+            tieneVehiculo={Boolean((trip as any)?.vehicle?.id ?? (trip as any)?.vehicle_id)}
+          />
+
           {weather && (
             <div className="bg-bgSurface border border-borderDefault rounded-xl p-3 shadow-card shrink-0">
               <h3 className="text-xs font-bold text-accentGreen uppercase tracking-wider mb-2 border-b border-borderDefault pb-1.5 flex items-center gap-2" title="El clima mostrado corresponde a la posición actual del vehículo">
@@ -801,14 +931,53 @@ export const TripDetailsPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            {/* Opcional: overlay para mostrar info temporal si no hay ruta ni origen ni destino */}
-            {!(trip as any).origin_lat && !(trip as any).destination_lat && !trip.route?.geojson && (!trip.events || trip.events.length === 0) && (
-              <div className="absolute inset-0 bg-bgStart/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center pointer-events-none p-8 text-center">
-                <MapPin className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
-                <p className="text-white font-bold mb-2">Sin Coordenadas Iniciales</p>
-                <p className="text-textMuted text-sm max-w-sm">No se asignó origen, destino ni corredor en la planificación de este viaje. El mapa se centrará al recibir el primer evento de GPS.</p>
-              </div>
-            )}
+            {/*
+              Estados vacíos del mapa, separados en dos porque son dos causas
+              distintas y antes se confundían en un solo cartel:
+
+               · Sin contexto de viaje NI posición → el mapa está realmente
+                 vacío. Es el único caso que tapa el mapa.
+               · Sin contexto de viaje PERO con posición → el mapa muestra al
+                 vehículo; falta el plan (origen, destino, corredor). Se avisa
+                 con una nota al pie, sin bloquear la vista.
+
+              La distinción importa: un viaje en Tracking Libre no tiene plan
+              cargado y eso es normal, no una falla que haya que reportar.
+            */}
+            {(() => {
+              const sinContextoViaje =
+                !(trip as any).origin_lat &&
+                !(trip as any).destination_lat &&
+                !trip.route?.geojson &&
+                (!trip.events || trip.events.length === 0);
+
+              if (!sinContextoViaje) return null;
+
+              if (!posicionVehiculo) {
+                return (
+                  <div className="absolute inset-0 bg-bgStart/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center pointer-events-none p-8 text-center">
+                    <MapPin className="w-16 h-16 mx-auto text-bgSurfaceHigh mb-4" />
+                    <p className="text-white font-bold mb-2">Sin datos para mostrar</p>
+                    <p className="text-textMuted text-sm max-w-sm">
+                      Este viaje no tiene origen, destino ni corredor cargados, y el vehículo
+                      todavía no reportó ninguna posición. El mapa se va a centrar solo en cuanto
+                      llegue el primer punto de GPS.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="absolute bottom-4 left-4 right-4 z-10 bg-bgSurfaceHigh/90 backdrop-blur-sm border border-borderDefault rounded-lg p-3 pointer-events-none">
+                  <p className="text-xs text-textSecondary leading-relaxed">
+                    <span className="text-white font-bold">Viaje sin ruta planificada.</span>{' '}
+                    Se está mostrando la posición actual del vehículo. No se cargaron origen,
+                    destino ni corredor, así que no hay recorrido previsto contra el cual
+                    comparar — algo esperable en un seguimiento sin viaje declarado.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-56 shrink-0">
@@ -891,8 +1060,28 @@ export const TripDetailsPage: React.FC = () => {
                     </div>
                   );
                 })() : (
-                  <div className="h-full flex items-center justify-center text-textMuted text-sm text-center">
-                    No hay eventos registrados en telemetría todavía.
+                  /*
+                    CAPA 2 vacía. La frase anterior ("No hay eventos registrados
+                    en telemetría todavía") se leía como una falla del sistema.
+                    No lo es: los eventos de viaje los genera la app del
+                    conductor al declarar paradas, checkpoints y novedades. Un
+                    viaje puede estar corriendo perfectamente sin ninguno.
+                    El estado se explica, y se aclara que la posición del
+                    vehículo es otra cosa y sigue arriba.
+                  */
+                  <div className="h-full flex flex-col items-center justify-center text-center px-6 gap-2">
+                    <Activity className="w-8 h-8 text-bgSurfaceHigh" />
+                    <p className="text-textSecondary text-sm font-bold">
+                      Todavía no hay eventos declarados
+                    </p>
+                    <p className="text-textMuted text-xs max-w-xs leading-relaxed">
+                      Los eventos los genera la app del conductor cuando declara paradas,
+                      checkpoints o novedades. Que no haya ninguno no significa que el viaje
+                      esté detenido.
+                      {posicionVehiculo
+                        ? ' La posición actual del vehículo se muestra arriba y en el mapa.'
+                        : ''}
+                    </p>
                   </div>
                 )}
               </div>

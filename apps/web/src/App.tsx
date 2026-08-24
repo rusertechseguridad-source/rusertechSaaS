@@ -13,6 +13,7 @@ import { ContactoPage } from './pages/public/ContactoPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AvlUserListPage } from './pages/avl/AvlUserListPage';
 import { AvlEventDictionaryPage } from './pages/avl/AvlEventDictionaryPage';
+import { AvlMonitorPage } from './pages/avl/monitor/AvlMonitorPage';
 import { VehiclesPage } from './pages/vehicles/VehiclesPage';
 import { LocationsPage } from './pages/locations/LocationsPage';
 import { RoutesPage } from './pages/routes/RoutesPage';
@@ -55,6 +56,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/map" element={<MapPage />} />
             <Route path="/avl" element={<AvlUserListPage />} />
+            <Route path="/avl/monitor" element={<AvlMonitorPage />} />
             <Route path="/avl/:id/dictionary" element={<AvlEventDictionaryPage />} />
             <Route path="/vehicles" element={<VehiclesPage />} />
             <Route path="/carriers" element={<CarriersPage />} />

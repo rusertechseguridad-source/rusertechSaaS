@@ -1,0 +1,67 @@
+{
+  "title": "AVL Ingest Monitor",
+  "subtitle": "What is arriving from each GPS provider, and how recent it is.",
+  "window_label": "Window",
+  "window_hours": "{{n}} h",
+  "refresh": "Refresh",
+  "auto_refresh": "Auto-refreshes every 60 s",
+  "loading": "Querying ingest...",
+  "error": "Could not query the ingest monitor.",
+  "empty": "This account has no GPS providers configured.",
+  "thresholds_note": "States use the tenant thresholds: live up to {{live}} min, idle up to {{idle}} min. Change them in Settings → Monitoring & Freshness.",
+  "estado": {
+    "en_vivo": "Receiving",
+    "inactivo": "Delayed",
+    "sin_senal": "No signal",
+    "sin_datos": "No data in window",
+    "inactivo_config": "Disabled"
+  },
+  "columns": {
+    "provider": "Provider",
+    "state": "State",
+    "last_point": "Last data",
+    "points": "Points",
+    "vehicles": "Vehicles",
+    "codes": "Codes"
+  },
+  "cells": {
+    "never": "No data",
+    "of_mobile": "{{n}} from the app",
+    "duplicates": "{{n}} duplicates discarded",
+    "codes_total": "{{n}} distinct codes",
+    "codes_unknown": "{{n}} not in dictionary",
+    "reporting": "{{n}} reported",
+    "assigned": "{{n}} assigned",
+    "mismatch": "Inconsistent assignment",
+    "mismatch_help": "Data arrived through this provider from more vehicles than have it assigned on their record. Review the vehicles' GPS provider assignment."
+  },
+  "codes": {
+    "title": "Received codes",
+    "recognized": "In dictionary",
+    "mobile": "Driver app",
+    "unknown": "Not in dictionary",
+    "count": "{{n}} points",
+    "empty": "No event codes arrived in this window.",
+    "unknown_help": "A code with no dictionary entry still reaches the database, but the platform does not know what it means: it triggers no alerts and is not translated on screen. Add it to the provider's dictionary.",
+    "open_dictionary": "Open dictionary"
+  },
+  "vehicles": {
+    "title": "Per-vehicle detail",
+    "show": "Show vehicles",
+    "hide": "Hide vehicles",
+    "loading": "Loading vehicles...",
+    "error": "Could not load the per-vehicle detail.",
+    "empty": "This provider has no vehicles assigned.",
+    "plate": "Plate",
+    "points": "Points",
+    "last_point": "Last data",
+    "state": "State",
+    "no_data": "No data"
+  },
+  "ago": {
+    "seconds": "{{n}}s ago",
+    "minutes": "{{n}}m ago",
+    "hours": "{{n}}h ago",
+    "days": "{{n}}d ago"
+  }
+}

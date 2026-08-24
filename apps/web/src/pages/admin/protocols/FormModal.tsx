@@ -99,7 +99,7 @@ export const FormModal: React.FC<FormModalProps> = ({
           <div className="flex items-center gap-3 text-cyan-400">
             <ShieldAlert className="w-6 h-6" />
             <h2 className="text-xl font-bold tracking-wide text-white">
-              {initialData ? t('form.editTitle') : t('form.createTitle')}
+              {initialData ? t('protocols.form.editTitle') : t('protocols.form.createTitle')}
             </h2>
           </div>
           <button 
@@ -125,7 +125,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Información General</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.name')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.name')}</label>
                     <input
                       type="text"
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -135,7 +135,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.description')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.description')}</label>
                     <input
                       type="text"
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -151,7 +151,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Condiciones de Activación</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.tripStatus')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.tripStatus')}</label>
                     <select
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors appearance-none"
                       value={formData.trip_status || ''}
@@ -161,7 +161,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.subStatus')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.subStatus')}</label>
                     <select
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors appearance-none"
                       value={formData.sub_status || ''}
@@ -171,7 +171,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.gpsReporting')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.gpsReporting')}</label>
                     <select
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors appearance-none"
                       value={formData.gps_reporting || ''}
@@ -181,7 +181,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.driverCommunication')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.driverCommunication')}</label>
                     <select
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors appearance-none"
                       value={formData.driver_communication || ''}
@@ -198,7 +198,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Resolución</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.riskLevel')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.riskLevel')}</label>
                     <select
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors appearance-none font-semibold text-cyan-400"
                       value={formData.risk_level || ''}
@@ -208,7 +208,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('form.slaMinutes')}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">{t('protocols.form.slaMinutes')}</label>
                     <input
                       type="number"
                       className="w-full bg-[#151B36] border border-[#2D3B6A] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -228,7 +228,7 @@ export const FormModal: React.FC<FormModalProps> = ({
                         <div className={`block w-12 h-6 rounded-full transition-colors ${formData.is_active ? 'bg-cyan-500' : 'bg-gray-600'}`}></div>
                         <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${formData.is_active ? 'transform translate-x-6' : ''}`}></div>
                       </div>
-                      <span className="ml-3 text-sm font-medium text-gray-300">{t('form.isActive')}</span>
+                      <span className="ml-3 text-sm font-medium text-gray-300">{t('protocols.form.isActive')}</span>
                     </label>
                   </div>
                 </div>
@@ -237,14 +237,14 @@ export const FormModal: React.FC<FormModalProps> = ({
               {/* Protocol Steps (Estructurado) */}
               <div className="space-y-4 md:col-span-2 pt-4 border-t border-[#2D3B6A]/50">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">{t('form.steps')}</h3>
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">{t('protocols.form.steps')}</h3>
                   <button
                     type="button"
                     onClick={handleAddStep}
                     className="flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors px-3 py-1.5 bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20"
                   >
                     <Plus className="w-4 h-4" />
-                    {t('form.addStep')}
+                    {t('protocols.form.addStep')}
                   </button>
                 </div>
                 
@@ -254,14 +254,14 @@ export const FormModal: React.FC<FormModalProps> = ({
                       <div className="flex-1 space-y-3">
                         <input
                           type="text"
-                          placeholder={t('form.stepTitle')}
+                          placeholder={t('protocols.form.stepTitle')}
                           className="w-full bg-[#1A2346] border border-[#2D3B6A] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 text-sm font-medium placeholder-gray-500"
                           value={step.title}
                           onChange={e => handleUpdateStep(idx, 'title', e.target.value)}
                           required
                         />
                         <textarea
-                          placeholder={t('form.stepDescription')}
+                          placeholder={t('protocols.form.stepDescription')}
                           rows={2}
                           className="w-full bg-[#1A2346] border border-[#2D3B6A] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 text-sm resize-none placeholder-gray-500"
                           value={step.description}
@@ -300,7 +300,7 @@ export const FormModal: React.FC<FormModalProps> = ({
             disabled={isSaving}
             className="px-6 py-2.5 bg-[#2D3B6A] hover:bg-[#3A4C8A] text-white rounded-lg transition-colors font-medium disabled:opacity-50"
           >
-            {t('form.cancel')}
+            {t('protocols.form.cancel')}
           </button>
           <button
             type="submit"
@@ -309,7 +309,7 @@ export const FormModal: React.FC<FormModalProps> = ({
             className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-[#0B1120] rounded-lg transition-colors font-bold disabled:opacity-50 flex items-center gap-2"
           >
             {isSaving && <div className="w-4 h-4 border-2 border-[#0B1120] border-t-transparent rounded-full animate-spin" />}
-            {t('form.save')}
+            {t('protocols.form.save')}
           </button>
         </div>
       </div>

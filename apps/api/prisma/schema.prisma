@@ -11,47 +11,49 @@ datasource db {
 }
 
 model Tenant {
-  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name                  String                  @db.VarChar(200)
-  slug                  String                  @unique @db.VarChar(100)
-  plan                  String                  @default("starter") @db.VarChar(50)
-  status                String                  @default("active") @db.VarChar(20)
-  settings_json         Json                    @default("{}")
-  created_at            DateTime                @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
-  avl_users             AvlUser[]
-  carbon_logs           CarbonLog[]
-  carbon_settings       CarbonSetting?
-  carriers              Carrier[]
-  control_zones         ControlZone[]
-  devices               Device[]
-  drivers               Driver[]
-  event_logs            EventLog[]
-  event_rules           EventRule[]
-  geofences             Geofence[]
-  mobileActivationCodes MobileActivationCode[]
-  mobile_alert_channels mobile_alert_channels[]
-  no_signal_zones       NoSignalZone[]
-  notification_channels NotificationChannel[]
-  operational_protocols OperationalProtocol[]
-  operations            Operation[]
-  parameter_settings    ParameterSetting[]
-  position_forwarders   PositionForwarder[]
-  routes                Route[]
-  saved_locations       SavedLocation[]
-  security_keys         SecurityKey[]
-  sensor_configs        SensorConfig[]
-  tenant_mobile_config  tenant_mobile_config?
-  trip_attachments      trip_attachments[]
-  trip_command_history  TripCommandHistory[]
-  trip_deviations       TripDeviation[]
-  trip_events           TripEvent[]
-  trip_risk_history     TripRiskHistory[]
-  trip_risk_levels      TripRiskLevel[]
-  trips                 Trip[]
-  users                 User[]
-  vehicle_groups        VehicleGroup[]
-  vehicles              Vehicle[]
+  id                       String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                     String                    @db.VarChar(200)
+  slug                     String                    @unique @db.VarChar(100)
+  plan                     String                    @default("starter") @db.VarChar(50)
+  status                   String                    @default("active") @db.VarChar(20)
+  settings_json            Json                      @default("{}")
+  created_at               DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                  @default(now()) @db.Timestamptz(6)
+  avl_users                AvlUser[]
+  carbon_logs              CarbonLog[]
+  carbon_settings          CarbonSetting?
+  carriers                 Carrier[]
+  control_zones            ControlZone[]
+  devices                  Device[]
+  drivers                  Driver[]
+  event_logs               EventLog[]
+  event_rules              EventRule[]
+  geofences                Geofence[]
+  mobileActivationCodes    MobileActivationCode[]
+  mobile_alert_channels    mobile_alert_channels[]
+  no_signal_zones          NoSignalZone[]
+  notification_channels    NotificationChannel[]
+  operational_protocols    OperationalProtocol[]
+  operations               Operation[]
+  parameter_settings       ParameterSetting[]
+  position_forwarders      PositionForwarder[]
+  routes                   Route[]
+  saved_locations          SavedLocation[]
+  security_keys            SecurityKey[]
+  sensor_configs           SensorConfig[]
+  tenant_mobile_config     tenant_mobile_config?
+  tenant_monitoring_config tenant_monitoring_config?
+  trip_attachments         trip_attachments[]
+  trip_code_counters       trip_code_counters[]
+  trip_command_history     TripCommandHistory[]
+  trip_deviations          TripDeviation[]
+  trip_events              TripEvent[]
+  trip_risk_history        TripRiskHistory[]
+  trip_risk_levels         TripRiskLevel[]
+  trips                    Trip[]
+  users                    User[]
+  vehicle_groups           VehicleGroup[]
+  vehicles                 Vehicle[]
 
   @@map("tenants")
 }
@@ -1000,4 +1002,27 @@ model trip_attachments {
   @@index([tenant_id, created_at(sort: Desc)], map: "idx_trip_attachments_tenant")
   @@index([trip_id], map: "idx_trip_attachments_trip")
   @@index([vehicle_id, created_at(sort: Desc)], map: "idx_trip_attachments_vehicle")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tenant_monitoring_config {
+  tenant_id               String   @id @db.Uuid
+  umbral_en_vivo_minutos  Int      @default(5) @db.SmallInt
+  umbral_inactivo_minutos Int      @default(30) @db.SmallInt
+  ventana_mapa_horas      Int      @default(24) @db.SmallInt
+  updated_at              DateTime @default(now()) @db.Timestamptz(6)
+  tenants                 Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model trip_code_counters {
+  tenant_id  String   @db.Uuid
+  code_date  DateTime @db.Date
+  last_value Int      @default(0)
+  tenants    Tenant   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([tenant_id, code_date])
 }
