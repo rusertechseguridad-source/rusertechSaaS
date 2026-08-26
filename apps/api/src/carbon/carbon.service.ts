@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
+import { redisDisponible } from '../common/config/redis-conexion';
 import { Queue } from 'bullmq';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -11,7 +12,13 @@ export class CarbonService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('carbon') private carbonQueue: Queue,
-  ) {}
+  ) {
+    if (!redisDisponible()) {
+      this.logger.warn(
+        'REDIS_URL no configurado: el cálculo de huella de carbono queda pausado (sus colas necesitan Redis). Única línea al respecto.',
+      );
+    }
+  }
 
   async getSettings(tenantId: string) {
     let settings = await this.prisma.carbonSetting.findUnique({
@@ -74,7 +81,9 @@ export class CarbonService {
     });
 
     for (const trip of activeTrips) {
-      await this.carbonQueue.add('carbon.calculate', {
+      if (!redisDisponible()) return;
+      if (!redisDisponible()) return;
+    await this.carbonQueue.add('carbon.calculate', {
         tripId: trip.id,
         vehicleId: trip.vehicle_id,
         tenantId: trip.tenant_id,
@@ -107,6 +116,7 @@ export class CarbonService {
 
       for (const log of logs) {
         if (log.trip_id) {
+          if (!redisDisponible()) return;
           await this.carbonQueue.add('carbon.calculate', {
             tripId: log.trip_id,
             vehicleId: log.vehicle_id,

@@ -4,6 +4,7 @@ import { RedisService } from '../common/redis/redis.service';
 import { GeocodingService } from './geocoding.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { redisDisponible } from '../common/config/redis-conexion';
 
 @Injectable()
 export class TelemetryService {
@@ -176,7 +177,10 @@ export class TelemetryService {
       }
     }).catch(err => this.logger.error('Async Geocoding failed', err));
 
-    // Fire and forget: Forwarding
+    // Fire and forget: Forwarding. Sin Redis no hay cola que lo transporte:
+    // se saltea sin ruido. (El hallazgo #4 de la auditoría sigue vigente —
+    // el reenvío solo ve esta vía de ingreso — y tiene su propia tanda.)
+    if (!redisDisponible()) return { status: "accepted" };
     this.prisma.positionForwarder.findMany({
       where: { tenant_id: tenantId, is_active: true, circuit_open: false }
     }).then(forwarders => {

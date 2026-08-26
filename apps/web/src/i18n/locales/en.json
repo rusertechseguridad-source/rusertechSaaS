@@ -20,7 +20,36 @@
     "change_language": "Cambiar idioma / Change language",
     "protocols": "Operational Protocols",
     "securityKeys": "Security Keys",
-    "motor": "Event Engine"
+    "motor": "Event Engine",
+    "reportes": "Reports",
+    "fleet": "Fleet",
+    "config": "Settings",
+    "tips": {
+      "map": "Where every vehicle is right now",
+      "alerts": "Situations that need attention",
+      "trips_group": "Declared trips and planned routes",
+      "trips": "Declare and follow trips",
+      "routes": "Planned routes and corridors",
+      "fleet_group": "Vehicles, drivers and devices",
+      "vehicles": "Vehicle onboarding, retirement and blocking",
+      "drivers": "Drivers and their documents",
+      "carriers": "Carrier companies",
+      "devices": "Installed GPS devices",
+      "reports_group": "Trends and reports by period",
+      "reportes": "Trends by vehicle, driver and route",
+      "analytics": "Overall operation dashboard",
+      "carbon": "Fleet carbon footprint",
+      "config_group": "Set once; defines how the system operates",
+      "locations": "Geofences and saved locations",
+      "avl": "GPS providers and their event dictionary",
+      "sensors": "Temperature and humidity ranges",
+      "motor": "Queue health and what is being evaluated",
+      "protocols": "What to do in each situation, and its risk level",
+      "securityKeys": "Verification keys with drivers",
+      "settings": "Company, users, notifications and thresholds",
+      "simulator": "Generate test runs",
+      "admin": "Every customer on the platform"
+    }
   },
   "labels": {
     "alert_types": {
@@ -839,5 +868,19 @@
       "motor": "Engine",
       "migracion": "Migration"
     }
+  },
+  "reportes": {
+    "title": "Reports",
+    "subtitle": "Trends by period. Data comes from trip summaries: a trip appears once it is closed.",
+    "desde": "From",
+    "hasta": "To",
+    "cargando": "Loading report...",
+    "error": "Could not load the report.",
+    "vacio": "No data in the period. Reports are built from trip summaries, computed when each trip closes: a period with no closed trips is an empty report — not a failure.",
+    "tab_vehiculos": "By vehicle",
+    "tab_conductores": "By driver",
+    "tab_rutas": "By route",
+    "tab_paradas": "Undeclared stops",
+    "tab_frio": "Cold chain"
   }
 }

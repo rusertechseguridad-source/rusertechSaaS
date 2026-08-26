@@ -27,6 +27,7 @@ export const SYSTEM_PERMISSIONS = {
   view_sensors: 'Ver Sensores (Clima)',
   manage_sensors: 'Administrar Sensores',
   view_analytics: 'Ver Reportes y Analytics',
+  generate_reports: 'Generar Informes de Viaje',
   view_carbon: 'Ver Huella de Carbono',
   manage_carbon: 'Administrar Huella de Carbono',
   view_simulator: 'Ver Simulador',

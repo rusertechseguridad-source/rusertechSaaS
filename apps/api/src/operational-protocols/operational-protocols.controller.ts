@@ -25,14 +25,17 @@ export class OperationalProtocolsController {
   }
 
   @Post()
-  @Roles('rusertech_admin', 'account_owner', 'key_user')
+  // Regla de producto (Etapa 2): la configuración la tocan solo el
+  // administrador de Rusertech y el administrador del tenant. key_user opera,
+  // no configura — se lo retira de las escrituras.
+  @Roles('rusertech_admin', 'account_owner')
   create(@Body() data: any, @Req() req?: Request) {
     const user = (req as any).user;
     return this.service.create(data, user.tenantId);
   }
 
   @Patch(':id')
-  @Roles('rusertech_admin', 'account_owner', 'key_user')
+  @Roles('rusertech_admin', 'account_owner')
   update(@Param('id') id: string, @Body() data: any, @Req() req?: Request) {
     const user = (req as any).user;
     return this.service.update(id, data, user.tenantId, user.role);

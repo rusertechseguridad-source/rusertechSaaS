@@ -5,9 +5,8 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
-  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
+  url        = "postgresql://postgres.rudaqsfgjorryuqayqyd:TorukMakto1986@aws-1-us-west-2.pooler.supabase.com:5432/postgres"
+  extensions = [postgis(schema: "public"), uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
 model Tenant {
@@ -31,6 +30,9 @@ model Tenant {
   geofences                Geofence[]
   mobileActivationCodes    MobileActivationCode[]
   mobile_alert_channels    mobile_alert_channels[]
+  motor_estado_vehiculo    motor_estado_vehiculo[]
+  motor_niveles_riesgo     motor_niveles_riesgo[]
+  motor_vehiculos_activos  motor_vehiculos_activos[]
   no_signal_zones          NoSignalZone[]
   notification_channels    NotificationChannel[]
   operational_protocols    OperationalProtocol[]
@@ -41,17 +43,24 @@ model Tenant {
   saved_locations          SavedLocation[]
   security_keys            SecurityKey[]
   sensor_configs           SensorConfig[]
+  tenant_engine_config     tenant_engine_config?
   tenant_mobile_config     tenant_mobile_config?
   tenant_monitoring_config tenant_monitoring_config?
   trip_attachments         trip_attachments[]
   trip_code_counters       trip_code_counters[]
   trip_command_history     TripCommandHistory[]
+  trip_conditions          trip_conditions[]
   trip_deviations          TripDeviation[]
   trip_events              TripEvent[]
   trip_risk_history        TripRiskHistory[]
   trip_risk_levels         TripRiskLevel[]
+  trip_sensor_excursions   trip_sensor_excursions[]
+  trip_sensor_series       trip_sensor_series[]
+  trip_state_history       trip_state_history[]
+  trip_summary             trip_summary[]
   trips                    Trip[]
   users                    User[]
+  vehicle_geofence_state   vehicle_geofence_state[]
   vehicle_groups           VehicleGroup[]
   vehicles                 Vehicle[]
 
@@ -111,6 +120,7 @@ model User {
   routes_created             Route[]
   saved_locations_created    SavedLocation[]
   commands_executed          TripCommandHistory[]
+  trip_conditions            trip_conditions[]
   trips_created              Trip[]
   accessible_carriers        UserCarrierAccess[]
   accessible_groups          UserGroupAccess[]
@@ -169,41 +179,45 @@ model AvlEventDictionary {
 }
 
 model Vehicle {
-  id                        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id                 String                 @db.Uuid
-  plate                     String                 @db.VarChar(20)
-  alias                     String?                @db.VarChar(100)
-  brand                     String?                @db.VarChar(100)
-  model                     String?                @db.VarChar(200)
-  year                      Int?                   @db.SmallInt
-  vehicle_type              String                 @default("truck") @db.VarChar(50)
-  fuel_type                 String                 @default("diesel") @db.VarChar(30)
-  fuel_efficiency_lper100km Decimal?               @db.Decimal(6, 2)
-  hub_asset_id              String?                @db.VarChar(100)
-  avl_user_id               String?                @db.Uuid
-  is_blocked                Boolean                @default(false)
+  id                        String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id                 String                   @db.Uuid
+  plate                     String                   @db.VarChar(20)
+  alias                     String?                  @db.VarChar(100)
+  brand                     String?                  @db.VarChar(100)
+  model                     String?                  @db.VarChar(200)
+  year                      Int?                     @db.SmallInt
+  vehicle_type              String                   @default("truck") @db.VarChar(50)
+  fuel_type                 String                   @default("diesel") @db.VarChar(30)
+  fuel_efficiency_lper100km Decimal?                 @db.Decimal(6, 2)
+  hub_asset_id              String?                  @db.VarChar(100)
+  avl_user_id               String?                  @db.Uuid
+  is_blocked                Boolean                  @default(false)
   block_reason              String?
-  metadata_json             Json                   @default("{}")
-  status                    String                 @default("active") @db.VarChar(20)
-  created_at                DateTime               @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime               @default(now()) @db.Timestamptz(6)
-  dictionary_category       String?                @db.VarChar(100)
-  carrier_id                String?                @db.Uuid
-  image_front_url           String?                @db.VarChar(500)
-  image_rear_url            String?                @db.VarChar(500)
-  image_side_url            String?                @db.VarChar(500)
-  group_id                  String?                @db.Uuid
+  metadata_json             Json                     @default("{}")
+  status                    String                   @default("active") @db.VarChar(20)
+  created_at                DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                 @default(now()) @db.Timestamptz(6)
+  dictionary_category       String?                  @db.VarChar(100)
+  carrier_id                String?                  @db.Uuid
+  image_front_url           String?                  @db.VarChar(500)
+  image_rear_url            String?                  @db.VarChar(500)
+  image_side_url            String?                  @db.VarChar(500)
+  group_id                  String?                  @db.Uuid
   carbon_logs               CarbonLog[]
   event_logs                EventLog[]
   mobileActivationCodes     MobileActivationCode[]
+  motor_estado_vehiculo     motor_estado_vehiculo?
+  motor_vehiculos_activos   motor_vehiculos_activos?
   trip_attachments          trip_attachments[]
+  trip_conditions           trip_conditions[]
   linked_to_trips           TripLinkedVehicle[]
   trips                     Trip[]
   user_access               UserVehicleAccess[]
-  avl_user                  AvlUser?               @relation(fields: [avl_user_id], references: [id])
-  carrier                   Carrier?               @relation(fields: [carrier_id], references: [id])
-  group                     VehicleGroup?          @relation(fields: [group_id], references: [id])
-  tenant                    Tenant                 @relation(fields: [tenant_id], references: [id])
+  vehicle_geofence_state    vehicle_geofence_state[]
+  avl_user                  AvlUser?                 @relation(fields: [avl_user_id], references: [id])
+  carrier                   Carrier?                 @relation(fields: [carrier_id], references: [id])
+  group                     VehicleGroup?            @relation(fields: [group_id], references: [id])
+  tenant                    Tenant                   @relation(fields: [tenant_id], references: [id])
 
   @@unique([tenant_id, plate])
   @@map("vehicles")
@@ -324,90 +338,97 @@ model Telemetry {
 }
 
 model Geofence {
-  id              String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id       String                   @db.Uuid
-  name            String                   @db.VarChar(200)
-  description     String?
-  zone_type       String                   @db.VarChar(30)
-  geometry        Unsupported("geography")
-  geometry_type   String                   @db.VarChar(20)
-  center_lat      Decimal?                 @db.Decimal(10, 7)
-  center_lng      Decimal?                 @db.Decimal(10, 7)
-  radius_meters   Int?
-  color           String                   @default("#2AB3FF") @db.VarChar(7)
-  fill_opacity    Decimal                  @default(0.15) @db.Decimal(3, 2)
-  country_code    String                   @default("AR") @db.Char(2)
-  is_active       Boolean                  @default(true)
-  created_by      String?                  @db.Uuid
-  created_at      DateTime                 @default(now()) @db.Timestamptz(6)
-  event_rules     EventRule[]
-  creator         User?                    @relation(fields: [created_by], references: [id])
-  tenant          Tenant                   @relation(fields: [tenant_id], references: [id])
-  route_geofences RouteGeofence[]
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
+  name                   String                   @db.VarChar(200)
+  description            String?
+  zone_type              String                   @db.VarChar(30)
+  geometry               Unsupported("geography")
+  geometry_type          String                   @db.VarChar(20)
+  center_lat             Decimal?                 @db.Decimal(10, 7)
+  center_lng             Decimal?                 @db.Decimal(10, 7)
+  radius_meters          Int?
+  color                  String                   @default("#2AB3FF") @db.VarChar(7)
+  fill_opacity           Decimal                  @default(0.15) @db.Decimal(3, 2)
+  country_code           String                   @default("AR") @db.Char(2)
+  is_active              Boolean                  @default(true)
+  created_by             String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  event_rules            EventRule[]
+  creator                User?                    @relation(fields: [created_by], references: [id])
+  tenant                 Tenant                   @relation(fields: [tenant_id], references: [id])
+  route_geofences        RouteGeofence[]
+  vehicle_geofence_state vehicle_geofence_state[]
 
   @@map("geofences")
 }
 
 model Trip {
-  id                      String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id               String               @db.Uuid
-  created_by_user_id      String               @db.Uuid
-  vehicle_id              String?              @db.Uuid
-  driver_id               String?              @db.Uuid
-  operation_id            String?              @db.Uuid
-  route_id                String?              @db.Uuid
-  carrier_id              String?              @db.Uuid
-  origin_name             String?              @db.VarChar(300)
-  origin_address          String?              @db.VarChar(500)
-  origin_lat              Decimal?             @db.Decimal(10, 7)
-  origin_lng              Decimal?             @db.Decimal(10, 7)
-  destination_name        String?              @db.VarChar(300)
-  destination_address     String?              @db.VarChar(500)
-  destination_lat         Decimal?             @db.Decimal(10, 7)
-  destination_lng         Decimal?             @db.Decimal(10, 7)
-  planned_start           DateTime             @db.Timestamptz(6)
-  planned_end             DateTime             @db.Timestamptz(6)
-  actual_start            DateTime?            @db.Timestamptz(6)
-  actual_end              DateTime?            @db.Timestamptz(6)
+  id                      String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id               String                    @db.Uuid
+  created_by_user_id      String                    @db.Uuid
+  vehicle_id              String?                   @db.Uuid
+  driver_id               String?                   @db.Uuid
+  operation_id            String?                   @db.Uuid
+  route_id                String?                   @db.Uuid
+  carrier_id              String?                   @db.Uuid
+  origin_name             String?                   @db.VarChar(300)
+  origin_address          String?                   @db.VarChar(500)
+  origin_lat              Decimal?                  @db.Decimal(10, 7)
+  origin_lng              Decimal?                  @db.Decimal(10, 7)
+  destination_name        String?                   @db.VarChar(300)
+  destination_address     String?                   @db.VarChar(500)
+  destination_lat         Decimal?                  @db.Decimal(10, 7)
+  destination_lng         Decimal?                  @db.Decimal(10, 7)
+  planned_start           DateTime                  @db.Timestamptz(6)
+  planned_end             DateTime                  @db.Timestamptz(6)
+  actual_start            DateTime?                 @db.Timestamptz(6)
+  actual_end              DateTime?                 @db.Timestamptz(6)
   planned_route_geojson   Json?
-  corridor_meters         Int                  @default(500)
-  criticality             String               @default("normal") @db.VarChar(20)
-  reinforced_monitoring   Boolean              @default(false)
-  status                  String               @default("draft") @db.VarChar(30)
+  corridor_meters         Int                       @default(500)
+  criticality             String                    @default("normal") @db.VarChar(20)
+  reinforced_monitoring   Boolean                   @default(false)
+  status                  String                    @default("BORRADOR") @db.VarChar(30)
   cancel_reason           String?
   notes                   String?
-  vehicle_changes_count   Int                  @default(0) @db.SmallInt
-  driver_changes_count    Int                  @default(0) @db.SmallInt
-  created_at              DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime             @default(now()) @db.Timestamptz(6)
-  name                    String               @default("") @db.VarChar(300)
-  trip_code               String?              @db.VarChar(100)
-  origin_location_id      String?              @db.Uuid
-  destination_location_id String?              @db.Uuid
-  device_id               String?              @db.Uuid
-  metadata_json           Json?                @default("{}")
-  driver_state            String?              @db.VarChar(30)
-  trip_type               String               @default("planned") @db.VarChar(20)
+  vehicle_changes_count   Int                       @default(0) @db.SmallInt
+  driver_changes_count    Int                       @default(0) @db.SmallInt
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  name                    String                    @default("") @db.VarChar(300)
+  trip_code               String?                   @db.VarChar(100)
+  origin_location_id      String?                   @db.Uuid
+  destination_location_id String?                   @db.Uuid
+  device_id               String?                   @db.Uuid
+  metadata_json           Json?                     @default("{}")
+  driver_state            String?                   @db.VarChar(30)
+  trip_type               String                    @default("planned") @db.VarChar(20)
   carbon_logs             CarbonLog[]
   event_logs              EventLog[]
+  motor_vehiculos_activos motor_vehiculos_activos[]
   trip_attachments        trip_attachments[]
   trip_command_history    TripCommandHistory[]
+  trip_conditions         trip_conditions[]
   trip_control_zones      TripControlZone[]
   trip_deviations         TripDeviation[]
   trip_events             TripEvent[]
   linked_vehicles         TripLinkedVehicle[]
   trip_risk_history       TripRiskHistory[]
   trip_risk_levels        TripRiskLevel?
-  carrier                 Carrier?             @relation(fields: [carrier_id], references: [id])
-  created_by              User                 @relation(fields: [created_by_user_id], references: [id])
-  destination_location    SavedLocation?       @relation("TripDestinationLocation", fields: [destination_location_id], references: [id])
-  device                  Device?              @relation(fields: [device_id], references: [id])
-  driver                  Driver?              @relation(fields: [driver_id], references: [id])
-  operation               Operation?           @relation(fields: [operation_id], references: [id])
-  origin_location         SavedLocation?       @relation("TripOriginLocation", fields: [origin_location_id], references: [id])
-  route                   Route?               @relation(fields: [route_id], references: [id])
-  tenant                  Tenant               @relation(fields: [tenant_id], references: [id])
-  vehicle                 Vehicle?             @relation(fields: [vehicle_id], references: [id])
+  trip_sensor_excursions  trip_sensor_excursions[]
+  trip_sensor_series      trip_sensor_series[]
+  trip_state_history      trip_state_history[]
+  trip_summary            trip_summary?
+  carrier                 Carrier?                  @relation(fields: [carrier_id], references: [id])
+  created_by              User                      @relation(fields: [created_by_user_id], references: [id])
+  destination_location    SavedLocation?            @relation("TripDestinationLocation", fields: [destination_location_id], references: [id])
+  device                  Device?                   @relation(fields: [device_id], references: [id])
+  driver                  Driver?                   @relation(fields: [driver_id], references: [id])
+  operation               Operation?                @relation(fields: [operation_id], references: [id])
+  origin_location         SavedLocation?            @relation("TripOriginLocation", fields: [origin_location_id], references: [id])
+  route                   Route?                    @relation(fields: [route_id], references: [id])
+  tenant                  Tenant                    @relation(fields: [tenant_id], references: [id])
+  vehicle                 Vehicle?                  @relation(fields: [vehicle_id], references: [id])
 
   @@map("trips")
 }
@@ -855,20 +876,25 @@ model UserGroupAccess {
 }
 
 model OperationalProtocol {
-  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenant_id            String?  @db.Uuid
-  name                 String   @db.VarChar(200)
-  description          String?
-  trip_status          String   @db.VarChar(30)
-  sub_status           String   @db.VarChar(100)
-  gps_reporting        String   @db.VarChar(20)
-  driver_communication String   @db.VarChar(20)
-  risk_level           String   @db.VarChar(20)
-  protocol_steps       Json     @default("[]")
-  sla_minutes          Int?
-  is_active            Boolean  @default(true)
-  created_at           DateTime @default(now()) @db.Timestamptz(6)
-  tenant               Tenant?  @relation(fields: [tenant_id], references: [id])
+  id                          String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id                   String?               @db.Uuid
+  name                        String                @db.VarChar(200)
+  description                 String?
+  trip_status                 String                @db.VarChar(30)
+  sub_status                  String                @db.VarChar(100)
+  gps_reporting               String                @db.VarChar(20)
+  driver_communication        String                @db.VarChar(20)
+  risk_level                  String                @db.VarChar(20)
+  protocol_steps              Json                  @default("[]")
+  sla_minutes                 Int?
+  is_active                   Boolean               @default(true)
+  created_at                  DateTime              @default(now()) @db.Timestamptz(6)
+  origen_global_id            String?               @db.Uuid
+  es_editable                 Boolean               @default(true)
+  operational_protocols       OperationalProtocol?  @relation("operational_protocolsTooperational_protocols", fields: [origen_global_id], references: [id], onUpdate: NoAction)
+  other_operational_protocols OperationalProtocol[] @relation("operational_protocolsTooperational_protocols")
+  tenant                      Tenant?               @relation(fields: [tenant_id], references: [id])
+  trip_conditions             trip_conditions[]
 
   @@unique([tenant_id, trip_status, sub_status, gps_reporting, driver_communication])
   @@map("operational_protocols")
@@ -1025,4 +1051,316 @@ model trip_code_counters {
   tenants    Tenant   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([tenant_id, code_date])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_cola {
+  id           BigInt    @id @default(autoincrement())
+  tenant_id    String    @db.Uuid
+  vehicle_id   String    @db.Uuid
+  trip_id      String?   @db.Uuid
+  telemetry_id String    @db.Uuid
+  telemetry_ts DateTime  @db.Timestamptz(6)
+  origen       String    @db.VarChar(10)
+  estado       String    @default("pendiente") @db.VarChar(12)
+  intentos     Int       @default(0) @db.SmallInt
+  tomado_at    DateTime? @db.Timestamptz(6)
+  tomado_por   String?   @db.VarChar(80)
+  error        String?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([telemetry_id, telemetry_ts], map: "uq_motor_cola_punto")
+  @@index([vehicle_id, telemetry_ts(sort: Desc)], map: "idx_motor_cola_vehiculo")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_estado_vehiculo {
+  vehicle_id           String                    @id @db.Uuid
+  tenant_id            String                    @db.Uuid
+  ultimo_punto_ts      DateTime?                 @db.Timestamptz(6)
+  ultimo_punto         Unsupported("geography")?
+  ultima_velocidad     Float?                    @db.Real
+  ultima_ignicion      Boolean?
+  detenido_desde       DateTime?                 @db.Timestamptz(6)
+  evaluado_hasta       DateTime?                 @db.Timestamptz(6)
+  gps_reporting        String?                   @db.VarChar(30)
+  driver_communication String?                   @db.VarChar(30)
+  actualizado_at       DateTime                  @default(now()) @db.Timestamptz(6)
+  tenants              Tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vehicles             Vehicle                   @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_estados_viaje {
+  codigo       String  @id @db.VarChar(30)
+  nombre       String  @db.VarChar(100)
+  descripcion  String?
+  orden        Int     @db.SmallInt
+  monitoreable Boolean @default(false)
+  es_terminal  Boolean @default(false)
+  color        String  @default("#6B7280") @db.VarChar(7)
+  is_active    Boolean @default(true)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_mapeo_vocabulario {
+  tabla       String    @db.VarChar(60)
+  columna     String    @db.VarChar(60)
+  valor_viejo String    @db.VarChar(100)
+  valor_nuevo String    @db.VarChar(100)
+  nota        String?
+  aplicado_at DateTime? @db.Timestamptz(6)
+
+  @@id([tabla, columna, valor_viejo])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_niveles_riesgo {
+  codigo                     String                  @id @db.VarChar(40)
+  nombre                     String                  @db.VarChar(100)
+  descripcion                String?
+  orden                      Int                     @db.SmallInt
+  color                      String                  @default("#6B7280") @db.VarChar(7)
+  sla_minutos                Int?                    @db.SmallInt
+  requiere_atencion_operador Boolean                 @default(false)
+  is_active                  Boolean                 @default(true)
+  tenant_id                  String?                 @db.Uuid
+  created_at                 DateTime                @default(now()) @db.Timestamptz(6)
+  tenants                    Tenant?                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  motor_tipos_condicion      motor_tipos_condicion[]
+  trip_conditions            trip_conditions[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_tipos_condicion {
+  codigo                   String               @id @db.VarChar(50)
+  nombre                   String               @db.VarChar(100)
+  descripcion              String?
+  familia                  String               @db.VarChar(20)
+  riesgo_default           String               @db.VarChar(40)
+  resolucion               String               @default("automatico") @db.VarChar(20)
+  detectable_sin_app       Boolean              @default(true)
+  requiere_datos_faltantes Boolean              @default(false)
+  is_active                Boolean              @default(true)
+  motor_niveles_riesgo     motor_niveles_riesgo @relation(fields: [riesgo_default], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  trip_conditions          trip_conditions[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_trabajos {
+  id         BigInt    @id @default(autoincrement())
+  tipo       String    @db.VarChar(40)
+  tenant_id  String    @db.Uuid
+  trip_id    String?   @db.Uuid
+  estado     String    @default("pendiente") @db.VarChar(12)
+  intentos   Int       @default(0) @db.SmallInt
+  tomado_at  DateTime? @db.Timestamptz(6)
+  tomado_por String?   @db.VarChar(80)
+  error      String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_valores_contexto {
+  dimension      String  @db.VarChar(30)
+  codigo         String  @db.VarChar(30)
+  nombre         String  @db.VarChar(100)
+  orden          Int     @db.SmallInt
+  umbral_minutos Int?    @db.SmallInt
+  is_active      Boolean @default(true)
+
+  @@id([dimension, codigo])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model motor_vehiculos_activos {
+  vehicle_id String   @id @db.Uuid
+  tenant_id  String   @db.Uuid
+  trip_id    String?  @db.Uuid
+  motivo     String   @db.VarChar(20)
+  desde      DateTime @default(now()) @db.Timestamptz(6)
+  tenants    Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  trips      Trip?    @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vehicles   Vehicle  @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id], map: "idx_mva_tenant")
+  @@index([trip_id], map: "idx_mva_trip")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tenant_engine_config {
+  tenant_id             String   @id @db.Uuid
+  red_seguridad_minutos Int      @default(30) @db.SmallInt
+  red_seguridad_activa  Boolean  @default(true)
+  parada_minutos        Int      @default(10) @db.SmallInt
+  parada_velocidad_kmh  Int      @default(5) @db.SmallInt
+  eval_geocercas        Boolean  @default(true)
+  eval_reglas           Boolean  @default(true)
+  eval_desvio           Boolean  @default(true)
+  eval_protocolos       Boolean  @default(true)
+  eval_riesgo           Boolean  @default(true)
+  eval_sensores         Boolean  @default(true)
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+  tenants               Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trip_conditions {
+  id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id             String                @db.Uuid
+  vehicle_id            String                @db.Uuid
+  trip_id               String?               @db.Uuid
+  tipo                  String                @db.VarChar(50)
+  nivel_riesgo          String                @db.VarChar(40)
+  inicio                DateTime              @db.Timestamptz(6)
+  fin                   DateTime?             @db.Timestamptz(6)
+  origen                String                @default("motor") @db.VarChar(10)
+  disparador            String?
+  datos                 Json                  @default("{}")
+  protocolo_id          String?               @db.Uuid
+  sla_vence_at          DateTime?             @db.Timestamptz(6)
+  atendida_por          String?               @db.Uuid
+  atendida_at           DateTime?             @db.Timestamptz(6)
+  nota                  String?
+  clave_identidad       String                @unique(map: "uq_trip_conditions_identidad")
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  users                 User?                 @relation(fields: [atendida_por], references: [id], onUpdate: NoAction)
+  motor_niveles_riesgo  motor_niveles_riesgo  @relation(fields: [nivel_riesgo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  operational_protocols OperationalProtocol?  @relation(fields: [protocolo_id], references: [id], onUpdate: NoAction)
+  tenants               Tenant                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  motor_tipos_condicion motor_tipos_condicion @relation(fields: [tipo], references: [codigo], onDelete: NoAction, onUpdate: NoAction)
+  trips                 Trip?                 @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vehicles              Vehicle               @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([trip_id, inicio(sort: Desc)], map: "idx_tc_trip")
+  @@index([vehicle_id, inicio(sort: Desc)], map: "idx_tc_vehiculo")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trip_sensor_excursions {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  trip_id           String    @db.Uuid
+  tenant_id         String    @db.Uuid
+  sensor_type       String    @db.VarChar(20)
+  inicio            DateTime  @db.Timestamptz(6)
+  fin               DateTime? @db.Timestamptz(6)
+  duracion_segundos Int?
+  valor_extremo     Decimal?  @db.Decimal(8, 2)
+  lado              String    @db.VarChar(10)
+  rango_min         Decimal?  @db.Decimal(8, 2)
+  rango_max         Decimal?  @db.Decimal(8, 2)
+  latitude          Float?
+  longitude         Float?
+  direccion         String?
+  tenants           Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  trips             Trip      @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([trip_id, sensor_type, inicio], map: "idx_tse_trip")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trip_sensor_series {
+  trip_id                 String   @db.Uuid
+  tenant_id               String   @db.Uuid
+  sensor_type             String   @db.VarChar(20)
+  serie                   Json     @default("[]")
+  puntos                  Int      @default(0)
+  valor_min               Decimal? @db.Decimal(8, 2)
+  valor_max               Decimal? @db.Decimal(8, 2)
+  valor_prom              Decimal? @db.Decimal(8, 2)
+  rango_min               Decimal? @db.Decimal(8, 2)
+  rango_max               Decimal? @db.Decimal(8, 2)
+  segundos_fuera_de_rango Int      @default(0)
+  excursiones             Int      @default(0)
+  calculado_at            DateTime @default(now()) @db.Timestamptz(6)
+  tenants                 Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  trips                   Trip     @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([trip_id, sensor_type])
+  @@index([tenant_id, calculado_at(sort: Desc)], map: "idx_tss_tenant")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trip_state_history {
+  id                       String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenant_id                String               @db.Uuid
+  trip_id                  String               @db.Uuid
+  estado_anterior          String?              @db.VarChar(30)
+  estado_nuevo             String               @db.VarChar(30)
+  disparado_por            String               @db.VarChar(20)
+  causa_id                 String?              @db.Uuid
+  causa_detalle            String?
+  automatico               Boolean              @default(true)
+  revierte_a               String?              @db.Uuid
+  created_at               DateTime             @default(now()) @db.Timestamptz(6)
+  trip_state_history       trip_state_history?  @relation("trip_state_historyTotrip_state_history", fields: [revierte_a], references: [id], onUpdate: NoAction)
+  other_trip_state_history trip_state_history[] @relation("trip_state_historyTotrip_state_history")
+  tenants                  Tenant               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  trips                    Trip                 @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([trip_id, created_at(sort: Desc)], map: "idx_tsh_trip")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model trip_summary {
+  trip_id               String                    @id @db.Uuid
+  tenant_id             String                    @db.Uuid
+  puntos_totales        Int                       @default(0)
+  km_recorridos         Decimal?                  @db.Decimal(10, 2)
+  vel_maxima_kmh        Float?                    @db.Real
+  vel_promedio_kmh      Float?                    @db.Real
+  inicio                DateTime?                 @db.Timestamptz(6)
+  fin                   DateTime?                 @db.Timestamptz(6)
+  duracion_total        Unsupported("interval")?
+  tiempo_en_marcha      Unsupported("interval")?
+  tiempo_detenido       Unsupported("interval")?
+  paradas_declaradas    Int                       @default(0)
+  paradas_no_declaradas Int                       @default(0)
+  cambios_de_estado     Int                       @default(0)
+  eventos_sos           Int                       @default(0)
+  eventos_incidente     Int                       @default(0)
+  eventos_checkpoint    Int                       @default(0)
+  eventos_comm          Int                       @default(0)
+  fotos_totales         Int                       @default(0)
+  heartbeats            Int                       @default(0)
+  recorrido             Unsupported("geography")?
+  calculado_at          DateTime                  @default(now()) @db.Timestamptz(6)
+  tiempos_por_estado    Json                      @default("{}")
+  condiciones           Json                      @default("[]")
+  cumplimiento_ventana  Boolean?
+  minutos_fuera_ventana Int?
+  rango_sensores        Json                      @default("[]")
+  tenants               Tenant                    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  trips                 Trip                      @relation(fields: [trip_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenant_id, inicio(sort: Desc)], map: "idx_trip_summary_tenant_inicio")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model vehicle_geofence_state {
+  vehicle_id   String   @db.Uuid
+  geofence_id  String   @db.Uuid
+  tenant_id    String   @db.Uuid
+  dentro       Boolean  @default(false)
+  desde        DateTime @default(now()) @db.Timestamptz(6)
+  ultimo_check DateTime @default(now()) @db.Timestamptz(6)
+  geofences    Geofence @relation(fields: [geofence_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenants      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vehicles     Vehicle  @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([vehicle_id, geofence_id])
+  @@index([geofence_id], map: "idx_vgs_geofence")
+  @@index([tenant_id], map: "idx_vgs_tenant")
 }

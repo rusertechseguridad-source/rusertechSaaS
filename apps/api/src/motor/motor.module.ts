@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { TelemetryModule } from '../telemetry/telemetry.module';
 import { ColaService } from './cola.service';
 import { EstadoVehiculoService } from './estado-vehiculo.service';
 import { MotorConfigService } from './motor-config.service';
 import { TransicionesService } from './transiciones.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
+import { TrabajosService } from './trabajos.service';
 import { MotorWorker } from './motor.worker';
 import { MotorController } from './motor.controller';
 
@@ -17,6 +19,7 @@ import { MotorController } from './motor.controller';
  * PrismaModule es @Global, así que no hace falta importarlo.
  */
 @Module({
+  imports: [TelemetryModule],
   controllers: [MotorController],
   providers: [
     ColaService,
@@ -24,8 +27,9 @@ import { MotorController } from './motor.controller';
     MotorConfigService,
     TransicionesService,
     VehiculosActivosService,
+    TrabajosService,
     MotorWorker,
   ],
-  exports: [ColaService, VehiculosActivosService],
+  exports: [ColaService, VehiculosActivosService, TrabajosService],
 })
 export class MotorModule {}

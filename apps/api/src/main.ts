@@ -1,3 +1,7 @@
+// PRIMERA línea a propósito: carga el .env antes de que los decoradores de
+// los módulos corran (deciden si registrar las colas de BullMQ leyendo
+// process.env.REDIS_URL). El porqué completo está en common/config/cargar-env.
+import './common/config/cargar-env';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';

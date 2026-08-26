@@ -6,6 +6,7 @@ import { EstadoVehiculoService } from './estado-vehiculo.service';
 import { MotorConfigService } from './motor-config.service';
 import { TransicionesService } from './transiciones.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
+import { TrabajosService } from './trabajos.service';
 import { evaluarGeocercas, evaluarTransicionesDeEstado } from './evaluadores/geocercas.evaluator';
 import type { ConfigMotor, Decision, EstadoVehiculo, PuntoEvaluable } from './tipos';
 
@@ -54,6 +55,7 @@ export class MotorWorker {
     private readonly config: MotorConfigService,
     private readonly transiciones: TransicionesService,
     private readonly activos: VehiculosActivosService,
+    private readonly trabajos: TrabajosService,
   ) {}
 
   @Interval(INTERVALO_MS)
@@ -65,6 +67,9 @@ export class MotorWorker {
       await this.sincronizarSiCorresponde();
       await this.cola.recuperarHuerfanas();
       await this.procesarLote();
+      // Trabajos de cierre de viaje (resumen + series). Van al final de la
+      // vuelta: el cierre no compite con la evaluación en vivo.
+      await this.trabajos.procesarPendientes(this.workerId);
     } catch (error) {
       this.logger.error(`Fallo la vuelta del motor: ${(error as Error).message}`);
     } finally {

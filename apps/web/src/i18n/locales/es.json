@@ -20,7 +20,36 @@
     "change_language": "Cambiar idioma / Change language",
     "protocols": "Protocolos Operativos",
     "securityKeys": "Claves de Seguridad",
-    "motor": "Motor de Eventos"
+    "motor": "Motor de Eventos",
+    "reportes": "Reportes",
+    "fleet": "Flota",
+    "config": "Configuración",
+    "tips": {
+      "map": "Dónde está cada vehículo ahora",
+      "alerts": "Situaciones que requieren atención",
+      "trips_group": "Viajes declarados y recorridos planificados",
+      "trips": "Declarar y seguir viajes",
+      "routes": "Recorridos planificados y corredores",
+      "fleet_group": "Vehículos, conductores y equipos",
+      "vehicles": "Alta, baja y bloqueo de vehículos",
+      "drivers": "Conductores y sus documentos",
+      "carriers": "Empresas transportistas",
+      "devices": "Equipos GPS instalados",
+      "reports_group": "Tendencias e informes por período",
+      "reportes": "Tendencias por vehículo, conductor y ruta",
+      "analytics": "Tablero general de la operación",
+      "carbon": "Huella de carbono de la flota",
+      "config_group": "Lo que se configura una vez y define cómo opera el sistema",
+      "locations": "Geocercas y ubicaciones guardadas",
+      "avl": "Proveedores GPS y su diccionario de eventos",
+      "sensors": "Rangos de temperatura y humedad",
+      "motor": "Estado de la cola y qué se está evaluando",
+      "protocols": "Qué hacer ante cada situación, y su nivel de riesgo",
+      "securityKeys": "Claves de verificación con los conductores",
+      "settings": "Empresa, usuarios, notificaciones y umbrales",
+      "simulator": "Generar recorridos de prueba",
+      "admin": "Todos los clientes de la plataforma"
+    }
   },
   "labels": {
     "alert_types": {
@@ -839,5 +868,19 @@
       "motor": "Motor",
       "migracion": "Migración"
     }
+  },
+  "reportes": {
+    "title": "Reportes",
+    "subtitle": "Tendencias por período. Los datos salen de los resúmenes de viaje: un viaje aparece cuando se cerró.",
+    "desde": "Desde",
+    "hasta": "Hasta",
+    "cargando": "Cargando el reporte...",
+    "error": "No se pudo cargar el reporte.",
+    "vacio": "Sin datos en el período. Los reportes se arman con los resúmenes de viaje, que se calculan al cerrar cada viaje: un período sin viajes cerrados es un reporte vacío — no es una falla.",
+    "tab_vehiculos": "Por vehículo",
+    "tab_conductores": "Por conductor",
+    "tab_rutas": "Por ruta",
+    "tab_paradas": "Paradas no declaradas",
+    "tab_frio": "Cadena de frío"
   }
 }

@@ -35,6 +35,11 @@ export const SYSTEM_PERMISSIONS = {
   view_sensors: 'Ver Sensores (Clima)',
   manage_sensors: 'Administrar Sensores',
   view_analytics: 'Ver Reportes y Analytics',
+  // Emitir el informe de viaje es una RESPONSABILIDAD, no una vista: el
+  // documento se archiva y se presenta ante terceros. Por eso es un permiso
+  // propio y no cuelga de view_trips ni de view_analytics (definición de
+  // producto, correcciones post-Etapa 2).
+  generate_reports: 'Generar Informes de Viaje',
   view_carbon: 'Ver Huella de Carbono',
   manage_carbon: 'Administrar Huella de Carbono',
   view_simulator: 'Ver Simulador',

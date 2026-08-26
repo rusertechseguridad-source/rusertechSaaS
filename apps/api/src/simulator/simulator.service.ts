@@ -3,6 +3,7 @@ import { TelemetryService } from '../telemetry/telemetry.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership } from '../common/tenant/tenant-scope';
 import { InjectQueue } from '@nestjs/bullmq';
+import { redisDisponible } from '../common/config/redis-conexion';
 import { Queue } from 'bullmq';
 
 @Injectable()
@@ -61,6 +62,12 @@ export class SimulatorService {
 
     const coordinates = routeGeoJson.coordinates; 
     
+    if (!redisDisponible()) {
+      // Acción manual: merece una respuesta clara, no un timeout misterioso.
+      throw new BadRequestException(
+        'El simulador de rutas necesita Redis (REDIS_URL). El envío de puntos individuales funciona igual.',
+      );
+    }
     const job = await this.routeQueue.add('simulateRoute', {
       tenantId, avlUserId, vehicleId, coordinates, intervalSeconds, speedKmh, currentIndex: 0
     });

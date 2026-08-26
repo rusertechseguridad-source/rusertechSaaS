@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { redisDisponible } from '../common/config/redis-conexion';
 import { PrismaService } from '../prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -18,6 +19,10 @@ export class OutboxProcessorService {
 
   @Interval(3000)
   async handleOutbox() {
+    // Sin Redis no se puede relayar a BullMQ: el outbox queda intacto (los
+    // mensajes se procesan cuando Redis exista) en lugar de quemar sus
+    // reintentos contra una conexión que no está.
+    if (!redisDisponible()) return;
     if (this.isProcessing) return;
     this.isProcessing = true;
 

@@ -11,6 +11,7 @@ import { exportToCsv } from '../../utils/export';
 import { VehicleCard } from '../../components/map/VehicleCard';
 import { PosicionActualCard } from '../../components/monitoring/PosicionActualCard';
 import { LineaDeTiempoEstados } from '../../components/monitoring/LineaDeTiempoEstados';
+import { BotonInforme } from '../../components/monitoring/BotonInforme';
 import type { LivePosition } from '../../types/monitoring';
 import { FRESCURA_COLORS } from '../../constants/freshness';
 import maplibregl from 'maplibre-gl';
@@ -180,6 +181,12 @@ export const TripDetailsPage: React.FC = () => {
     }
   };
 
+  /**
+   * Abre el informe del viaje. El endpoint exige el JWT en el header, así que
+   * no alcanza con window.open(url): se descarga con fetch y se abre el blob.
+   * Si el backend no tiene Chromium, responde HTML imprimible y avisa por
+   * header — el operador imprime con Ctrl+P y el resultado es el mismo.
+   */
   const handleGenerateMobileCode = async () => {
     if (!trip) return;
     try {
@@ -588,6 +595,13 @@ export const TripDetailsPage: React.FC = () => {
           </div>
         </div>
         
+        {/*
+          El informe, donde se ve. La primera versión era un ícono de 16 px sin
+          texto adentro del panel de eventos: técnicamente existía,
+          operativamente no. Un botón que hay que descubrir no es un botón.
+        */}
+        <BotonInforme tripId={trip.id} />
+
         <RequirePermission permission="manage_trips">
           <div className="flex bg-bgSurface border border-borderDefault rounded-lg overflow-hidden p-1 shadow-card">
             {['PROGRAMADO', 'EN_CURSO', 'FINALIZADO', 'CANCELADO'].map(status => (

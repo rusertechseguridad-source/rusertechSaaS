@@ -41,6 +41,7 @@ import { AvlUserListPage } from './pages/avl/AvlUserListPage';
 import { AvlEventDictionaryPage } from './pages/avl/AvlEventDictionaryPage';
 import { AvlMonitorPage } from './pages/avl/monitor/AvlMonitorPage';
 import { MotorMonitorPage } from './pages/admin/motor/MotorMonitorPage';
+import { ReportesPage } from './pages/reportes/ReportesPage';
 import { VehiclesPage } from './pages/vehicles/VehiclesPage';
 import { LocationsPage } from './pages/locations/LocationsPage';
 import { RoutesPage } from './pages/routes/RoutesPage';
@@ -87,6 +88,7 @@ function App() {
             <Route path="/avl" element={<AvlUserListPage />} />
             <Route path="/avl/monitor" element={<AvlMonitorPage />} />
             <Route path="/motor" element={<MotorMonitorPage />} />
+            <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/avl/:id/dictionary" element={<AvlEventDictionaryPage />} />
             <Route path="/vehicles" element={<VehiclesPage />} />
             <Route path="/carriers" element={<CarriersPage />} />

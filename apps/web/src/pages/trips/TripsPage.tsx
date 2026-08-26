@@ -10,6 +10,7 @@ import { exportToCsv } from '../../utils/export';
 import { Link } from 'react-router-dom';
 import { TripModal } from './TripModal';
 import { useTranslation } from 'react-i18next';
+import { BotonInforme } from '../../components/monitoring/BotonInforme';
 
 /* ─────────────── helpers ─────────────── */
 const STATUS_COLOR: Record<string, string> = {
@@ -150,6 +151,11 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
 
       {/* 9. Acciones */}
       <div className="w-32 shrink-0 text-right flex items-center justify-end gap-2">
+        {/*
+          Informe desde el listado: quien quiere el informe de cinco viajes no
+          debería entrar a cada uno. Visible solo con generate_reports.
+        */}
+        <BotonInforme tripId={trip.id} variante="compacto" />
         <RequirePermission permission="manage_trips">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(trip); }}

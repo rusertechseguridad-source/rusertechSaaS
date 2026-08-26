@@ -23,7 +23,9 @@ export class SettingsController {
 
   @Put('profile')
   updateProfile(@Request() req: any, @Body() body: any) {
-    if (req.user.role !== 'account_owner' && req.user.role !== 'manager' && req.user.role !== 'rusertech_admin') {
+    // Regla de producto (Etapa 2): configuración = solo administradores.
+    // manager pierde la edición del perfil; conserva la lectura.
+    if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
       throw new ForbiddenException('No tienes permisos para editar el perfil del Tenant.');
     }
     return this.settingsService.updateProfile(req.user.tenantId, body);
@@ -79,7 +81,7 @@ export class SettingsController {
   }
 
   @Put('notifications')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
+  @Roles('account_owner', 'rusertech_admin')
   async updateNotificationsConfig(@Req() req: Request, @Body() body: any) {
     const { tenantId } = (req as any).user;
     return this.settingsService.updateNotificationsConfig(tenantId, body);
@@ -93,7 +95,7 @@ export class SettingsController {
   }
 
   @Put('carbon')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
+  @Roles('account_owner', 'rusertech_admin')
   async updateCarbonConfig(@Req() req: Request, @Body() body: any) {
     const { tenantId } = (req as any).user;
     return this.settingsService.updateCarbonConfig(tenantId, body);
@@ -121,7 +123,7 @@ export class SettingsController {
    * devuelve lo que quedó realmente guardado — que puede no ser lo enviado.
    */
   @Put('monitoring')
-  @Roles('account_owner', 'manager', 'rusertech_admin')
+  @Roles('account_owner', 'rusertech_admin')
   async updateMonitoringConfig(@Req() req: Request, @Body() body: Partial<UmbralesMonitoreo>) {
     const { tenantId } = (req as any).user;
     return this.monitoringConfig.guardarUmbrales(tenantId, body);

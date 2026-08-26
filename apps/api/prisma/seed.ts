@@ -18,7 +18,7 @@ async function main() {
         'view_vehicles', 'manage_vehicles', 'view_devices', 'manage_devices',
         'view_carriers', 'manage_carriers', 'view_drivers', 'manage_drivers',
         'view_locations', 'manage_locations', 'view_avl', 'manage_avl',
-        'view_sensors', 'manage_sensors', 'view_analytics', 'view_carbon', 'manage_carbon',
+        'view_sensors', 'manage_sensors', 'view_analytics', 'generate_reports', 'view_carbon', 'manage_carbon',
         'view_simulator', 'use_simulator', 'view_settings', 'manage_settings',
         'manage_users', 'admin_global',
         // Settings exclusivos del master
@@ -39,7 +39,7 @@ async function main() {
         'view_vehicles', 'manage_vehicles', 'view_devices', 'manage_devices',
         'view_carriers', 'manage_carriers', 'view_drivers', 'manage_drivers',
         'view_locations', 'manage_locations', 'view_avl', 'manage_avl',
-        'view_sensors', 'manage_sensors', 'view_analytics', 'view_carbon', 'manage_carbon',
+        'view_sensors', 'manage_sensors', 'view_analytics', 'generate_reports', 'view_carbon', 'manage_carbon',
         'view_simulator', 'use_simulator', 'view_settings', 'manage_settings',
         'manage_users',
         // Settings disponibles (NO billing, system, maintenance — solo rusertech_admin)
@@ -118,7 +118,7 @@ async function main() {
         'view_carriers', 'manage_carriers', 'view_drivers', 'manage_drivers',
         'view_locations', 'manage_locations', 'view_avl', 'manage_avl',
         'view_sensors', 'manage_sensors', 'view_analytics', 'view_carbon',
-        'view_settings', 'manage_settings',
+        'view_settings',  // manage_settings retirado: key_user opera, no configura (regla de producto, Etapa 2)
         // Settings permitidos
         'settings_general', 'settings_ui', 'settings_localization',
         'settings_notifications', 'settings_security', 'settings_avl',

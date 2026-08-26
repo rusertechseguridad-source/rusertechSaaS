@@ -14,6 +14,8 @@ import { UsersModule } from './users/users.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { AvlUsersModule } from './avl-users/avl-users.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
+import { conexionBull } from './common/config/redis-conexion';
+import { soloConRedis } from './common/config/bull-opcional';
 import { SimulatorModule } from './simulator/simulator.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { LocationsModule } from './locations/locations.module';
@@ -34,23 +36,17 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OperationalProtocolsModule } from './operational-protocols/operational-protocols.module';
 import { SecurityKeysModule } from './security-keys/security-keys.module';
 import { MotorModule } from './motor/motor.module';
+import { InformesModule } from './informes/informes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
-    BullModule.forRoot({
-      connection: (() => {
-        let connectionUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-        if (connectionUrl.startsWith('https://')) {
-          const url = new URL(connectionUrl);
-          const host = url.host;
-          const password = process.env.REDIS_TOKEN || '';
-          connectionUrl = `rediss://default:${password}@${host}:6379`;
-        }
-        return { url: connectionUrl };
-      })(),
-    }),
+    // Sin REDIS_URL, BullMQ directamente NO se registra: ninguna cola se
+    // instancia y no hay conexiones que puedan fallar. La conexión centinela
+    // anterior no alcanzaba — BullMQ abre varias conexiones por cola y no
+    // todas heredan retryStrategy. Detalle en common/config/bull-opcional.ts.
+    ...soloConRedis(BullModule.forRoot({ connection: conexionBull() as any })),
     PrismaModule,
     RedisModule,
     MonitoringModule,
@@ -78,6 +74,7 @@ import { MotorModule } from './motor/motor.module';
     OperationalProtocolsModule,
     SecurityKeysModule,
     MotorModule,
+    InformesModule,
   ],
   controllers: [AppController],
   providers: [
