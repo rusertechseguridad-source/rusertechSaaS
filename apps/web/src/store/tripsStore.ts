@@ -95,7 +95,19 @@ export const useTripsStore = create<TripsState>((set, get) => ({
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
-      if (!res.ok) throw new Error('Error al eliminar viaje');
+      if (!res.ok) {
+        // El backend explica POR QUÉ no se puede borrar (viaje en curso, o la
+        // lista de lo que cuelga con sus cantidades) y ofrece la alternativa.
+        // Antes se descartaba el cuerpo y se mostraba 'Error al eliminar viaje':
+        // el operador veía un fallo genérico ante una negativa deliberada.
+        const detalle = await res
+          .json()
+          .then((cuerpo) => cuerpo?.message)
+          .catch(() => null);
+        throw new Error(
+          detalle || `No se pudo eliminar el viaje (HTTP ${res.status}).`,
+        );
+      }
       get().fetchTrips();
     } catch (e: any) {
       console.error(e);

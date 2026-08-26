@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CarbonService } from '../carbon/carbon.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 
 @Injectable()
 export class TripsService {
+  private readonly logger = new Logger(TripsService.name);
+
   constructor(private prisma: PrismaService, private carbonService: CarbonService) {}
 
   /** Verifica que el viaje pertenezca al tenant antes de leerlo o modificarlo. */
@@ -143,11 +145,20 @@ export class TripsService {
       ? new Date(data.scheduled_end) 
       : new Date(planned_start.getTime() + 24 * 60 * 60 * 1000);
 
+    // El estado inicial se valida contra el catálogo si viene explícito. El
+    // default 'PROGRAMADO' es una decisión de producto de este endpoint (un
+    // viaje creado desde la web nace confirmado, no en borrador) y no depende
+    // del default de la columna — que además lo aplica Prisma, no la base.
+    const estadoInicial = data.status || 'PROGRAMADO';
+    if (data.status) {
+      await this.assertEstadoValido(data.status);
+    }
+
     const trip = await this.prisma.trip.create({
       data: {
         name: data.name || '',
         trip_code: data.trip_code || null,
-        status: data.status || 'PROGRAMADO',
+        status: estadoInicial,
         planned_start,
         planned_end,
         vehicle: data.vehicle_id ? { connect: { id: data.vehicle_id } } : undefined,
@@ -185,7 +196,10 @@ export class TripsService {
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.trip_code !== undefined) updateData.trip_code = data.trip_code;
-    if (data.status !== undefined) updateData.status = data.status;
+    if (data.status !== undefined) {
+      await this.assertEstadoValido(data.status);
+      updateData.status = data.status;
+    }
     
     if (data.scheduled_start !== undefined) {
       updateData.planned_start = new Date(data.scheduled_start);
@@ -272,15 +286,136 @@ export class TripsService {
     return this.mapToDto(trip);
   }
 
+  /**
+   * Verifica que un estado exista en el catálogo `motor_estados_viaje`.
+   *
+   * Por qué acá y no en un DTO: el proyecto no tiene DTOs (los controllers
+   * reciben `@Body() data: any`), y los tres escritores de `trips.status`
+   * pasan por este servicio.
+   *
+   * Por qué no una FK en la base: `trips.status` la escribe también la Mobile
+   * API, que es otro repo — una FK rechazaría su INSERT. La validación cubre
+   * el camino del SaaS, que es el que sí controlamos.
+   *
+   * Qué evita: un estado fuera del catálogo deja el viaje invisible para el
+   * motor (que activa el monitoreo con INNER JOIN contra esa tabla) sin emitir
+   * ningún error. Es preferible un 400 explícito al escribir que un viaje que
+   * nadie monitorea y nadie sabe por qué.
+   */
+  private async assertEstadoValido(status: string): Promise<void> {
+    const filas = await this.prisma.$queryRaw<Array<{ codigo: string }>>`
+      SELECT codigo FROM motor_estados_viaje WHERE is_active
+    `;
+    const validos = filas.map((f) => f.codigo);
+    if (!validos.includes(status)) {
+      throw new BadRequestException(
+        `Estado de viaje desconocido: "${status}". ` +
+          `Los válidos son: ${validos.join(', ')}.`,
+      );
+    }
+  }
+
+  /**
+   * Borra un viaje — SOLO si no dejó rastro.
+   *
+   * El `prisma.trip.delete()` a secas que estaba acá devolvía 500 en cualquier
+   * viaje real: hacia `trips` apuntan 16 claves foráneas y **seis bloquean**.
+   * Postgres levanta 23503, Prisma lo mapea a P2003 y, como el proyecto no
+   * tiene ningún ExceptionFilter, subía como error 500 sin explicar nada.
+   *
+   * Y no era una FK sino una CADENA de seis: quitando la que frena y
+   * reintentando aparecen sucesivamente trip_linked_vehicles → trip_events →
+   * trip_deviations → trip_risk_history → trip_command_history →
+   * trip_attachments. Por eso no alcanza con atrapar el error y nombrar la
+   * tabla del mensaje: le mentiría al operador seis veces seguidas.
+   *
+   * La regla la decide lo que el viaje TIENE, no una política global:
+   *
+   *  · Viaje en un estado no terminal → 409. Un viaje en curso no se borra:
+   *    se finaliza o se cancela.
+   *  · Viaje sin nada colgando → se borra de verdad. Es el caso legítimo:
+   *    el operador cargó mal un viaje y lo quiere sacar.
+   *  · Viaje con historia → 409 enumerando QUÉ lo bloquea, con números, y
+   *    señalando la alternativa real (cancelarlo).
+   *
+   * Por qué NO cascada: `trip_summary`, `trip_sensor_series` y
+   * `trip_sensor_excursions` son evidencia probatoria de cadena de frío —
+   * sobreviven a propósito a la purga de telemetría, y un cliente puede
+   * reclamarlas. Además `trip_attachments` son fotos en Storage: borrar la
+   * fila deja el archivo huérfano en el bucket. Y ni siquiera lograría el
+   * objetivo: el `TripId` también vive dentro de `telemetry.raw_payload`, que
+   * ninguna cascada reescribe.
+   */
   async remove(id: string, tenantId: string) {
     await this.assertViajeDelTenant(id, tenantId);
-    return this.prisma.trip.delete({
-      where: { id }
+
+    // `assertViajeDelTenant` sólo confirma la pertenencia (hace `select: {id}`),
+    // así que el estado y el código hay que traerlos aparte.
+    const viaje = await this.prisma.trip.findUnique({
+      where: { id },
+      select: { id: true, status: true, trip_code: true },
     });
+    if (!viaje) throw new NotFoundException('Viaje no encontrado');
+
+    // 1 · Un viaje que no terminó no se borra. Se finaliza o se cancela.
+    const terminales = await this.prisma.$queryRaw<Array<{ codigo: string }>>`
+      SELECT codigo FROM motor_estados_viaje WHERE es_terminal
+    `;
+    const esTerminal = terminales.some((t) => t.codigo === viaje.status);
+    if (!esTerminal) {
+      throw new ConflictException(
+        `El viaje está en estado "${viaje.status}" y no se puede eliminar. ` +
+          'Finalizalo o cancelalo primero.',
+      );
+    }
+
+    // 2 · Inventario de lo que cuelga del viaje. Se cuenta TODO de una sola
+    //     vez para poder decirlo junto: mostrar un bloqueante por vez obliga
+    //     al operador a descubrirlos de a uno.
+    const [inventario] = await this.prisma.$queryRaw<
+      Array<Record<string, bigint>>
+    >`
+      SELECT
+        (SELECT count(*) FROM trip_events            WHERE trip_id = ${id}::uuid) AS eventos,
+        (SELECT count(*) FROM trip_deviations        WHERE trip_id = ${id}::uuid) AS desvios,
+        (SELECT count(*) FROM trip_linked_vehicles   WHERE trip_id = ${id}::uuid) AS vehiculos_vinculados,
+        (SELECT count(*) FROM trip_command_history   WHERE trip_id = ${id}::uuid) AS comandos,
+        (SELECT count(*) FROM trip_risk_history      WHERE trip_id = ${id}::uuid) AS historial_riesgo,
+        (SELECT count(*) FROM trip_attachments       WHERE trip_id = ${id}::uuid) AS fotos,
+        (SELECT count(*) FROM trip_summary           WHERE trip_id = ${id}::uuid) AS resumenes,
+        (SELECT count(*) FROM trip_sensor_series     WHERE trip_id = ${id}::uuid) AS series_de_sensores,
+        (SELECT count(*) FROM trip_sensor_excursions WHERE trip_id = ${id}::uuid) AS excursiones,
+        (SELECT count(*) FROM trip_conditions        WHERE trip_id = ${id}::uuid) AS condiciones,
+        (SELECT count(*) FROM trip_state_history     WHERE trip_id = ${id}::uuid) AS historial_de_estados
+    `;
+
+    const bloqueantes = Object.entries(inventario ?? {})
+      .filter(([, cantidad]) => Number(cantidad) > 0)
+      .map(([nombre, cantidad]) => `${Number(cantidad)} ${nombre.replace(/_/g, ' ')}`);
+
+    if (bloqueantes.length > 0) {
+      throw new ConflictException(
+        'El viaje no se puede eliminar porque tiene historia asociada: ' +
+          `${bloqueantes.join(', ')}. ` +
+          'Es evidencia del viaje y se conserva a propósito. ' +
+          'Si querés sacarlo de las pantallas operativas, cancelalo: ' +
+          'el viaje queda con su historia y deja de figurar como activo.',
+      );
+    }
+
+    // 3 · Sin historia: se borra de verdad. Queda traza en el log porque es
+    //     una operación destructiva, aunque lo destruido sea una fila vacía.
+    const borrado = await this.prisma.trip.delete({ where: { id } });
+    this.logger.log(
+      `Viaje eliminado: ${id} (código ${viaje.trip_code ?? 'sin código'}, ` +
+        `estado ${viaje.status}, tenant ${tenantId}) — sin registros asociados.`,
+    );
+    return borrado;
   }
 
   async updateStatus(id: string, tenantId: string, data: { status: string, notes?: string }) {
     await this.assertViajeDelTenant(id, tenantId);
+    await this.assertEstadoValido(data.status);
 
     const updateData: any = { status: data.status };
     if (data.status === 'EN_CURSO') {

@@ -242,9 +242,23 @@ export class LivePositionsService {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * `DISTINCT ON (vehicle_id)` ordenado por timestamp descendente: es la forma
-   * natural en Postgres de traer "la última fila por grupo", y aprovecha el
-   * índice existente `idx_telemetry_vehicle_time (vehicle_id, timestamp desc)`.
+   * Una fila por vehículo del tenant con al menos un punto en la ventana.
+   *
+   * `LATERAL ... ORDER BY "timestamp" DESC LIMIT 1` recorre el índice existente
+   * `idx_telemetry_vehicle_time (vehicle_id, timestamp desc)` y se detiene en la
+   * primera entrada: lee UNA fila por vehículo. El `DISTINCT ON` que había antes
+   * tenía que traer y ordenar la ventana completa —28.683 filas para devolver 27
+   * en el laboratorio, con el sort yéndose a disco— y crecía con
+   * ventana x flota en lugar de con la flota.
+   *
+   * El driver es `vehicles`, no `telemetry`: son decenas de filas, y cada una
+   * dispara una búsqueda indexada en vez de un barrido de la ventana.
+   *
+   * ⚠️ Medido en laboratorio con volumen sintético (297.313 filas): 67,5 ms y
+   * 6.351 bloques la versión vieja contra 9,3 ms y 2.532 la nueva, con
+   * equivalencia verificada por EXCEPT en ambos sentidos. Con el volumen actual
+   * de la base las dos son indistinguibles: esto se aplica por diseño, no
+   * porque hoy se note.
    *
    * El rango temporal es **cerrado** (`>= desde AND <= hasta`) y ambos extremos
    * se calculan en JS como constantes.
@@ -332,37 +346,60 @@ export class LivePositionsService {
         WHERE tenant_id = ${tenantId}::uuid
           AND status = 'EN_CURSO'
           AND vehicle_id IS NOT NULL
-      ),
-      ultimas AS (
-        SELECT DISTINCT ON (t.vehicle_id)
-          t.vehicle_id,
-          t."timestamp",
-          t.latitude,
-          t.longitude,
-          t.speed_kmh,
-          t.heading_degrees,
-          t.ignition,
-          t.temperature_c,
-          t.humidity_pct,
-          t.event_type,
-          t.provider_code,
-          EXTRACT(EPOCH FROM (NOW() - t."timestamp"))::int AS age_seconds,
-          bool_or(jsonb_exists(t.raw_payload, 'MobileCode')) OVER (PARTITION BY t.vehicle_id) AS tiene_origen_movil
-        FROM telemetry t
-        WHERE t.tenant_id = ${tenantId}::uuid
-          AND t."timestamp" >= ${desde}
-          AND t."timestamp" <= ${hasta}
-          AND t.is_duplicate = false
-        ORDER BY t.vehicle_id, t."timestamp" DESC
       )
       SELECT
-        u.*,
+        v.id AS vehicle_id,
+        u."timestamp",
+        u.latitude,
+        u.longitude,
+        u.speed_kmh,
+        u.heading_degrees,
+        u.ignition,
+        u.temperature_c,
+        u.humidity_pct,
+        u.event_type,
+        u.provider_code,
+        EXTRACT(EPOCH FROM (NOW() - u."timestamp"))::int AS age_seconds,
+        -- La bandera mira TODOS los puntos de la ventana, no sólo el último: es
+        -- la misma semántica que el bool_or(...) OVER (PARTITION BY ...) que
+        -- había acá. Un vehículo que alterna app y HUB no debe entrar y salir
+        -- del mapa según cuál punto llegó último.
+        EXISTS (
+          SELECT 1
+          FROM telemetry m
+          WHERE m.tenant_id = ${tenantId}::uuid
+            AND m.vehicle_id = v.id
+            AND m."timestamp" >= ${desde}
+            AND m."timestamp" <= ${hasta}
+            AND m.is_duplicate = false
+            AND jsonb_exists(m.raw_payload, 'MobileCode')
+        ) AS tiene_origen_movil,
         v.plate,
         v.alias,
         (va.vehicle_id IS NOT NULL) AS con_viaje_activo
-      FROM ultimas u
-      JOIN vehicles v ON v.id = u.vehicle_id AND v.tenant_id = ${tenantId}::uuid
-      LEFT JOIN viajes_activos va ON va.vehicle_id = u.vehicle_id
+      FROM vehicles v
+      -- CROSS JOIN (no LEFT): un vehículo sin puntos en la ventana NO aparece,
+      -- igual que con el JOIN interno contra "ultimas" que había antes. El mapa
+      -- no debe recibir filas con posición nula.
+      CROSS JOIN LATERAL (
+        SELECT t."timestamp", t.latitude, t.longitude, t.speed_kmh,
+               t.heading_degrees, t.ignition, t.temperature_c, t.humidity_pct,
+               t.event_type, t.provider_code
+        FROM telemetry t
+        WHERE t.tenant_id = ${tenantId}::uuid
+          AND t.vehicle_id = v.id
+          AND t."timestamp" >= ${desde}
+          AND t."timestamp" <= ${hasta}
+          AND t.is_duplicate = false
+        ORDER BY t."timestamp" DESC
+        LIMIT 1
+      ) u
+      LEFT JOIN viajes_activos va ON va.vehicle_id = v.id
+      WHERE v.tenant_id = ${tenantId}::uuid
+      -- Sin ORDER BY las dos versiones devuelven las mismas filas en distinto
+      -- orden. "v.id" reproduce el que emitía el DISTINCT ON y, a diferencia de
+      -- él, lo garantiza.
+      ORDER BY v.id
     `;
   }
 

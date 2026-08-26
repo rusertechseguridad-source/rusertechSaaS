@@ -29,7 +29,25 @@ export class AdminService {
     if (!tenant) throw new NotFoundException('Tenant no encontrado');
 
     const vehicles = await this.prisma.vehicle.count({ where: { tenant_id: id } });
-    const activeTrips = await this.prisma.trip.count({ where: { tenant_id: id, status: { in: ['planned', 'in_progress'] } } });
+    // Viajes activos = los que NO están en un estado terminal, según el catálogo
+    // `motor_estados_viaje`. Antes contaba `['planned','in_progress']`, dos valores
+    // que ningún escritor del sistema produce: el panel mostraba 0 siempre.
+    //
+    // Se cuenta por NEGACIÓN a propósito. `trips.status` no tiene FK al catálogo
+    // (la Mobile API escribe esa columna y una FK rechazaría su INSERT), así que
+    // puede aparecer un código desconocido. Con un INNER JOIN ese viaje
+    // desaparecería del conteo sin avisar — el mismo fallo silencioso que el
+    // motor. Contando "todo lo que no es terminal", un estado que nadie previó
+    // se ve en el número en lugar de esconderse.
+    const [{ activos }] = await this.prisma.$queryRaw<Array<{ activos: bigint }>>`
+      SELECT count(*) AS activos
+      FROM trips t
+      WHERE t.tenant_id = ${id}::uuid
+        AND t.status NOT IN (
+          SELECT codigo FROM motor_estados_viaje WHERE es_terminal
+        )
+    `;
+    const activeTrips = Number(activos);
     const openAlerts = await this.prisma.eventLog.count({ where: { tenant_id: id, status: 'active' } });
     
     return { vehicles, activeTrips, openAlerts };
