@@ -5,6 +5,7 @@ import { GeocodingService } from './geocoding.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { redisDisponible } from '../common/config/redis-conexion';
+import { claveDedupe } from './dedupe';
 
 @Injectable()
 export class TelemetryService {
@@ -100,8 +101,21 @@ export class TelemetryService {
       }
     }
 
-    // 4. Deduplication
-    const dedupKey = `dedup:${vehicleId}:${timestamp.getTime()}`;
+    // 4. Deduplicación
+    // La clave incluye el CÓDIGO de evento, no solo (vehículo, instante).
+    //
+    // Antes era `dedup:${vehicleId}:${ts}` y descartaba eventos legítimos: el
+    // AVL emite el paquete de evento con el MISMO fix de GPS que el reporte
+    // periódico, y los timestamps del HUB tienen precisión de segundo. Un
+    // `speed_exceeded` que compartía segundo con un punto de posición se perdía
+    // entero — sin fila, sin `outbox_messages`, y por lo tanto sin motor de
+    // eventos ni reenvío. Verificado en laboratorio.
+    //
+    // La identidad de una fila no es (vehículo, instante) sino
+    // (vehículo, instante, qué reporta). Es el mismo criterio que ya usaba el
+    // índice de la app móvil (`telemetry_mobile_dedupe`, que incluye `Code`):
+    // esto sólo lo extiende al camino del HUB.
+    const dedupKey = claveDedupe(vehicleId, timestamp, code);
     const isDup = await this.redis.get(dedupKey);
     if (isDup) {
       return { status: "duplicate", skipped: true };
@@ -129,31 +143,55 @@ export class TelemetryService {
       raw_payload: payload,
     };
 
-    await this.prisma.$transaction(async (tx) => {
-      await (tx as any).telemetry.create({
-        data: {
-          ...normalized,
-          avl_user_id: avlUserId,
-        }
-      });
-      // Set location PostGIS point
-      // Consulta parametrizada. Acá los valores llegan del payload del HUB,
-      // así que la interpolación directa era el caso más expuesto del repo.
-      await tx.$executeRaw`
-        UPDATE "telemetry"
-        SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
-        WHERE vehicle_id = ${vehicleId}::uuid
-          AND timestamp = ${timestamp}
-      `;
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await (tx as any).telemetry.create({
+          data: {
+            ...normalized,
+            avl_user_id: avlUserId,
+          },
+        });
 
-      await (tx as any).outboxMessage.create({
-        data: {
-          queue_name: 'telemetry.raw',
-          job_name: 'processTelemetry',
-          payload: { ...normalized, avlUserId },
-        }
+        // `location` NO se escribe acá a propósito: la llena el trigger
+        // `fn_fill_location` (BEFORE INSERT) desde latitude/longitude, y está
+        // clonado en todas las particiones —incluidas las que cree el cron en
+        // el futuro, verificado— así que cubre también los puntos que la
+        // Mobile API escribe directo sin pasar por este ingest.
+        //
+        // El UPDATE que estaba acá era redundante Y peligroso: identificaba la
+        // fila por `(vehicle_id, timestamp)`, un par que NO es único (el mismo
+        // vehículo puede tener una posición y un evento en el mismo segundo).
+        // Reproducido en laboratorio: movía la geometría de un punto ajeno
+        // 1.088 km. El trigger opera sobre NEW en memoria y no puede tocar
+        // otra fila, así que quitarlo elimina esa clase de error de raíz.
+
+        await (tx as any).outboxMessage.create({
+          data: {
+            queue_name: 'telemetry.raw',
+            job_name: 'processTelemetry',
+            payload: { ...normalized, avlUserId },
+          },
+        });
       });
-    });
+    } catch (error: any) {
+      // El índice `telemetry_hub_dedupe` es el respaldo EN BASE del dedupe de
+      // Redis: cubre la reentrega posterior al TTL de 300 s, el reinicio de
+      // Redis y la carrera entre instancias — los tres caminos por los que hoy
+      // entra un duplicado. Un choque acá no es una falla: es exactamente el
+      // caso que el índice existe para atrapar, y la respuesta correcta es la
+      // misma que la del dedupe en memoria.
+      //
+      // Se distingue en la respuesta (`source`) para poder medir cuántos
+      // duplicados se le escapan a Redis: si este contador crece, el TTL de
+      // 300 s se quedó corto para el patrón de reentrega del proveedor.
+      if (error?.code === 'P2002') {
+        this.logger.debug(
+          `Punto duplicado rechazado por la base: vehículo ${vehicleId}, ${timestamp.toISOString()}, código ${code ?? 'sin código'}`,
+        );
+        return { status: "duplicate", skipped: true, source: "db" };
+      }
+      throw error;
+    }
 
     // Update Redis last position cache (Initial, without address)
     const positionData = { ...normalized, avlUser: avlUserId, address: null as string | null };
