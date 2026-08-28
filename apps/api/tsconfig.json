@@ -21,5 +21,11 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  // `prisma.config.ts` NO es código de la aplicación: lo carga la CLI de
+  // Prisma con su propio loader, y usa `import.meta` (ESM), que este tsconfig
+  // compila a CommonJS. Incluirlo hacía fallar `tsc --noEmit` con TS1470.
+  // La CLI valida el archivo al cargarlo, y `npm run verificar:bloqueo-prisma`
+  // comprueba que el bloqueo funciona de verdad.
+  "exclude": ["prisma.config.ts", "node_modules", "dist"]
 }
