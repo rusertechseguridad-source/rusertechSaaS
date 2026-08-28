@@ -855,7 +855,21 @@
     "condiciones_catalogo": "Condiciones que el motor conoce ({{n}})",
     "condiciones_pendientes": "Pendientes de configuración ({{n}})",
     "nota_sin_app": "Las marcadas con ·app necesitan la app del conductor. El resto se detecta solo con telemetría, así que funcionan también para un cliente que solo tiene AVL satelital.",
-    "nota_pendientes": "Están en el catálogo pero todavía no se evalúan: falta dónde configurar su parámetro. Se muestran acá para que se sepa que faltan, en vez de que simplemente no existan."
+    "nota_pendientes": "Están en el catálogo pero todavía no se evalúan: falta dónde configurar su parámetro. Se muestran acá para que se sepa que faltan, en vez de que simplemente no existan.",
+    "parametros": "Parámetros del motor",
+    "tolerancia": {
+      "titulo": "Precisión del recorrido guardado",
+      "explicacion_1": "Cuando un viaje termina, su recorrido se guarda dibujado en el mapa. Este valor es cuánto puede alejarse ese dibujo del recorrido real, en metros.",
+      "explicacion_2": "Valores más bajos guardan el recorrido con más detalle y ocupan más espacio. Valores más altos ahorran espacio, pero pueden borrar del dibujo maniobras cortas —entrar a una calle lateral y volver—, que son la evidencia si un cliente reclama un desvío.",
+      "explicacion_3": "Recomendado: 2 metros. El valor usado queda registrado en cada viaje, así que cambiarlo no altera los recorridos ya guardados.",
+      "metros": "metros",
+      "guardar": "Guardar",
+      "guardando": "Guardando…",
+      "guardado": "Precisión del recorrido guardada.",
+      "error": "No se pudo guardar la precisión del recorrido.",
+      "solo_admin": "Solo el administrador de la cuenta puede cambiar este valor.",
+      "usando_default": "Valor por defecto de la instalación"
+    }
   },
   "estadosViaje": {
     "title": "Línea de tiempo de estados",

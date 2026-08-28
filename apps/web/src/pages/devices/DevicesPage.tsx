@@ -92,13 +92,12 @@ export const DevicesPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    const headers = [t('devices.table.device'), t('devices.table.imei'), t('devices.table.type'), t('devices.table.status'), t('devices.table.battery')];
+    const headers = [t('devices.table.device'), t('devices.table.imei'), t('devices.table.type'), t('devices.table.status')];
     const rows = filtered.map(d => [
       d.name,
       d.imei || '',
       t(`devices.types.${d.device_type.toLowerCase()}`),
       t(`devices.status.${d.status.toLowerCase()}`),
-      d.battery_level !== null ? `${d.battery_level}%` : 'N/A'
     ]);
     exportToCsv('Dispositivos', headers, rows);
   };
@@ -141,15 +140,11 @@ export const DevicesPage: React.FC = () => {
       iconColor: 'text-yellow-400',
       border: 'border-yellow-500/20',
     },
-    {
-      label: t('devices.low_battery'),
-      value: devices.filter(d => d.battery_level !== null && d.battery_level <= 20).length,
-      icon: BatteryWarning,
-      gradient: 'from-red-500/20 to-red-500/5',
-      iconColor: 'text-red-400',
-      border: 'border-red-500/20',
-    },
   ];
+  // El KPI de "batería baja" se retiró (auditoría E3): ningún camino escribe
+  // devices.battery_level, así que el contador daba 0 SIEMPRE — un panel que
+  // muestra un dato vacío hace creer que el dato existe. Vuelve el día que los
+  // equipos reporten batería de verdad.
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-bg text-textPrimary overflow-hidden w-full">
@@ -232,8 +227,6 @@ export const DevicesPage: React.FC = () => {
                     t('devices.table.type'),
                     t('devices.table.imei'),
                     t('devices.table.status'),
-                    t('devices.table.battery'),
-                    t('devices.table.signal'),
                     t('devices.table.actions')
                   ].map((col) => (
                     <th
@@ -289,18 +282,6 @@ export const DevicesPage: React.FC = () => {
                         }`}>
                           {t(`devices.status.${device.status.toLowerCase()}`)}
                         </span>
-                      </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-xs text-textSecondary">
-                          {getBatteryIcon(device.battery_level)}
-                          {device.battery_level !== null ? `${device.battery_level}%` : 'N/D'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-xs text-textSecondary">
-                          <Signal className={`w-4 h-4 ${device.signal_strength && device.signal_strength > 50 ? 'text-accentBlue' : 'text-textMuted'}`} />
-                          {device.signal_strength !== null ? `${device.signal_strength}%` : 'N/D'}
-                        </div>
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex gap-2">

@@ -91,3 +91,41 @@ export const useHistorialViaje = (tripId: string | undefined) =>
       return Array.isArray(data) ? data : [];
     },
   });
+
+export interface ToleranciaRecorrido {
+  tolerancia_m: number;
+  /** true = el tenant no tiene fila propia y rige el default de la instalación. */
+  es_default: boolean;
+}
+
+/** Precisión del recorrido guardado (E7). */
+export function useToleranciaRecorrido() {
+  return useQuery<ToleranciaRecorrido>({
+    queryKey: ['motor', 'tolerancia-recorrido'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/config/recorrido`, { headers: getHeaders() });
+      if (!res.ok) throw new Error(`No se pudo leer la precisión del recorrido (HTTP ${res.status}).`);
+      return res.json();
+    },
+  });
+}
+
+export function useCambiarToleranciaRecorrido() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (tolerancia_m: number) => {
+      const res = await fetch(`${API_URL}/config/recorrido`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ tolerancia_m }),
+      });
+      if (!res.ok) {
+        // El backend explica el rango en su mensaje: se propaga, no se tapa.
+        const detalle = await res.json().then((c) => c?.message).catch(() => null);
+        throw new Error(detalle || `No se pudo guardar (HTTP ${res.status}).`);
+      }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['motor', 'tolerancia-recorrido'] }),
+  });
+}

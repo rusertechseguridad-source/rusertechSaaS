@@ -855,7 +855,21 @@
     "condiciones_catalogo": "Conditions the engine knows ({{n}})",
     "condiciones_pendientes": "Awaiting configuration ({{n}})",
     "nota_sin_app": "Those marked ·app need the driver app. The rest are detected from telemetry alone, so they also work for a customer with satellite AVL only.",
-    "nota_pendientes": "They are in the catalog but are not evaluated yet: there is nowhere to configure their parameter. They are shown here so it is known they are missing, rather than simply not existing."
+    "nota_pendientes": "They are in the catalog but are not evaluated yet: there is nowhere to configure their parameter. They are shown here so it is known they are missing, rather than simply not existing.",
+    "parametros": "Engine parameters",
+    "tolerancia": {
+      "titulo": "Saved route precision",
+      "explicacion_1": "When a trip ends, its route is saved as drawn on the map. This value is how far that drawing may deviate from the actual route, in meters.",
+      "explicacion_2": "Lower values keep more detail and use more space. Higher values save space, but may erase short maneuvers from the drawing — turning into a side street and back — which are the evidence if a client disputes a detour.",
+      "explicacion_3": "Recommended: 2 meters. The value used is recorded on each trip, so changing it does not alter routes already saved.",
+      "metros": "meters",
+      "guardar": "Save",
+      "guardando": "Saving…",
+      "guardado": "Route precision saved.",
+      "error": "Could not save the route precision.",
+      "solo_admin": "Only the account administrator can change this value.",
+      "usando_default": "Installation default"
+    }
   },
   "estadosViaje": {
     "title": "State timeline",

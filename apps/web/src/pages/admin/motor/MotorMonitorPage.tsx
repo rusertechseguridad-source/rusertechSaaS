@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Cpu, RefreshCw, AlertTriangle, Radar, X } from 'lucide-react';
 import { useSaludMotor, useVehiculosMonitoreados, useDesactivarMonitoreo } from './api';
 import { useMotorCatalogos } from '../../../hooks/useMotorCatalogos';
+import { useToleranciaRecorrido, useCambiarToleranciaRecorrido } from './api';
+import { useAuthStore } from '../../../store/authStore';
 import { RequirePermission, SinPermiso } from '../../../components/RequirePermission';
 import { useToastStore } from '../../../store/toastStore';
 import { useAhora } from '../../../hooks/useAhora';
@@ -50,6 +52,11 @@ export const MotorMonitorPage: React.FC = () => {
   const { data: monitoreados } = useVehiculosMonitoreados();
   const { data: catalogos } = useMotorCatalogos();
   const desactivar = useDesactivarMonitoreo();
+  const { user } = useAuthStore();
+  const puedeEditarConfig = Boolean(user?.permissions?.includes('manage_settings'));
+  const { data: tolerancia } = useToleranciaRecorrido();
+  const cambiarTolerancia = useCambiarToleranciaRecorrido();
+  const [toleranciaBorrador, setToleranciaBorrador] = React.useState<string | null>(null);
   const ahora = useAhora(5_000);
 
   /*
@@ -188,6 +195,69 @@ export const MotorMonitorPage: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+
+        {/* ── Parámetros del motor (E7) ──────────────────────────────────── */}
+        <div className="bg-bgSurface border border-borderDefault rounded-xl p-5">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
+            {t('motor.parametros')}
+          </h2>
+
+          <div className="max-w-2xl">
+            <h3 className="text-xs font-bold text-white mb-1">{t('motor.tolerancia.titulo')}</h3>
+            {/* Texto de operación, no técnico: el operador decide con esto. */}
+            <p className="text-[11px] text-textSecondary leading-relaxed mb-1">
+              {t('motor.tolerancia.explicacion_1')}
+            </p>
+            <p className="text-[11px] text-textSecondary leading-relaxed mb-1">
+              {t('motor.tolerancia.explicacion_2')}
+            </p>
+            <p className="text-[11px] text-textMuted leading-relaxed mb-3">
+              {t('motor.tolerancia.explicacion_3')}
+            </p>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                max={50}
+                step={0.5}
+                value={toleranciaBorrador ?? (tolerancia ? String(tolerancia.tolerancia_m) : '')}
+                onChange={(e) => setToleranciaBorrador(e.target.value)}
+                disabled={!puedeEditarConfig}
+                className="w-28 bg-bgStart border border-borderDefault rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accentBlue disabled:opacity-50"
+                aria-label={t('motor.tolerancia.titulo')}
+              />
+              <span className="text-xs text-textMuted">{t('motor.tolerancia.metros')}</span>
+              {puedeEditarConfig ? (
+                <button
+                  onClick={async () => {
+                    if (toleranciaBorrador === null) return;
+                    try {
+                      await cambiarTolerancia.mutateAsync(Number(toleranciaBorrador));
+                      setToleranciaBorrador(null);
+                      addToast({ type: 'success', message: t('motor.tolerancia.guardado') });
+                    } catch (e: any) {
+                      addToast({ type: 'error', message: e?.message ?? t('motor.tolerancia.error') });
+                    }
+                  }}
+                  disabled={toleranciaBorrador === null || cambiarTolerancia.isPending}
+                  className="px-3 py-2 rounded-lg text-xs font-bold bg-accentBlue/20 text-accentBlue border border-accentBlue/30 hover:bg-accentBlue/30 disabled:opacity-40 transition-colors"
+                >
+                  {cambiarTolerancia.isPending ? t('motor.tolerancia.guardando') : t('motor.tolerancia.guardar')}
+                </button>
+              ) : (
+                // Sin permiso no se oculta el valor ni se deja un input mudo:
+                // se explica quién puede cambiarlo (criterio del proyecto).
+                <span className="text-[10px] text-textMuted">{t('motor.tolerancia.solo_admin')}</span>
+              )}
+              {tolerancia?.es_default && (
+                <span className="text-[10px] px-2 py-1 rounded border border-borderDefault text-textMuted">
+                  {t('motor.tolerancia.usando_default')}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Qué sabe detectar hoy ───────────────────────────────────────── */}

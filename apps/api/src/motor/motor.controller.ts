@@ -7,6 +7,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { requireTenantId } from '../common/tenant/tenant-scope';
 import { ColaService } from './cola.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
+import { MotorConfigService } from './motor-config.service';
 
 /**
  * API DEL MOTOR.
@@ -24,6 +25,7 @@ export class MotorController {
     private readonly prisma: PrismaService,
     private readonly cola: ColaService,
     private readonly activos: VehiculosActivosService,
+    private readonly config: MotorConfigService,
   ) {}
 
   /**
@@ -65,6 +67,31 @@ export class MotorController {
    * sostenida, el motor no da abasto. Un número alto puntual después de un
    * reinicio es normal.
    */
+  /**
+   * Precisión del recorrido guardado (E7). Lectura para cualquiera que vea la
+   * pantalla del motor; edición con `manage_settings` — que en el seed tienen
+   * exactamente `account_owner` (su tenant) y `rusertech_admin`: la misma
+   * regla que el resto de la configuración.
+   */
+  @Get('config/recorrido')
+  async toleranciaRecorrido(@CurrentUser() user: any) {
+    return this.config.obtenerToleranciaRecorrido(user.tenantId);
+  }
+
+  @Post('config/recorrido')
+  @RequirePermissions('manage_settings')
+  async cambiarToleranciaRecorrido(
+    @CurrentUser() user: any,
+    @Body() body: { tolerancia_m: number; tenant_id?: string },
+  ) {
+    // `rusertech_admin` puede ajustar el valor de cualquier tenant; el resto
+    // sólo el propio. Un tenant_id ajeno de un no-admin se ignora a propósito
+    // (no 403: el campo simplemente no existe para ese rol).
+    const esAdminPlataforma = user.role === 'rusertech_admin';
+    const tenantObjetivo = esAdminPlataforma && body.tenant_id ? body.tenant_id : user.tenantId;
+    return this.config.cambiarToleranciaRecorrido(tenantObjetivo, body.tolerancia_m);
+  }
+
   @Get('salud')
   @RequirePermissions('view_settings')
   async salud() {
