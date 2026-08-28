@@ -2,23 +2,23 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
+import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
 @Injectable()
 export class LocationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+    private readonly acceso: AccesoEntidadesService,
+  ) {}
 
   async findAll(user: any) {
-    let restrictions = undefined;
-    if (user?.role === 'viewer') {
-      const fullUser = await this.prisma.user.findUnique({ where: { id: user.id }, select: { entity_restrictions: true } });
-      const er = fullUser?.entity_restrictions as any;
-      if (er && Array.isArray(er.locations) && er.locations.length > 0) {
-        restrictions = { id: { in: er.locations } };
-      }
-    }
+    // 🔴 Acá había una fuga entre clientes, no sólo un problema de
+    // restricciones: `restrictions` quedaba en `undefined` para todo rol que no
+    // fuera `viewer`, y `where: undefined` devuelve las ubicaciones de TODOS
+    // los tenants. `vehicles` y `trips` sí filtraban; esta se salteó.
+    const restricciones = await this.acceso.filtroPara(user, 'locations', 'id');
 
     return this.prisma.extended.savedLocation.findMany({
-      where: restrictions,
+      where: tenantWhere(user?.tenantId, 'LocationsService.findAll', restricciones),
       include: {
         operation: { select: { name: true } },
       },

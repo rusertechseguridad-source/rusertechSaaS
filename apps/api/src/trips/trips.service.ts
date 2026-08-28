@@ -2,12 +2,15 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException, 
 import { PrismaService } from '../prisma/prisma.service';
 import { CarbonService } from '../carbon/carbon.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
+import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
 @Injectable()
 export class TripsService {
   private readonly logger = new Logger(TripsService.name);
 
-  constructor(private prisma: PrismaService, private carbonService: CarbonService) {}
+  constructor(private prisma: PrismaService, private carbonService: CarbonService,
+    private readonly acceso: AccesoEntidadesService,
+  ) {}
 
   /** Verifica que el viaje pertenezca al tenant antes de leerlo o modificarlo. */
   private async assertViajeDelTenant(id: string, tenantId: string) {
@@ -40,14 +43,11 @@ export class TripsService {
   }
 
   async findAll(user: any) {
-    let restrictions = undefined;
-    if (user?.role === 'viewer') {
-      const fullUser = await this.prisma.user.findUnique({ where: { id: user.id }, select: { entity_restrictions: true } });
-      const er = fullUser?.entity_restrictions as any;
-      if (er && Array.isArray(er.vehicles) && er.vehicles.length > 0) {
-        restrictions = { vehicle_id: { in: er.vehicles } };
-      }
-    }
+    // Punto único: la política de restricciones vive en AccesoEntidadesService.
+    // Antes esta condición estaba repetida en tres servicios y fallaba en
+    // ABIERTO — cualquier forma inesperada del jsonb dejaba la consulta sin
+    // filtro. Ahora una forma ilegible deniega y queda registrada.
+    const restrictions = await this.acceso.filtroPara(user, 'vehicles', 'vehicle_id');
 
     const trips = await this.prisma.trip.findMany({
       where: { 

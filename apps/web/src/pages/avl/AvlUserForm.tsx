@@ -17,13 +17,29 @@ export const AvlUserForm: React.FC<{
     provider_name: existingUser?.provider_name || existingUser?.name || '',
     provider_platform_url: existingUser?.provider_platform_url || '',
     provider_username: existingUser?.provider_username || '',
-    provider_password: existingUser?.provider_password || '',
+
     operational_contact: (existingUser as any)?.operational_contact || '',
     provider_api_url: existingUser?.provider_api_url || '',
-    provider_api_key: existingUser?.provider_api_key || '',
+
     provider_notes: existingUser?.provider_notes || '',
     is_active: existingUser ? existingUser.is_active : true,
   });
+
+  // Las credenciales del proveedor NO viven en `formData`.
+  //
+  // El backend ya no las devuelve (se guardan cifradas y sólo se revelan por un
+  // endpoint aparte), así que `existingUser?.provider_password || ''` daría ''
+  // y guardar sin tocarlas las habría BORRADO. Van en su propio estado con la
+  // regla: lo que el operador no escribió, no se manda, y Prisma no toca esa
+  // columna.
+  const [credenciales, setCredenciales] = useState<{
+    provider_password?: string;
+    provider_api_key?: string;
+  }>({});
+
+  const cambiarCredencial = (campo: 'provider_password' | 'provider_api_key', valor: string) => {
+    setCredenciales(prev => ({ ...prev, [campo]: valor }));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -35,10 +51,17 @@ export const AvlUserForm: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Sólo se envían las credenciales que el operador efectivamente escribió.
+    // Una clave ausente le dice al backend "no toques esa columna".
+    const credencialesAEnviar = Object.fromEntries(
+      Object.entries(credenciales).filter(([, valor]) => valor !== undefined && valor !== ''),
+    );
+    const cuerpo = { ...formData, ...credencialesAEnviar };
+
     if (existingUser) {
-      await updateUser(existingUser.id, formData);
+      await updateUser(existingUser.id, cuerpo);
     } else {
-      await createUser(formData);
+      await createUser(cuerpo);
     }
     onClose();
   };
@@ -235,11 +258,23 @@ export const AvlUserForm: React.FC<{
                   <input
                     type="password"
                     name="provider_password"
-                    value={formData.provider_password}
-                    onChange={handleChange}
+                    value={credenciales.provider_password ?? ''}
+                    onChange={(e) => cambiarCredencial('provider_password', e.target.value)}
+                    placeholder={
+                      (existingUser as any)?.tiene_password_proveedor
+                        ? 'Hay una contraseña guardada — escribí una nueva para reemplazarla'
+                        : 'Sin contraseña guardada'
+                    }
                     className="w-full bg-bgStart border border-borderDefault rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-accentBlue placeholder-textMuted transition-colors"
                     title="Contraseña que nos proporcionaron"
                   />
+                  {/* Un input vacío es indistinguible de "no hay credencial": la
+                      pantalla lo dice en lugar de dejar que el operador suponga. */}
+                  <p className="text-xs text-textMuted mt-1">
+                    {(existingUser as any)?.tiene_password_proveedor
+                      ? 'Guardada y cifrada. Dejá el campo vacío para conservarla.'
+                      : 'No hay contraseña guardada para este proveedor.'}
+                  </p>
                 </div>
               </div>
             </section>

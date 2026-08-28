@@ -7,6 +7,8 @@ import { MonitoringConfigService } from '../common/monitoring/monitoring-config.
 import { v4 as uuidv4 } from 'uuid';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
+import { aVistaPublica, credencialParaGuardar, descifrarCredenciales } from './avl-users.credenciales';
+import { CONTEXTO } from '../common/crypto/secretos-cifrados';
 
 /**
  * Cuánto hacia atrás se buscan códigos sin diccionario.
@@ -90,8 +92,10 @@ export class AvlUsersService {
 
     const { ventanaHoras, ultimoPorProveedor } = await this.consultarUltimoDato(tenantId);
 
-    return usuarios.map((u: { id: string }) => ({
-      ...u,
+    // `aVistaPublica` saca las credenciales y deja en su lugar dos booleanos:
+    // la pantalla necesita saber SI hay credencial guardada, no cuál es.
+    return usuarios.map((u: any) => ({
+      ...aVistaPublica(u),
       ultimo_dato: ultimoPorProveedor.get(u.id) ?? null,
       ventana_horas: ventanaHoras,
     }));
@@ -149,26 +153,99 @@ export class AvlUsersService {
       }
     });
     if (!user) throw new NotFoundException('AVL User no encontrado');
-    return user;
+    return aVistaPublica(user as any);
+  }
+
+  /**
+   * Campos que el cliente puede escribir. Todo lo demás del body se descarta.
+   *
+   * Antes se hacía `data: {...data}` con el body crudo. Eso es asignación
+   * masiva: un `PUT {"tenant_id":"<otro>"}` MOVÍA el proveedor GPS a otro
+   * cliente — verificado ejecutando el servicio. `tenant_id`, `id`, `api_key`
+   * y las credenciales cifradas no se toman de acá: los dos primeros no se
+   * cambian nunca por esta vía, y las credenciales tienen su propio camino
+   * (`credencialParaGuardar`), que distingue "no vino" de "borrala".
+   */
+  // Verificada contra el modelo `AvlUser` de schema.prisma, columna por
+  // columna. Quedan afuera a propósito: `id`, `tenant_id` (el mass assignment
+  // que se está cerrando), `api_key` (tiene su propio endpoint de
+  // regeneración), `last_data_at` (lo escribe el ingest), `created_at`,
+  // `updated_at`, y las dos credenciales, que van por `credencialParaGuardar`.
+  private static readonly CAMPOS_EDITABLES = [
+    'user_avl_code',
+    'name',
+    'description',
+    'provider_name',
+    'provider_platform_url',
+    'provider_username',
+    'provider_api_url',
+    'provider_notes',
+    'operational_contact',
+    'is_active',
+  ] as const;
+
+  private soloCamposEditables(data: any): Record<string, unknown> {
+    const limpio: Record<string, unknown> = {};
+    for (const campo of AvlUsersService.CAMPOS_EDITABLES) {
+      if (data?.[campo] !== undefined) limpio[campo] = data[campo];
+    }
+    return limpio;
   }
 
   async create(tenantId: string, data: any) {
     const apiKey = uuidv4();
-    return this.prisma.extended.avlUser.create({
+    // `as any` acotado: `soloCamposEditables` devuelve Record<string,unknown> y
+    // Prisma no puede verificar estáticamente que los obligatorios estén. La
+    // validación real de presencia la hace la base (NOT NULL); lo que esta
+    // lista garantiza es que no entre NADA que el cliente no deba escribir.
+    const creado = await this.prisma.extended.avlUser.create({
       data: {
-        ...data,
+        ...this.soloCamposEditables(data),
+        // En un alta sí se acepta la cadena vacía: significa "no cargué
+        // credencial", que es distinto de la edición, donde un vacío casi
+        // siempre es un formulario reenviando un campo que nunca se completó.
+        provider_password: credencialParaGuardar(
+          data?.provider_password, CONTEXTO.avlProviderPassword, 'provider_password', true),
+        provider_api_key: credencialParaGuardar(
+          data?.provider_api_key, CONTEXTO.avlProviderApiKey, 'provider_api_key', true),
         tenant_id: tenantId,
         api_key: apiKey,
-      }
+      } as any
     });
+    return aVistaPublica(creado as any);
   }
 
   async update(id: string, tenantId: string, data: any) {
     await this.assertAvlUserDelTenant(id, tenantId);
-    return this.prisma.extended.avlUser.update({
+    const actualizado = await this.prisma.extended.avlUser.update({
       where: { id },
-      data,
+      data: {
+        ...this.soloCamposEditables(data),
+        provider_password: credencialParaGuardar(
+          data?.provider_password, CONTEXTO.avlProviderPassword, 'provider_password', false),
+        provider_api_key: credencialParaGuardar(
+          data?.provider_api_key, CONTEXTO.avlProviderApiKey, 'provider_api_key', false),
+      },
     });
+    return aVistaPublica(actualizado as any);
+  }
+
+  /**
+   * Devuelve las credenciales EN CLARO. Endpoint aparte y con permiso propio:
+   * el listado no puede traerlas, porque entonces las tendría cualquiera que
+   * abra la pantalla.
+   */
+  async revelarCredenciales(id: string, tenantId: string) {
+    await this.assertAvlUserDelTenant(id, tenantId);
+    const fila = await this.prisma.extended.avlUser.findUnique({
+      where: { id },
+      select: { provider_username: true, provider_password: true, provider_api_key: true },
+    });
+    if (!fila) throw new NotFoundException('AVL User no encontrado');
+    this.logger.warn(
+      `Credenciales de proveedor reveladas: avl_user=${id} tenant=${tenantId}`,
+    );
+    return descifrarCredenciales(fila as any);
   }
 
   async delete(id: string, tenantId: string) {

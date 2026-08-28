@@ -5,6 +5,7 @@ import { MailService } from '../mail/mail.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { LivePositionsService } from '../common/live-positions/live-positions.service';
 import { MonitoringConfigService } from '../common/monitoring/monitoring-config.service';
+import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
 @Injectable()
 export class VehiclesService {
@@ -14,22 +15,13 @@ export class VehiclesService {
     private mailService: MailService,
     private livePositions: LivePositionsService,
     private monitoringConfig: MonitoringConfigService,
+    private readonly acceso: AccesoEntidadesService,
   ) {}
 
   async findAll(user: any, skip?: number, take?: number) {
     // Restricciones por usuario (un viewer puede tener una lista acotada de vehículos).
     // Se combinan con el filtro de tenant, nunca lo reemplazan.
-    let restrictions: Record<string, any> = {};
-    if (user?.role === 'viewer') {
-      const fullUser = await this.prisma.user.findUnique({
-        where: { id: user.id },
-        select: { entity_restrictions: true },
-      });
-      const er = fullUser?.entity_restrictions as any;
-      if (er && Array.isArray(er.vehicles) && er.vehicles.length > 0) {
-        restrictions = { id: { in: er.vehicles } };
-      }
-    }
+    const restrictions = await this.acceso.filtroPara(user, 'vehicles', 'id');
 
     return this.prisma.extended.vehicle.findMany({
       skip,

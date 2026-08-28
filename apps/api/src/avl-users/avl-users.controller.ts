@@ -71,6 +71,20 @@ export class AvlUsersController {
     return this.service.toggleActive(id, user.tenantId, is_active);
   }
 
+  /**
+   * Credenciales del proveedor EN CLARO.
+   *
+   * Endpoint propio y con `manage_avl` a propósito: el listado ya no las trae,
+   * porque devolverlas ahí se las daba a cualquiera que abriera la pantalla.
+   * Acá se piden de a una, con permiso de escritura, y queda registrado en el
+   * log del servidor quién las pidió.
+   */
+  @Get(':id/credenciales')
+  @RequirePermissions('manage_avl')
+  revelarCredenciales(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.service.revelarCredenciales(id, user.tenantId);
+  }
+
   @Post(':id/regenerate-api-key')
   @RequirePermissions('manage_avl')
   regenerateApiKey(@Param('id') id: string, @CurrentUser() user: any) {
