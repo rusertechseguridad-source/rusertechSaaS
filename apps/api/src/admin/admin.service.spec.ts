@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 
 /**
  * Era la plantilla de NestJS ("should be defined") sin proveer PrismaService:
@@ -13,17 +14,30 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('AdminService', () => {
   let service: AdminService;
 
-  const prismaMock = {
-    tenant: { findUnique: jest.fn(), findMany: jest.fn() },
+  // AdminService pasó a depender de MailService en la Tanda 1: el correo de
+  // alta era un mock de `console.log` que imprimía la contraseña temporal.
+  const mailMock = { sendInvitation: jest.fn(), sendVehicleBlockedAlert: jest.fn() };
+
+  const prismaMock: any = {
+    tenant: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn() },
     vehicle: { count: jest.fn() },
     eventLog: { count: jest.fn() },
     $queryRaw: jest.fn(),
+    // `createTenant` corre dentro de una transacción con callback; el mock la
+    // ejecuta con el mismo objeto, que es lo que hace Prisma en la práctica.
+    $transaction: jest.fn((cb: any) => cb(prismaMock)),
+    user: { create: jest.fn(), update: jest.fn() },
+    carbonSetting: { create: jest.fn() },
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const modulo: TestingModule = await Test.createTestingModule({
-      providers: [AdminService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        AdminService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: MailService, useValue: mailMock },
+      ],
     }).compile();
 
     service = modulo.get<AdminService>(AdminService);
@@ -53,6 +67,54 @@ describe('AdminService', () => {
       const sqlEnviado = prismaMock.$queryRaw.mock.calls[0][0].join('');
       expect(sqlEnviado).toContain('es_terminal');
       expect(sqlEnviado).toContain('NOT IN');
+    });
+  });
+
+  describe('createTenant · el correo de alta', () => {
+    // El envío era un mock de seis `console.log`, uno de ellos con la
+    // contraseña temporal en texto plano (verificación integral, §2.6).
+    const alta = {
+      name: 'Transportes Sur', slug: 'transportes-sur', plan: 'starter',
+      adminEmail: 'dueno@sur.com', adminFullName: 'Ana Pérez',
+    };
+
+    beforeEach(() => {
+      prismaMock.tenant.findUnique.mockResolvedValue(null);
+      prismaMock.tenant.create.mockResolvedValue({ id: 't9', name: 'Transportes Sur' });
+      prismaMock.user.create.mockResolvedValue({ id: 'u9', email: alta.adminEmail, full_name: alta.adminFullName });
+      prismaMock.carbonSetting.create.mockResolvedValue({});
+    });
+
+    it('manda la clave por correo y NO la escribe en la salida del proceso', async () => {
+      const espiaLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+      mailMock.sendInvitation.mockResolvedValue(undefined);
+
+      const respuesta = await service.createTenant(alta);
+
+      expect(mailMock.sendInvitation).toHaveBeenCalledTimes(1);
+      const enviado = mailMock.sendInvitation.mock.calls[0][0];
+      expect(enviado.to).toBe(alta.adminEmail);
+      expect(enviado.tempPassword).toEqual(expect.any(String));
+      // El nombre del tenant, no el slug: es lo que lee el destinatario.
+      expect(enviado.tenantName).toBe('Transportes Sur');
+      expect(respuesta.emailSent).toBe(true);
+
+      // La afirmación que da nombre a la corrección: la contraseña no aparece
+      // en ninguna línea impresa por el proceso.
+      const impreso = espiaLog.mock.calls.flat().join(' ');
+      expect(impreso).not.toContain(enviado.tempPassword);
+      espiaLog.mockRestore();
+    });
+
+    it('si el correo falla, el tenant sobrevive pero la respuesta lo dice', async () => {
+      // Sin este aviso el tenant nace inaccesible en silencio: la clave ya no
+      // queda en ningún otro lado.
+      mailMock.sendInvitation.mockRejectedValue(new Error('SMTP caído'));
+
+      const respuesta = await service.createTenant(alta);
+
+      expect(respuesta.tenantId).toBe('t9');
+      expect(respuesta.emailSent).toBe(false);
     });
   });
 });

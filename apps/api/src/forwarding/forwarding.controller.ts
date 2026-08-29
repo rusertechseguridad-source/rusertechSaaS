@@ -2,9 +2,13 @@ import { Controller, Get, Post, Put, Delete, Patch, Body, Param, UseGuards, Requ
 import { ForwardingService } from './forwarding.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Controller('api/v1/forwarding')
-@UseGuards(JwtAuthGuard)
+// `RolesGuard` faltaba: el `@Roles` de abajo estaba declarado y era inerte, así
+// que cualquier rol leía `auth_credentials` (el bearer token de la integración
+// del cliente) y podía reapuntar el reenvío (verificación integral, §2.4).
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('account_owner', 'manager', 'rusertech_admin')
 export class ForwardingController {
   constructor(private readonly forwardingService: ForwardingService) {}

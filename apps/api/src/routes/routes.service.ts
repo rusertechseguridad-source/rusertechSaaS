@@ -8,6 +8,11 @@ export class RoutesService {
 
   async findAll(tenantId: string) {
     return this.prisma.extended.route.findMany({
+      // El `tenantId` se recibía y no se usaba: sin `where`, esta consulta
+      // devolvía los recorridos de TODOS los tenants a cualquier usuario
+      // autenticado. `tenantWhere` ya estaba importado en este archivo y se
+      // usa cuatro líneas más abajo en `findOne` (verificación integral, §2.3).
+      where: tenantWhere(tenantId, 'RoutesService.findAll'),
       include: {
         origin_location: { select: { name: true } },
         destination_location: { select: { name: true } },

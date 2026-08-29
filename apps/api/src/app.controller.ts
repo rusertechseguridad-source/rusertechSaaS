@@ -21,8 +21,17 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  // Sin guard, esta ruta era el único endpoint anónimo del backend: cualquiera
+  // en internet escribía archivos de cualquier tamaño en el disco del servidor
+  // y recibía la URL pública para servirlos (verificación integral, §2.5).
+  // El `@Get('alerts')` de arriba, en este mismo archivo, sí lo tenía.
   @Post('upload')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', {
+    // 10 MB: cubre logos, fotos de viaje y adjuntos, y deja de permitir que un
+    // solo request llene el disco. Sin este límite multer acepta cualquier
+    // tamaño. La lista blanca de extensiones queda para la tanda de higiene.
+    limits: { fileSize: 10 * 1024 * 1024 },
     storage: diskStorage({
       destination: './uploads',
       filename: (req, file, cb) => {

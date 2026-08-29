@@ -1,12 +1,18 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as nodemailer from 'nodemailer'; // We need to install this
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(AdminService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   async getTenants() {
     return this.prisma.tenant.findMany({
@@ -96,13 +102,24 @@ export class AdminService {
       return { tenant, user, tempPassword };
     });
 
-    // 5. Enviar email de bienvenida
-    await this.sendWelcomeEmail(result.user.email, result.user.full_name || '', data.slug, result.tempPassword);
+    // 5. Enviar email de bienvenida.
+    // El envío va FUERA de la transacción y no la revierte: el tenant ya existe
+    // y borrarlo por un fallo de correo sería peor. Pero el resultado se informa
+    // (`emailSent`), porque la contraseña temporal ya no queda en ningún otro
+    // lado — si el correo no salió, el tenant nace inaccesible y hay que
+    // regenerar la clave con `POST /admin/users/:id/reset-password`.
+    const emailSent = await this.sendWelcomeEmail(
+      result.user.email,
+      result.user.full_name || '',
+      result.tenant.name,
+      result.tempPassword,
+    );
 
     return {
       message: 'Tenant creado exitosamente',
       tenantId: result.tenant.id,
-      adminEmail: result.user.email
+      adminEmail: result.user.email,
+      emailSent
     };
   }
 
@@ -219,14 +236,41 @@ export class AdminService {
     return { newPassword };
   }
 
-  private async sendWelcomeEmail(email: string, name: string, slug: string, tempPass: string) {
-    console.log(`\n\n=== MOCK EMAIL A ${email} ===`);
-    console.log(`Asunto: Bienvenido a Rusertech - Accesos`);
-    console.log(`Hola ${name}, tu cuenta para la empresa ${slug} ha sido creada.`);
-    console.log(`URL de acceso: https://app.rusertech.com/login`);
-    console.log(`Tu contraseña temporal es: ${tempPass}`);
-    console.log(`Por favor cámbiala al ingresar.`);
-    console.log(`==================================\n\n`);
+  /**
+   * Envía las credenciales del `account_owner` del tenant recién creado.
+   *
+   * Antes esto era un mock de seis `console.log` que no mandaba nada, y uno de
+   * ellos imprimía la contraseña temporal en texto plano. Las dos ramas eran
+   * malas: o alguien leía el log del servidor y se quedaba con la credencial
+   * del administrador de ese cliente, o nadie lo leía y el tenant nacía
+   * inaccesible (verificación integral, §2.6).
+   *
+   * Devuelve si el correo salió. NO relanza: el tenant ya está creado y el
+   * llamador necesita poder informarlo, no perder la operación entera.
+   */
+  private async sendWelcomeEmail(
+    email: string,
+    name: string,
+    tenantName: string,
+    tempPass: string,
+  ): Promise<boolean> {
+    try {
+      await this.mailService.sendInvitation({
+        to: email,
+        fullName: name,
+        tempPassword: tempPass,
+        tenantName,
+      });
+      return true;
+    } catch (error) {
+      // El error se registra SIN la contraseña: ese era justamente el problema.
+      this.logger.error(
+        `No se pudo enviar el correo de alta a ${email}: ${(error as Error).message}. ` +
+          'El tenant quedó creado pero su administrador no recibió la clave: ' +
+          'regenerarla con POST /admin/users/:id/reset-password.',
+      );
+      return false;
+    }
   }
 
   // --- GLOBAL PARAMETERS ---

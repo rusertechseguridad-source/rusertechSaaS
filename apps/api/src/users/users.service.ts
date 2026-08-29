@@ -9,10 +9,15 @@ export class UsersService {
   // Buscar un usuario por email (usado para login).
   // Se usa el prisma normal sin extensión RLS porque en el login
   // aún no tenemos un tenant_id en el contexto.
-  async findByEmail(email: string): Promise<User & { role?: any } | null> {
+  async findByEmail(
+    email: string,
+  ): Promise<(User & { role?: any; tenant?: { status: string } }) | null> {
     return this.prisma.user.findUnique({
       where: { email },
-      include: { role: true }
+      // `tenant.status` se suma para que el login pueda negar el acceso a un
+      // cliente suspendido. Se proyecta sólo `status`: el resto de la fila del
+      // tenant incluye `settings_json`, que trae credenciales SMTP.
+      include: { role: true, tenant: { select: { status: true } } }
     });
   }
 
