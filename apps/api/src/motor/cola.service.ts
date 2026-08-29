@@ -79,7 +79,7 @@ export class ColaService {
     const hasta = new Date(ahora + 5 * 60 * 1000);
 
     const filas: FilaCola[] = await this.prisma.$queryRaw<FilaCola[]>`
-      WITH tomadas AS (
+      WITH candidatas AS (
         SELECT id
         FROM motor_cola
         WHERE estado = 'pendiente'
@@ -87,38 +87,69 @@ export class ColaService {
         LIMIT ${TAMANO_LOTE}
         FOR UPDATE SKIP LOCKED
       ),
+      -- El JOIN va PRIMERO. Antes se marcaba 'procesando' y se incrementaba
+      -- "intentos" sobre todas las candidatas, y recién después se descartaban
+      -- las que no tenían punto: esas nunca llegaban al worker, así que nunca
+      -- podían llamar a marcarFallido() —el único lugar donde vive el límite de
+      -- reintentos— y "recuperarHuerfanas" las devolvía a 'pendiente' cada 5
+      -- minutos. Bucle infinito con un contador "smallint": a los 32.767
+      -- intentos (~114 días) el UPDATE aborta por desbordamiento y el motor
+      -- entero deja de procesar, en silencio.
+      con_punto AS (
+        SELECT c.id, c.tenant_id, c.vehicle_id, c.trip_id, c.telemetry_id,
+               c.telemetry_ts, c.origen,
+               t.latitude, t.longitude, t.speed_kmh, t.ignition,
+               t.temperature_c, t.provider_code
+        FROM motor_cola c
+        JOIN candidatas ON candidatas.id = c.id
+        JOIN telemetry t
+          ON t.id = c.telemetry_id
+         AND t."timestamp" = c.telemetry_ts
+         AND t."timestamp" >= ${desde}
+         AND t."timestamp" <= ${hasta}
+      ),
+      -- Sólo se marca lo que de verdad va a procesarse.
       marcadas AS (
         UPDATE motor_cola c
         SET estado = 'procesando',
             tomado_at = now(),
             tomado_por = ${workerId},
             intentos = c.intentos + 1
-        FROM tomadas
-        WHERE c.id = tomadas.id
-        RETURNING c.id, c.tenant_id, c.vehicle_id, c.trip_id,
-                  c.telemetry_id, c.telemetry_ts, c.origen
+        FROM con_punto
+        WHERE c.id = con_punto.id
+        RETURNING c.id
+      ),
+      -- Y lo que no tiene punto sale del bucle POR LA PUERTA, no por el techo
+      -- del contador: se marca 'fallido' con el motivo escrito. Un punto que ya
+      -- no existe no va a aparecer en el próximo intento — la partición se
+      -- purgó, o el dato llegó fuera de la ventana de 7 días.
+      sin_punto AS (
+        UPDATE motor_cola c
+        SET estado = 'fallido',
+            error = 'El punto de telemetría referenciado no existe o quedó fuera de la ventana de 7 días.',
+            tomado_at = null,
+            tomado_por = null
+        FROM candidatas
+        WHERE c.id = candidatas.id
+          AND c.id NOT IN (SELECT id FROM con_punto)
+        RETURNING c.id
       )
       SELECT
-        m.id::text        AS cola_id,
-        m.telemetry_id::text AS telemetry_id,
-        m.tenant_id::text AS tenant_id,
-        m.vehicle_id::text AS vehicle_id,
-        m.trip_id::text   AS trip_id,
-        m.telemetry_ts    AS "timestamp",
-        t.latitude,
-        t.longitude,
-        t.speed_kmh,
-        t.ignition,
-        t.temperature_c,
-        t.provider_code,
-        m.origen
-      FROM marcadas m
-      JOIN telemetry t
-        ON t.id = m.telemetry_id
-       AND t."timestamp" = m.telemetry_ts
-       AND t."timestamp" >= ${desde}
-       AND t."timestamp" <= ${hasta}
-      ORDER BY m.vehicle_id, m.telemetry_ts
+        p.id::text           AS cola_id,
+        p.telemetry_id::text AS telemetry_id,
+        p.tenant_id::text    AS tenant_id,
+        p.vehicle_id::text   AS vehicle_id,
+        p.trip_id::text      AS trip_id,
+        p.telemetry_ts       AS "timestamp",
+        p.latitude,
+        p.longitude,
+        p.speed_kmh,
+        p.ignition,
+        p.temperature_c,
+        p.provider_code,
+        p.origen
+      FROM con_punto p
+      ORDER BY p.vehicle_id, p.telemetry_ts
     `;
 
     return filas.map((f) => ({

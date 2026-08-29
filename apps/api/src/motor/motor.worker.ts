@@ -9,6 +9,7 @@ import { VehiculosActivosService } from './vehiculos-activos.service';
 import { TrabajosService } from './trabajos.service';
 import { evaluarGeocercas, evaluarTransicionesDeEstado } from './evaluadores/geocercas.evaluator';
 import type { ConfigMotor, Decision, EstadoVehiculo, PuntoEvaluable } from './tipos';
+import { EventosService } from './eventos.service';
 
 /** Cada cuánto busca trabajo. Con esto la latencia queda muy por debajo del objetivo de 30-60 s. */
 const INTERVALO_MS = 5000;
@@ -50,6 +51,7 @@ export class MotorWorker {
   private ultimaSincronizacion = 0;
 
   constructor(
+    private readonly eventos: EventosService,
     private readonly cola: ColaService,
     private readonly estado: EstadoVehiculoService,
     private readonly config: MotorConfigService,
@@ -224,7 +226,20 @@ export class MotorWorker {
       );
     }
 
+    // ── LA LÍNEA QUE FALTABA ────────────────────────────────────────────
+    // Acá terminaba `procesarVehiculo` con un log de depuración, y el arreglo
+    // `decisiones` moría con la función. El cálculo estaba bien hecho y el
+    // resultado se tiraba.
+    //
+    // Va DESPUÉS de `guardar()` y `guardarGeocercas()` a propósito: si el
+    // proceso muere entre medio, el reintento compara contra el estado ya
+    // guardado, no emite las mismas decisiones, y no duplica alertas.
     if (decisiones.length > 0) {
+      // NO se envuelve en try/catch: si la escritura falla, la excepción sube
+      // y el llamador devuelve los puntos a la cola con `marcarFallido`. Que
+      // el punto se reprocese es exactamente lo que queremos — una alerta que
+      // no se escribió es una alerta que nadie va a ver.
+      await this.eventos.persistir(decisiones);
       this.logger.debug(
         `Vehículo ${vehicleId}: ${puntos.length} puntos, ${decisiones.length} decisiones.`,
       );

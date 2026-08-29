@@ -39,6 +39,9 @@ export function evaluarGeocercas(
       causa_id: g.geofence_id,
       detalle: `Entró en la geocerca "${g.nombre}"`,
       datos: { zone_type: g.zone_type, nombre: g.nombre },
+      latitude: punto.latitude,
+      longitude: punto.longitude,
+      provider_code: punto.provider_code,
     });
   }
 
@@ -53,6 +56,9 @@ export function evaluarGeocercas(
       causa_id: idAntes,
       detalle: 'Salió de una geocerca',
       datos: {},
+      latitude: punto.latitude,
+      longitude: punto.longitude,
+      provider_code: punto.provider_code,
     });
   }
 

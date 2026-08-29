@@ -70,6 +70,14 @@ export interface Decision {
   /** Si el hecho debe notificarse (lo define la configuración de la zona). */
   notificar?: boolean;
   datos?: Record<string, unknown>;
+  /**
+   * Dónde ocurrió. `event_logs` tiene `latitude`, `longitude` y
+   * `provider_code`, y sin ellas la alerta no se puede ubicar en el mapa: el
+   * operador vería "entró en una geocerca" sin saber dónde.
+   */
+  latitude?: number;
+  longitude?: number;
+  provider_code?: string | null;
 }
 
 /**

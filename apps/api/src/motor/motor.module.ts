@@ -8,6 +8,7 @@ import { VehiculosActivosService } from './vehiculos-activos.service';
 import { TrabajosService } from './trabajos.service';
 import { MotorWorker } from './motor.worker';
 import { MotorController } from './motor.controller';
+import { EventosService } from './eventos.service';
 
 /**
  * MOTOR DE EVENTOS — Etapa 1.
@@ -21,7 +22,7 @@ import { MotorController } from './motor.controller';
 @Module({
   imports: [TelemetryModule],
   controllers: [MotorController],
-  providers: [
+  providers: [EventosService, 
     ColaService,
     EstadoVehiculoService,
     MotorConfigService,

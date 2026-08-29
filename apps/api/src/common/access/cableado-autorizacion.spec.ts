@@ -19,7 +19,14 @@ const controladores = globSync('**/*.controller.ts', { cwd: RAIZ, absolute: true
   .filter((f) => !f.endsWith('.spec.ts'));
 
 const leer = (f: string) => readFileSync(f, 'utf-8');
-const corto = (f: string) => f.replace(RAIZ, '').replace(/^\//, '');
+/**
+ * ⚠️ Normalizar el separador NO es cosmético: `path.join` devuelve `\` en
+ * Windows, la lista de exenciones de abajo usa `/`, y ninguna coincidía —
+ * el barrido fallaba entero en la máquina de Gustavo y pasaba en la mía.
+ * Es la tercera vez en esta serie que un verificador da un resultado
+ * distinto según el entorno.
+ */
+const corto = (f: string) => f.replace(RAIZ, '').replace(/\\/g, '/').replace(/^\//, '');
 
 /**
  * ⚠️ Un guard cuenta sólo si está DENTRO de un `@UseGuards(...)`.
@@ -79,6 +86,14 @@ describe('Cableado de autorización', () => {
       'security-keys/security-keys.controller.ts': 'Usa @Roles con RolesGuard.',
       'forwarding/forwarding.controller.ts': 'Usa @Roles con RolesGuard (enchufado en la Tanda 1).',
     };
+
+    // ⚠️ Cada clave de `exentos` tiene que corresponder a un archivo REAL.
+    // Si `corto()` deja de normalizar el separador —lo que pasaba en Windows—
+    // ninguna coincide, todas las exenciones se vuelven letra muerta y el
+    // barrido falla entero. Esta comprobación lo caza en cualquier sistema.
+    const rutasReales = new Set(controladores.map(corto));
+    const exencionesMuertas = Object.keys(exentos).filter((k) => !rutasReales.has(k));
+    expect(exencionesMuertas).toEqual([]);
 
     const desprotegidos = controladores
       .filter((f) => {

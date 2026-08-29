@@ -191,7 +191,9 @@ describe('Escalada de privilegios · las TRES rutas que escriben role_code', () 
           .filter((l) => !/role_code:\s*\{/.test(l));
         if (escribe.length === 0) continue;
         if (!texto.includes('exigirRolAsignable')) {
-          culpables.push(`${archivo.replace(raiz, '')} — escribe role_code y no llama a la regla`);
+          // Separador normalizado: en Windows `replace(raiz,'')` deja `\`.
+          const relativo = archivo.replace(raiz, '').replace(/\\/g, '/');
+          culpables.push(`${relativo} — escribe role_code y no llama a la regla`);
         }
       }
       expect(culpables).toEqual([]);
