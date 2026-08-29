@@ -236,9 +236,9 @@ export const MotorMonitorPage: React.FC = () => {
                     try {
                       await cambiarTolerancia.mutateAsync(Number(toleranciaBorrador));
                       setToleranciaBorrador(null);
-                      addToast({ type: 'success', message: t('motor.tolerancia.guardado') });
+                      addToast(t('motor.tolerancia.guardado'), 'success');
                     } catch (e: any) {
-                      addToast({ type: 'error', message: e?.message ?? t('motor.tolerancia.error') });
+                      addToast(e?.message ?? t('motor.tolerancia.error'), 'error');
                     }
                   }}
                   disabled={toleranciaBorrador === null || cambiarTolerancia.isPending}

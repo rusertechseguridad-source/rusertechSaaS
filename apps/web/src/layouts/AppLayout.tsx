@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { SimulatorPanel } from '../components/Simulator/SimulatorPanel';
 import { useAuthStore } from '../store/authStore';
 import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert, Key, Cpu, ChevronDown, BarChart3 } from 'lucide-react';
 

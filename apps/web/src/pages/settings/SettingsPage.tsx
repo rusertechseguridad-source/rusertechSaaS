@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { Settings, Building, Users, Key, Globe, Plus, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Shield, RefreshCw, Leaf, MapPin, ExternalLink, User, Sliders, Bell, Radar } from 'lucide-react';
+import { Settings, Building, Users, Trash2, Edit2, ShieldAlert, Check, X, HelpCircle, Leaf, MapPin, ExternalLink, User, Sliders, Bell, Radar } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { NotificationChannelsTab } from '../../components/Settings/NotificationChannelsTab';
@@ -40,8 +40,13 @@ export const SettingsPage: React.FC = () => {
   const [parameters, setParameters] = useState<any[]>([]);
 
   // Notifications
-  const [smtpConfig, setSmtpConfig] = useState({ host: '', port: 587, user: '', pass: '', from: '' });
-  const [fcmConfig, setFcmConfig] = useState({ serverKey: '' });
+  // Estos dos SÍ se llenan (líneas ~87-88, desde GET /settings/notifications) y
+  // ningún componente los lee: la pantalla que los mostraba se reemplazó por
+  // NotificationChannelsTab. O sea que hoy la contraseña SMTP del cliente viaja
+  // al navegador en cada carga de Configuración para no mostrarse en ninguna
+  // parte. La pantalla es de la Tanda 6; dejar de mandar la clave, de la 7.
+  const [, setSmtpConfig] = useState({ host: '', port: 587, user: '', pass: '', from: '' });
+  const [, setFcmConfig] = useState({ serverKey: '' });
 
   // Carbon
   const [climatiqConfig, setClimatiqConfig] = useState({ enabled: false, apiKey: '' });
@@ -217,16 +222,11 @@ export const SettingsPage: React.FC = () => {
     fetchConfigs();
   };
 
-  const saveNotificationsConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/settings/notifications`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ smtp: smtpConfig, fcm: fcmConfig })
-    });
-    alert('Configuración de notificaciones guardada');
-  };
+  // Acá vivía `saveNotificationsConfig`, que hacía PUT /settings/notifications
+  // con { smtp, fcm }. Ningún formulario la llamaba: la pestaña que la usaba se
+  // reemplazó por NotificationChannelsTab y quedó el resto. El cuerpo íntegro
+  // está transcripto en el reporte de la Tanda 2, para que la Tanda 6 lo
+  // restituya junto con la pantalla de SMTP/FCM que hoy no existe.
 
   const saveCarbonConfig = async (e: React.FormEvent) => {
     e.preventDefault();

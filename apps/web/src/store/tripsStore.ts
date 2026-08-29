@@ -11,6 +11,13 @@ export interface Trip {
   actual_end: string | null;
   vehicle_id: string;
   vehicle?: any;
+  // El esquema tiene `trips.driver_id` y la relación `driver`, y
+  // `TripDetailsPage` las lee. Faltaban en el tipo, así que el compilador
+  // (ciego) no podía decir nada. Van OPCIONALES porque hoy sólo las devuelve
+  // `generateMobilePairing`: `findAll`/`findOne` no incluyen `driver`, y por eso
+  // la columna Conductor sale vacía. Cerrar eso es de la Tanda 6.
+  driver_id: string | null;
+  driver?: any;
   operation_id: string | null;
   operation?: any;
   origin_location_id: string | null;

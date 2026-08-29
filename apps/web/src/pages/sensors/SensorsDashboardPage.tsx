@@ -2,14 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { Thermometer, Droplets, Activity, Truck } from 'lucide-react';
 import { SensorGauge } from './components/SensorGauge';
-import { SensorSparkline } from './components/SensorSparkline';
 import { SensorHistoryModal } from './SensorHistoryModal';
-import { Search, Download, Filter } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export const SensorsDashboardPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user, token } = useAuthStore();
+  const { token } = useAuthStore();
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -44,11 +43,6 @@ export const SensorsDashboardPage: React.FC = () => {
     if (val < min) return 'text-accentBlue border-accentBlue bg-accentBlue/10';
     if (val > max) return 'text-alertRed border-alertRed bg-alertRed/10';
     return 'text-accentGreen border-accentGreen bg-accentGreen/10';
-  };
-
-  const formatVal = (val: any) => {
-    if (val === undefined || val === null) return '-- . -';
-    return Number(val).toFixed(2);
   };
 
   const getStatusBgColor = (val: number, min: number, max: number) => {

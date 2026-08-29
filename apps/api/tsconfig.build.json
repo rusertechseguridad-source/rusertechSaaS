@@ -1,10 +1,11 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": [
-    "node_modules",
-    "test",
-    "dist",
-    "**/*spec.ts",
-    "prisma.config.ts"
-  ]
+  // ⚠️ `exclude` NO se hereda: cuando un tsconfig hijo lo declara, REEMPLAZA
+  // por completo al del padre en vez de sumarse. Este archivo es el que usan
+  // `nest build` y `nest start`, y al omitir `prisma.config.ts` la API no
+  // arrancaba: TS1470, porque ese archivo usa `import.meta` (ESM) y acá se
+  // compila a CommonJS. La exclusión del padre existía y no servía de nada.
+  // Reproducido: `tsc -p tsconfig.build.json --noEmit` daba 1 error y
+  // `tsc --noEmit` (tsconfig.json) daba 0.
+  "exclude": ["prisma.config.ts", "node_modules", "test", "dist", "**/*spec.ts"]
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, CreditCard, FileText, Car, Calendar, Upload, CheckCircle, Download } from 'lucide-react';
+import { X, User, Phone, CreditCard, FileText, Car, Upload, CheckCircle, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
 
 interface DriverModalProps {

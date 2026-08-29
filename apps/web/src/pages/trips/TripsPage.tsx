@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
 import {
-  Truck, Plus, Search, Calendar, MapPin, User, Building2,
-  Radio, ChevronRight, CheckCircle, X, Filter, Thermometer,
-  Droplets, AlertTriangle, Clock, Play, Download,
+  Truck, Plus, Search, Calendar, MapPin, User,
+  ChevronRight, X, Thermometer,
+  Droplets, AlertTriangle, Play, Download,
 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
@@ -180,7 +180,9 @@ const TripRow: React.FC<{ trip: Trip, onEdit: (trip: Trip) => void }> = ({ trip,
 /* ─────────────── main page ─────────────── */
 export const TripsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { trips, fetchTrips, createTrip, loading } = useTripsStore();
+  // `createTrip` se destructuraba sin usarse: el alta la hace el modal,
+  // que llama al store por su cuenta.
+  const { trips, fetchTrips, loading } = useTripsStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [carrierFilter, setCarrierFilter] = useState('');

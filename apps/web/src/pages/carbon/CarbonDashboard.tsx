@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Leaf, Activity, Download, Settings, BarChart2 } from 'lucide-react';
+import { Leaf, Activity, Download, BarChart2 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 
 export const CarbonDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
+  // Mismo hueco que AnalyticsDashboard: se marca el estado y no se pinta.
+  const [, setLoading] = useState(false);
   const [settings, setSettings] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [apiKey, setApiKey] = useState('');

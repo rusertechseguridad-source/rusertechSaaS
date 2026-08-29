@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Smartphone, Signal, Battery, Plus, Search, AlertTriangle, Edit2, Trash2, X, BatteryMedium, BatteryCharging, BatteryWarning, Download } from 'lucide-react';
+import { Smartphone, Signal, Plus, Search, AlertTriangle, Edit2, Trash2, X, Download } from 'lucide-react';
 import { useDevicesStore, type Device } from '../../store/devicesStore';
-import { RequirePermission } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
 
@@ -107,13 +106,6 @@ export const DevicesPage: React.FC = () => {
     d.name.toLowerCase().includes(search.toLowerCase()) || 
     (d.imei && d.imei.toLowerCase().includes(search.toLowerCase()))
   );
-
-  const getBatteryIcon = (level: number | null) => {
-    if (level === null) return <Battery className="w-4 h-4 text-textMuted" />;
-    if (level > 60) return <BatteryCharging className="w-4 h-4 text-accentGreen" />;
-    if (level > 20) return <BatteryMedium className="w-4 h-4 text-yellow-400" />;
-    return <BatteryWarning className="w-4 h-4 text-statusDanger" />;
-  };
 
   const statCards = [
     {

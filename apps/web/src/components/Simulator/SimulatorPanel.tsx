@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSimulatorStore } from '../../store/simulatorStore';
 import { useAvlStore } from '../../store/avlStore';
-import { Activity, Play, Send, AlertTriangle, X, Trash2, Info } from 'lucide-react';
+import { Activity, Play, Send, AlertTriangle, Trash2, Info } from 'lucide-react';
 
 export const SimulatorPanel: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'point' | 'route' | 'alert' | 'status'>('info');
   
   const { activeJobs, fetchStatus, sendPoint, sendAlert, startRoute, deleteRoute, loading } = useSimulatorStore();

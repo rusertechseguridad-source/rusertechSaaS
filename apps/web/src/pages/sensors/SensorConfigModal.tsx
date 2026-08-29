@@ -7,7 +7,11 @@ interface Props {
 }
 
 export const SensorConfigModal: React.FC<Props> = ({ vehicleId, onClose }) => {
-  const [configs, setConfigs] = useState<any[]>([]);
+  // `configs` se llena y NADIE lo lee, porque el filtro de abajo compara
+  // `c.vehicle_id` y la tabla `sensor_configs` guarda `scope_id`: el arreglo
+  // siempre queda vacío y el formulario siempre muestra los valores por
+  // defecto. Es el hallazgo 🔴 de cadena de frío; se corrige en la Tanda 6.
+  const [, setConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states for Temperature

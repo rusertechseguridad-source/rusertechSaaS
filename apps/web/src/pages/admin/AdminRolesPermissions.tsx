@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Shield, Check, X, Search, Save } from 'lucide-react';
+import { Plus, Shield, Check, Search, Save } from 'lucide-react';
 import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
 import { translateRole } from '../../utils/labels';

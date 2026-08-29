@@ -23,7 +23,7 @@ interface AlertsState {
   resolveAlert: (id: string, resolution_note: string) => Promise<void>;
 }
 
-export const useAlertsStore = create<AlertsState>((set, get) => ({
+export const useAlertsStore = create<AlertsState>((set) => ({
   alerts: [],
   loading: false,
 

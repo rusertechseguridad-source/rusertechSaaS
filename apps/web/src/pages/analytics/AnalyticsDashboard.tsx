@@ -5,7 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
+  // El valor NO se renderiza: la pantalla no distingue «cargando» de «sin
+  // datos», y ante un 403 muestra ceros como si fueran reales. Pintarlo es
+  // de la Tanda 6; acá se deja el hueco a la vista en vez de taparlo.
+  const [, setLoading] = useState(false);
   const [period, setPeriod] = useState('month');
   const [fleetData, setFleetData] = useState<any>(null);
   const [tripsData, setTripsData] = useState<any>(null);

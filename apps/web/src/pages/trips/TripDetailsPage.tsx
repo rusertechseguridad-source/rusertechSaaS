@@ -31,7 +31,8 @@ export const TripDetailsPage: React.FC = () => {
   
   const [operatorLogs, setOperatorLogs] = useState<any[]>([]);
   const [newLogText, setNewLogText] = useState('');
-  const [loadingLogs, setLoadingLogs] = useState(false);
+  // Ídem: la bitácora no muestra su propio estado de carga (Tanda 6).
+  const [, setLoadingLogs] = useState(false);
 
   const [linkedVehicles, setLinkedVehicles] = useState<any[]>([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
