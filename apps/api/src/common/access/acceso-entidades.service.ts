@@ -120,4 +120,29 @@ export class AccesoEntidadesService {
 
     return filtroDeAcceso(restriccion, campo);
   }
+
+  /**
+   * La misma decisión, pero como LISTA de ids en vez de fragmento de `where`.
+   *
+   * Existe porque las consultas más importantes del producto —el mapa, el
+   * histórico de sensores— son SQL crudo y no pueden recibir un `where` de
+   * Prisma. Sin esto, la restricción sólo se podía aplicar donde ya se estaba
+   * aplicando, que es exactamente por qué cubría 3 sitios de 14.
+   *
+   * @returns `null` cuando el usuario no tiene restricción (ve todo lo de su
+   *          tenant), o el arreglo de ids permitidos — que puede venir vacío,
+   *          y un arreglo vacío significa "no ve ninguno", no "ve todos".
+   */
+  async idsPermitidos(
+    usuario: UsuarioAutenticado | undefined,
+    alcance: AlcanceRestriccion,
+  ): Promise<string[] | null> {
+    // Se reusa `filtroPara` a propósito, con un nombre de campo interno: así
+    // las dos formas comparten la MISMA decisión y no pueden divergir. Que
+    // fueran dos implementaciones sería el error de siempre.
+    const filtro = await this.filtroPara(usuario, alcance, '__ids');
+    const condicion = filtro['__ids'] as { in?: string[] } | undefined;
+    if (!condicion || !Array.isArray(condicion.in)) return null;
+    return condicion.in;
+  }
 }

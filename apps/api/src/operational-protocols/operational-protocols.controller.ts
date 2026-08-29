@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import type { Request } from 'express';
+import { ActualizarProtocoloDto } from './dto/actualizar-protocolo.dto';
 
 @Controller('api/v1/operational-protocols')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,9 +35,12 @@ export class OperationalProtocolsController {
     return this.service.create(data, user.tenantId);
   }
 
+  // El DTO es lo que impide que `{"tenant_id": null}` en el cuerpo vuelva
+  // GLOBAL un protocolo propio. La reja de abajo mira la fila que YA existe;
+  // no miraba lo que se estaba escribiendo.
   @Patch(':id')
   @Roles('rusertech_admin', 'account_owner')
-  update(@Param('id') id: string, @Body() data: any, @Req() req?: Request) {
+  update(@Param('id') id: string, @Body() data: ActualizarProtocoloDto, @Req() req?: Request) {
     const user = (req as any).user;
     return this.service.update(id, data, user.tenantId, user.role);
   }

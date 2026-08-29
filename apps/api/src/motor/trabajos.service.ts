@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeocodingService } from '../telemetry/geocoding.service';
+import { assertTenantOwnership } from '../common/tenant/tenant-scope';
 
 const INTENTOS_MAXIMOS = 5;
 const ARRENDAMIENTO_MINUTOS = 10;
@@ -146,6 +147,13 @@ export class TrabajosService {
    * Encola en vez de ejecutar en línea: mismo camino, mismos reintentos.
    */
   async encolarRecalculo(tripId: string, tenantId: string): Promise<void> {
+    // El controller ya valida que HAYA tenant, pero nadie comprobaba que el
+    // viaje FUERA de ese tenant: se encolaba el recálculo del viaje de otro
+    // cliente, y el trabajo quedaba con el tenant del solicitante y el trip del
+    // dueño. 404 y no 403, como el resto del proyecto: no confirmamos que el
+    // UUID exista en otro tenant.
+    await assertTenantOwnership(this.prisma.trip, tripId, tenantId, 'Viaje');
+
     await this.prisma.$executeRaw`
       INSERT INTO motor_trabajos (tipo, tenant_id, trip_id)
       VALUES ('calcular_resumen', ${tenantId}::uuid, ${tripId}::uuid)

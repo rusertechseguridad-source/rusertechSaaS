@@ -2,10 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { LivePositionsService } from '../common/live-positions/live-positions.service';
+import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
 @Injectable()
 export class SensorsService {
   constructor(
+    private readonly acceso: AccesoEntidadesService,
     private prisma: PrismaService,
     private livePositions: LivePositionsService,
   ) {}
@@ -62,7 +64,13 @@ export class SensorsService {
     });
   }
 
-  async getDashboard(tenantId: string) {
+  /**
+   * Tablero de sensores. Recibe `user`: la temperatura de un camión que el
+   * usuario no puede ver es tan privada como su posición.
+   */
+  async getDashboard(user: any) {
+    const tenantId = user?.tenantId;
+    const permitidos = await this.acceso.idsPermitidos(user, 'vehicles');
     const configs = await this.prisma.sensorConfig.findMany({
       where: { tenant_id: tenantId, is_active: true, scope_type: 'vehicle' }
     });
@@ -71,7 +79,11 @@ export class SensorsService {
 
     const vehicleIds = configs.map(c => c.scope_id);
     const vehicles = await this.prisma.vehicle.findMany({
-      where: tenantWhere(tenantId, 'SensorsService.getDashboard', { id: { in: vehicleIds } }),
+      // La intersección entre los vehículos con sensor configurado y los que
+      // este usuario puede ver. `permitidos === null` = sin restricción.
+      where: tenantWhere(tenantId, 'SensorsService.getDashboard', {
+        id: { in: permitidos ? vehicleIds.filter((id) => permitidos.includes(id)) : vehicleIds },
+      }),
       select: { 
         id: true, plate: true, alias: true, hub_asset_id: true,
         avl_user: { select: { name: true, user_avl_code: true } },
@@ -109,7 +121,13 @@ export class SensorsService {
     return result;
   }
 
-  async getHistory(vehicleId: string, tenantId: string, sensorType: string, period: string) {
+  /** Histórico de un vehículo puntual: se comprueba ANTES de consultar. */
+  async getHistory(vehicleId: string, user: any, sensorType: string, period: string) {
+    const tenantId = user?.tenantId;
+    const permitidos = await this.acceso.idsPermitidos(user, 'vehicles');
+    if (permitidos && !permitidos.includes(vehicleId)) {
+      throw new NotFoundException('Vehículo no encontrado');
+    }
     // Sin esta verificación, cualquier usuario autenticado podía leer el
     // histórico de sensores de un vehículo de otro cliente pasando su UUID.
     await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');

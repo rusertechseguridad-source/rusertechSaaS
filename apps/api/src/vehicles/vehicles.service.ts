@@ -38,7 +38,21 @@ export class VehiclesService {
     });
   }
 
-  async findOne(id: string, tenantId: string) {
+  /**
+   * Detalle de un vehículo. Recibe `user` y no `tenantId` porque un usuario
+   * restringido a 3 vehículos veía el listado con 3 y podía abrir el detalle
+   * de cualquiera de los 120 escribiendo el UUID en la URL: la restricción
+   * decoraba la única pantalla donde se notaba que existía.
+   */
+  async findOne(id: string, user: any) {
+    const tenantId = user?.tenantId;
+    const permitidos = await this.acceso.idsPermitidos(user, 'vehicles');
+    if (permitidos && !permitidos.includes(id)) {
+      // 404 y no 403: el mismo criterio que `assertTenantOwnership`. Un 403
+      // confirmaría que el vehículo existe.
+      throw new NotFoundException('Vehículo no encontrado');
+    }
+
     // findFirst con tenant en el where: un id de otro tenant devuelve null → 404.
     const vehicle = await this.prisma.extended.vehicle.findFirst({
       where: tenantWhere(tenantId, 'VehiclesService.findOne', { id }),
@@ -78,8 +92,13 @@ export class VehiclesService {
    * La causa raíz no era la clave: era depender de una caché que sólo conoce
    * una de las dos vías de ingreso de datos.
    */
-  async getLivePositions(tenantId: string) {
-    return this.livePositions.obtenerParaMapa(tenantId);
+  /** El mapa. Ahora recibe `user`: era el sitio donde más se notaba que la
+   *  restricción no se aplicaba — 3 vehículos en el listado, 120 en el mapa. */
+  async getLivePositions(user: any) {
+    const tenantId = user?.tenantId;
+    const permitidos = await this.acceso.idsPermitidos(user, 'vehicles');
+
+    return this.livePositions.obtenerParaMapa(tenantId, permitidos);
   }
 
   async create(data: any, tenantId: string) {

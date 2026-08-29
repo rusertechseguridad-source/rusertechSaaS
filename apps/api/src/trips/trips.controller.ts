@@ -17,7 +17,7 @@ export class TripsController {
 
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.tripsService.findOne(id, user.tenantId);
+    return this.tripsService.findOne(id, user);
   }
 
   @Post()

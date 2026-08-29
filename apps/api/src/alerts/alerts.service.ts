@@ -1,15 +1,25 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { tenantWhere } from '../common/tenant/tenant-scope';
+import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
 @Injectable()
 export class AlertsService {
   private readonly logger = new Logger(AlertsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly acceso: AccesoEntidadesService,
+  ) {}
 
-  async findAll(tenantId: string) {
+  /**
+   * Listado de alertas. Recibe `user` porque cada alerta cuelga de un vehículo:
+   * un usuario restringido a 3 vehículos veía las alertas de los 120.
+   */
+  async findAll(user: any) {
+    const restriccion = await this.acceso.filtroPara(user, 'vehicles', 'vehicle_id');
     return this.prisma.eventLog.findMany({
-      where: { tenant_id: tenantId },
+      where: tenantWhere(user?.tenantId, 'AlertsService.findAll', restriccion),
       orderBy: { triggered_at: 'desc' },
       include: {
         vehicle: { select: { plate: true, alias: true } },

@@ -2,9 +2,11 @@ import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Request } f
 import { DevicesService } from './devices.service';
 import { ActualizarDispositivoDto } from './dto/actualizar-dispositivo.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
 @Controller('api/v1/devices')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
@@ -22,16 +24,24 @@ export class DevicesController {
   // Tanda 3 nombra seis handlers y pide no ampliar el alcance. Medido: acá
   // `tenant_id` NO es inyectable (el servicio lo pisa después del spread);
   // lo que sí entra es un `id` elegido por el cliente. Queda reportado.
+  // `manage_devices` lo tienen rusertech_admin, account_owner y key_user.
+  // ⚠️ `manager` tiene `view_devices` pero NO `manage_devices`: pierde el alta,
+  // la edición y el borrado de dispositivos. Verificado contra el seed.
+  @RequirePermissions('manage_devices')
   @Post()
   create(@Request() req: any, @Body() data: any) {
     return this.devicesService.create(req.user.tenantId, data);
   }
 
+
+  @RequirePermissions('manage_devices')
   @Put(':id')
   update(@Request() req: any, @Param('id') id: string, @Body() data: ActualizarDispositivoDto) {
     return this.devicesService.update(req.user.tenantId, id, data);
   }
 
+
+  @RequirePermissions('manage_devices')
   @Delete(':id')
   remove(@Request() req: any, @Param('id') id: string) {
     return this.devicesService.remove(req.user.tenantId, id);

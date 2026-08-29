@@ -8,6 +8,7 @@ import { requireTenantId } from '../common/tenant/tenant-scope';
 import { ColaService } from './cola.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
 import { MotorConfigService } from './motor-config.service';
+import { isAdminRole } from '../common/constants/admin-roles';
 
 /**
  * API DEL MOTOR.
@@ -94,8 +95,14 @@ export class MotorController {
 
   @Get('salud')
   @RequirePermissions('view_settings')
-  async salud() {
-    return this.cola.salud();
+  async salud(@CurrentUser() user: any) {
+    // El monitor de un cliente muestra SU cola. La vista global queda para el
+    // administrador de plataforma, que es quien tiene que ver el sistema entero.
+    // `isAdminRole` y no una lista suelta: es la fuente única (ADMIN_ROLES).
+    const tenantId = isAdminRole(user?.role)
+      ? null
+      : requireTenantId(user?.tenantId, 'MotorController.salud');
+    return this.cola.salud(tenantId);
   }
 
   /** Qué vehículos se están monitoreando y por qué. */

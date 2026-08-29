@@ -174,15 +174,15 @@ export class LivePositionsService {
    * de saber si hubo puntos de la app en la ventana, y la caché no conoce
    * ninguna de las dos cosas.
    */
-  async obtenerParaMapa(tenantId: string): Promise<RespuestaMapa> {
+  async obtenerParaMapa(tenantId: string, idsPermitidos: string[] | null = null): Promise<RespuestaMapa> {
     const tenant = requireTenantId(tenantId, 'LivePositionsService.obtenerParaMapa');
     const ventana = await this.resolverVentana(tenant);
 
-    const filas = await this.consultarPostgres(tenant, ventana);
+    const filas = await this.consultarPostgres(tenant, ventana, undefined, idsPermitidos);
     const enAlcance = filas.filter((f) => f.tiene_origen_movil || f.con_viaje_activo);
     const positions = enAlcance.map((f) => this.mapear(f, 'postgres', ventana.umbrales));
 
-    const sinDatos = await this.contarEnViajeSinDatos(tenant, ventana);
+    const sinDatos = await this.contarEnViajeSinDatos(tenant, ventana, idsPermitidos);
 
     const summary: ResumenMonitoreo = {
       en_vivo: positions.filter((p) => p.freshness === 'en_vivo').length,
@@ -205,10 +205,14 @@ export class LivePositionsService {
    * El `tenantId` es obligatorio también acá: este método se llama desde el
    * detalle de vehículo, cuyo id llega por parámetro de la URL.
    */
-  async obtenerPorVehiculo(vehicleId: string, tenantId: string): Promise<PosicionEnVivo | null> {
+  async obtenerPorVehiculo(
+    vehicleId: string,
+    tenantId: string,
+    idsPermitidos: string[] | null = null,
+  ): Promise<PosicionEnVivo | null> {
     const tenant = requireTenantId(tenantId, 'LivePositionsService.obtenerPorVehiculo');
     const ventana = await this.resolverVentana(tenant);
-    const filas = await this.consultarPostgres(tenant, ventana, vehicleId);
+    const filas = await this.consultarPostgres(tenant, ventana, vehicleId, idsPermitidos);
     if (filas.length === 0) return null;
     return this.mapear(filas[0], 'postgres', ventana.umbrales);
   }
@@ -293,8 +297,16 @@ export class LivePositionsService {
     tenantId: string,
     ventana: VentanaConsulta,
     vehicleId?: string,
+    idsPermitidos: string[] | null = null,
   ): Promise<FilaPosicion[]> {
     const { desde, hasta } = ventana;
+
+    // Restricción por entidad. `null` = sin restricción; un arreglo (aunque
+    // sea vacío) acota. Va como parámetro y no interpolado: `= ANY($n)` con un
+    // `uuid[]` mantiene la consulta preparada y el plan estable, y no hay forma
+    // de inyectar. El `IS NULL` de la izquierda hace que el caso sin
+    // restricción no toque el plan.
+    const permitidos = idsPermitidos;
 
     if (vehicleId) {
       return this.prisma.$queryRaw<FilaPosicion[]>`
@@ -323,6 +335,7 @@ export class LivePositionsService {
           FROM telemetry t
           WHERE t.tenant_id = ${tenantId}::uuid
             AND t.vehicle_id = ${vehicleId}::uuid
+            AND (${permitidos}::uuid[] IS NULL OR t.vehicle_id = ANY(${permitidos}::uuid[]))
             AND t."timestamp" >= ${desde}
             AND t."timestamp" <= ${hasta}
             AND t.is_duplicate = false
@@ -396,6 +409,7 @@ export class LivePositionsService {
       ) u
       LEFT JOIN viajes_activos va ON va.vehicle_id = v.id
       WHERE v.tenant_id = ${tenantId}::uuid
+        AND (${permitidos}::uuid[] IS NULL OR v.id = ANY(${permitidos}::uuid[]))
       -- Sin ORDER BY las dos versiones devuelven las mismas filas en distinto
       -- orden. "v.id" reproduce el que emitía el DISTINCT ON y, a diferencia de
       -- él, lo garantiza.
@@ -413,7 +427,11 @@ export class LivePositionsService {
    * Se excluyen los vehículos dados de baja: no reportan porque están fuera de
    * servicio, no porque haya un problema que atender.
    */
-  private async contarEnViajeSinDatos(tenantId: string, ventana: VentanaConsulta): Promise<number> {
+  private async contarEnViajeSinDatos(
+    tenantId: string,
+    ventana: VentanaConsulta,
+    permitidos: string[] | null = null,
+  ): Promise<number> {
     const { desde, hasta } = ventana;
 
     const filas = await this.prisma.$queryRaw<{ sin_datos: number }[]>`
@@ -423,6 +441,7 @@ export class LivePositionsService {
       WHERE tr.tenant_id = ${tenantId}::uuid
         AND tr.status = 'EN_CURSO'
         AND tr.vehicle_id IS NOT NULL
+        AND (${permitidos}::uuid[] IS NULL OR tr.vehicle_id = ANY(${permitidos}::uuid[]))
         AND v.status <> 'inactive'
         AND NOT EXISTS (
           SELECT 1

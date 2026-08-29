@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { Roles } from '../common/decorators/roles.decorator';
+import { InvitarUsuarioDto } from './dto/invitar-usuario.dto';
 
 @Controller('api/v1/settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -41,7 +42,7 @@ export class SettingsController {
   }
 
   @Post('users/invite')
-  inviteUser(@Request() req: any, @Body() body: any) {
+  inviteUser(@Request() req: any, @Body() body: InvitarUsuarioDto) {
     if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
       throw new ForbiddenException('No tienes permisos para invitar usuarios.');
     }

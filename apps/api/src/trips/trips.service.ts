@@ -73,9 +73,15 @@ export class TripsService {
     return trips.map(t => this.mapToDto(t));
   }
 
-  async findOne(id: string, tenantId: string) {
+  /**
+   * Detalle de un viaje. Recibe `user` y no `tenantId`: `findAll` SÍ aplicaba
+   * la restricción por vehículo y el detalle no, así que un usuario restringido
+   * veía una lista corta y podía abrir cualquier viaje escribiendo el UUID.
+   */
+  async findOne(id: string, user: any) {
+    const restriccion = await this.acceso.filtroPara(user, 'vehicles', 'vehicle_id');
     const trip = await this.prisma.trip.findFirst({
-      where: tenantWhere(tenantId, 'TripsService.findOne', { id }),
+      where: tenantWhere(user?.tenantId, 'TripsService.findOne', { id, ...restriccion }),
       include: {
         vehicle: {
           include: { avl_user: true, carrier: true }

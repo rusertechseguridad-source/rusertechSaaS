@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Patch, Delete, Param, Body, UseGuards, Requ
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { isAdminRole } from '../common/constants/admin-roles';
+import { ActualizarUsuarioGlobalDto } from './dto/actualizar-usuario-global.dto';
 
 @Controller('api/v1/admin')
 @UseGuards(JwtAuthGuard)
@@ -76,7 +77,7 @@ export class AdminController {
   }
 
   @Put('users/:id')
-  updateUserGlobal(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+  updateUserGlobal(@Request() req: any, @Param('id') id: string, @Body() body: ActualizarUsuarioGlobalDto) {
     this.checkSuperAdmin(req);
     return this.adminService.updateUserGlobal(id, body, req.user?.id);
   }

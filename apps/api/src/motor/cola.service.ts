@@ -187,7 +187,16 @@ export class ColaService {
   }
 
   /** Estado de la cola, para el monitor y para decidir si hay atraso. */
-  async salud(): Promise<SaludCola> {
+  /**
+   * Estado de la cola. `tenantId` acota el conteo; `null` devuelve la vista
+   * global y SÓLO la usa un administrador de plataforma.
+   *
+   * Antes no recibía nada y contaba `motor_cola` entera: el monitor de un
+   * cliente mostraba la cola de todos, que además es una señal de cuánta
+   * actividad tienen los demás. `motor_cola.tenant_id` existe y es `not null`,
+   * así que filtrar no cuesta nada.
+   */
+  async salud(tenantId: string | null): Promise<SaludCola> {
     const filas: { estado: string; cantidad: number; antiguedad: number | null; mas_viejo: Date | null }[] =
       await this.prisma.$queryRaw<{ estado: string; cantidad: number; antiguedad: number | null; mas_viejo: Date | null }[]>`
         SELECT estado,
@@ -195,6 +204,7 @@ export class ColaService {
                extract(epoch from (now() - min(created_at)))::int AS antiguedad,
                min(created_at) AS mas_viejo
         FROM motor_cola
+        WHERE (${tenantId}::uuid IS NULL OR tenant_id = ${tenantId}::uuid)
         GROUP BY estado
       `;
 

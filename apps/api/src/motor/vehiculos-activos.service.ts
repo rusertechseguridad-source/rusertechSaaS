@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTenantOwnership } from '../common/tenant/tenant-scope';
 
 export interface ResultadoSincronizacion {
   activados_por_estado: number;
@@ -105,12 +106,26 @@ export class VehiculosActivosService {
 
   /** Activación manual por un operador. Sobrevive a la sincronización. */
   async activarManual(vehicleId: string, tenantId: string, tripId: string | null): Promise<void> {
+    // Dos agujeros en la misma sentencia, y los dos por lo mismo: nadie
+    // comprobaba de quién era el vehículo.
+    //
+    //   1. Sin esta verificación, se activaba el monitoreo de un vehículo de
+    //      OTRO cliente insertando una fila con el tenant del solicitante.
+    //   2. El `ON CONFLICT (vehicle_id)` tiene la PK en el vehículo, no en el
+    //      par (vehículo, tenant): si el vehículo del otro cliente YA estaba
+    //      monitoreado, el `DO UPDATE` le pisaba `motivo` y `trip_id`.
+    //
+    // `desactivar`, cuatro líneas más abajo, sí filtraba por tenant. La pareja
+    // estaba asimétrica.
+    await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');
+
     await this.prisma.$executeRaw`
       INSERT INTO motor_vehiculos_activos (vehicle_id, tenant_id, trip_id, motivo, desde)
       VALUES (${vehicleId}::uuid, ${tenantId}::uuid, ${tripId}::uuid, 'manual', now())
       ON CONFLICT (vehicle_id) DO UPDATE SET
         motivo  = 'manual',
         trip_id = EXCLUDED.trip_id
+      WHERE motor_vehiculos_activos.tenant_id = ${tenantId}::uuid
     `;
   }
 

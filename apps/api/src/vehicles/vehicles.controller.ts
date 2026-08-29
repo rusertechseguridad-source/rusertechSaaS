@@ -22,12 +22,12 @@ export class VehiclesController {
 
   @Get('live')
   getLivePositions(@CurrentUser() user: any) {
-    return this.vehiclesService.getLivePositions(user.tenantId);
+    return this.vehiclesService.getLivePositions(user);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.vehiclesService.findOne(id, user.tenantId);
+    return this.vehiclesService.findOne(id, user);
   }
 
   // El alta tiene el MISMO passthrough que la edición, pero el encargo de la
