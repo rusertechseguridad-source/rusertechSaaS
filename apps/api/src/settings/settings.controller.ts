@@ -6,6 +6,7 @@ import {
 } from '../common/monitoring/monitoring-config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('api/v1/settings')
@@ -48,11 +49,15 @@ export class SettingsController {
   }
 
   @Put('users/:id')
-  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: { role_code?: string, full_name?: string, entity_restrictions?: any, contact_type?: string }) {
+  updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: ActualizarUsuarioDto) {
     if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
       throw new ForbiddenException('Solo el propietario puede editar usuarios.');
     }
-    return this.settingsService.updateUser(req.user.tenantId, userId, body);
+
+    // La regla de qué rol se puede asignar ya NO vive acá: se movió al
+    // servicio. Ponerla en el controller fue el error de la Tanda 3 — cubría
+    // esta ruta y dejaba sin cubrir el `invite` y el panel de administración.
+    return this.settingsService.updateUser(req.user.tenantId, userId, body, req.user?.id);
   }
 
   @Patch('users/:id/toggle')

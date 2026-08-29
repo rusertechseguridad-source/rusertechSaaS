@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
+import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
+import { exigirRolAsignable } from './roles-asignables';
 
 @Injectable()
 export class SettingsService {
@@ -33,6 +35,13 @@ export class SettingsService {
   }
 
   async inviteUser(tenantId: string, data: { email: string; full_name: string; role_code: string }) {
+    // ⚠️ La escalada NO necesitaba editar a nadie: un `account_owner` invitaba
+    // un usuario NUEVO con `rusertech_admin` y entraba con esa cuenta. La
+    // Tanda 3 protegió el `update` y dejó esta puerta abierta.
+    // `objetivoId` no aplica: el usuario todavía no existe, así que sólo puede
+    // dispararse la regla del rol de plataforma, que es la que importa acá.
+    exigirRolAsignable({ rolSolicitado: data.role_code }, 'SettingsService.inviteUser');
+
     const existing = await this.prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {
       throw new BadRequestException('El correo ya está registrado.');
@@ -78,7 +87,17 @@ export class SettingsService {
     return { ...safeUser, emailSent: true };
   }
 
-  async updateUser(tenantId: string, userId: string, data: { role_code?: string, full_name?: string, entity_restrictions?: any, contact_type?: string }) {
+  // El tipo del parámetro es el DTO, no una lista repetida acá: si mañana se
+  // agrega un campo editable, se agrega en un solo lugar. La lista suelta que
+  // había antes ya se había desincronizado (no incluía `status`).
+  async updateUser(tenantId: string, userId: string, data: ActualizarUsuarioDto, editorId?: string) {
+    // La comprobación vive acá y no sólo en el controller: así cualquier ruta
+    // futura que llame a este método queda cubierta sin acordarse de nada.
+    exigirRolAsignable(
+      { rolSolicitado: data.role_code, editorId, objetivoId: userId },
+      'SettingsService.updateUser',
+    );
+
     return this.prisma.user.update({
       where: { id: userId, tenant_id: tenantId },
       data,

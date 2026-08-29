@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CrearEntradaDiccionarioDto } from './dto/crear-entrada-diccionario.dto';
 
 @Controller('api/v1/avl-users')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -98,7 +99,7 @@ export class AvlUsersController {
 
   @Post(':id/dictionary')
   @RequirePermissions('manage_avl')
-  addDictionaryEntry(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
+  addDictionaryEntry(@Param('id') id: string, @Body() data: CrearEntradaDiccionarioDto, @CurrentUser() user: any) {
     return this.service.addDictionaryEntry(id, user.tenantId, data);
   }
 

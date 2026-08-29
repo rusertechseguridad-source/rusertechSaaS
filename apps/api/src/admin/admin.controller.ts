@@ -78,7 +78,7 @@ export class AdminController {
   @Put('users/:id')
   updateUserGlobal(@Request() req: any, @Param('id') id: string, @Body() body: any) {
     this.checkSuperAdmin(req);
-    return this.adminService.updateUserGlobal(id, body);
+    return this.adminService.updateUserGlobal(id, body, req.user?.id);
   }
 
   // --- ROLES ---

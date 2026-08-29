@@ -4,6 +4,7 @@ import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as nodemailer from 'nodemailer'; // We need to install this
+import { exigirRolAsignable } from '../settings/roles-asignables';
 
 @Injectable()
 export class AdminService {
@@ -161,7 +162,16 @@ export class AdminService {
     });
   }
 
-  async updateUserGlobal(id: string, data: any) {
+  async updateUserGlobal(id: string, data: any, editorId?: string) {
+    // Ésta es la ruta por la que la escalada seguía pasando: `checkSuperAdmin`
+    // controla QUIÉN entra, y nadie controlaba QUÉ rol se asigna. Un
+    // administrador de plataforma podía otorgar `rusertech_admin` desde una
+    // pantalla, sin rastro y sin segundo factor.
+    exigirRolAsignable(
+      { rolSolicitado: data.role_code, editorId, objetivoId: id },
+      'AdminService.updateUserGlobal',
+    );
+
     const updateData: any = {};
     if (data.role_code !== undefined) updateData.role_code = data.role_code;
     if (data.status !== undefined) updateData.status = data.status;
