@@ -16,7 +16,6 @@ describe('AppController', () => {
 
   const appServiceMock = {
     getHello: jest.fn().mockReturnValue('Rusertech API'),
-    getCriticalAlerts: jest.fn().mockResolvedValue([{ id: 'a1' }]),
   };
 
   beforeEach(async () => {
@@ -34,10 +33,16 @@ describe('AppController', () => {
     expect(appServiceMock.getHello).toHaveBeenCalledTimes(1);
   });
 
-  it('getAlerts delega con el tenant del usuario autenticado — nunca sin tenant', async () => {
-    const user = { tenantId: 'tenant-1' };
-    await expect(controller.getAlerts(user)).resolves.toEqual([{ id: 'a1' }]);
-    expect(appServiceMock.getCriticalAlerts).toHaveBeenCalledWith('tenant-1');
+  it('🔴 AppController ya NO registra una ruta de alertas', () => {
+    // Registraba `GET /api/v1/alerts`, la misma dirección que AlertsController,
+    // y como se registra primero GANABA: el módulo de alertas entero —con
+    // tenant, restricciones y todas las abiertas— nunca corría. Verificado en
+    // producción: la alerta `warning` del motor no aparecía.
+    //
+    // Esta prueba existe para que la ruta no vuelva por descuido.
+    const metodos = Object.getOwnPropertyNames(AppController.prototype);
+    expect(metodos).not.toContain('getAlerts');
+    expect(metodos.filter((m) => /alert/i.test(m))).toEqual([]);
   });
 
   it('uploadFile rechaza la petición sin archivo con un error explícito', () => {

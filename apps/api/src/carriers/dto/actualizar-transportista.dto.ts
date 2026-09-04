@@ -1,4 +1,5 @@
-import { IsEmail, IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 /**
  * PUT /api/v1/carriers/:id  ·  POST /api/v1/carriers
@@ -6,10 +7,10 @@ import { IsEmail, IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'clas
  * Campos copiados de `model Carrier` en schema.prisma.
  * NO están: `id`, `tenant_id`, `created_at`.
  *
- * ⚠️ Igual que en conductores, la pantalla manda TRES campos inexistentes:
- * `fleet_size`, `insurance_info` y `notes` (CarrierModal.tsx:84-86). Mismo
- * criterio: no se declaran, y el fallo pasa de un 500 mudo a un 400 que los
- * nombra. → Tanda 6.
+ * `fleet_size`, `insurance_info` y `notes` SÍ están: Gustavo agregó las tres
+ * columnas por SQL (decisión de producto — un transportista lleva tamaño de
+ * flota, datos del seguro y notas). Verificadas contra `information_schema` de
+ * la base real: `integer`, `text`, `text`, las tres nullable.
  *
  * `operating_bases` es `String?` sin límite en el esquema (texto largo), por eso
  * es el único sin `@MaxLength`.
@@ -45,6 +46,33 @@ export class ActualizarTransportistaDto {
 
   @IsOptional() @IsString()
   operating_bases?: string | null;
+
+  /**
+   * ⚠️ Llega de un `<input>`, así que el navegador manda **string**: `"12"`,
+   * no `12`. El `ValidationPipe` corre con `enableImplicitConversion: false`
+   * —a propósito, para que `"no soy un número"` no se vuelva `NaN` y pase un
+   * `@IsInt`— así que la conversión va acá, explícita y sólo para lo que de
+   * verdad es numérico.
+   *
+   * El `''` del campo vacío se convierte en `null`, no en `0`: una flota de
+   * tamaño desconocido no es una flota de cero camiones.
+   */
+  @Transform(({ value }) => {
+    if (value === '' || value === null || value === undefined) return null;
+    if (typeof value === 'number') return value;
+    const n = Number(value);
+    // Si no es numérico se devuelve el valor original para que `@IsInt` lo
+    // rechace con un mensaje claro, en vez de convertirlo en NaN.
+    return Number.isFinite(n) ? n : value;
+  })
+  @IsOptional() @IsInt() @Min(0) @Max(100000)
+  fleet_size?: number | null;
+
+  @IsOptional() @IsString()
+  insurance_info?: string | null;
+
+  @IsOptional() @IsString()
+  notes?: string | null;
 
   @IsOptional() @IsIn(['active', 'inactive', 'suspended'])
   status?: string;

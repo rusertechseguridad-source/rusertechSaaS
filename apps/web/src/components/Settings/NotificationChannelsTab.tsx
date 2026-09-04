@@ -4,6 +4,7 @@ import {
   Webhook, Smartphone, X, Check, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 const CHANNEL_TYPE_ICONS: Record<string, React.ReactNode> = {
   email:     <Mail className="w-4 h-4" />,
@@ -86,7 +87,7 @@ export const NotificationChannelsTab: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.target) { alert('Nombre y destino son requeridos'); return; }
+    if (!form.name || !form.target) { avisar.error('Nombre y destino son requeridos'); return; }
     setSaving(true);
     try {
       const token = localStorage.getItem('rusertech_token');
@@ -105,7 +106,7 @@ export const NotificationChannelsTab: React.FC = () => {
         fetchChannels();
       } else {
         const err = await res.json();
-        alert(err.message || 'Error al guardar');
+        avisar.error(err.message || 'Error al guardar');
       }
     } finally { setSaving(false); }
   };

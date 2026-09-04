@@ -8,6 +8,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 export const AlertsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -130,7 +131,7 @@ export const AlertsPage: React.FC = () => {
   const submitResolve = async () => {
     if (!alertToResolve) return;
     if (!resolutionNote.trim()) {
-      alert('Debes ingresar una justificación para atender la alerta.');
+      avisar.exito('Debes ingresar una justificación para atender la alerta.');
       return;
     }
     
@@ -148,7 +149,7 @@ export const AlertsPage: React.FC = () => {
       }
       await storeFetch();
     } catch (err: any) {
-      alert(err.message || 'Error al atender.');
+      avisar.error(err.message || 'Error al atender.');
     }
   };
 
@@ -166,7 +167,7 @@ export const AlertsPage: React.FC = () => {
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       if (res.status === 403) {
-        alert(errData.message || 'No tienes permisos de administrador para cambiar esta configuración.');
+        avisar.exito(errData.message || 'No tienes permisos de administrador para cambiar esta configuración.');
       } else {
         throw new Error('Failed to update settings');
       }
@@ -177,12 +178,58 @@ export const AlertsPage: React.FC = () => {
   };
 
   // Helper to translate event types — uses central label dictionary
-  const translateEvent = (eventType: string) => translateAlertType(eventType);
+  /**
+   * Qué texto se muestra para una alerta.
+   *
+   * ⚠️ `metadata_json.detalle` es la frase que el motor escribe pensada para el
+   * operador —"Entró en la geocerca Zona Obelisco"— y la pantalla sólo pintaba
+   * `event_type`, así que se veía `Geocerca Entrada`. El diccionario sigue
+   * siendo el respaldo para los eventos del HUB, que no traen detalle.
+   */
+  const textoDeAlerta = (alerta: any): string => {
+    const detalle = alerta?.metadata_json?.detalle;
+    if (typeof detalle === 'string' && detalle.trim()) return detalle.trim();
+    return translateAlertType(alerta?.event_type ?? '');
+  };
 
-  const getEventColor = (eventType: string) => {
-    const configuredSeverityId = tenantSettings?.alert_colors?.[eventType];
-    if (configuredSeverityId) {
-      const sev = SEVERITY_LEVELS.find(s => s.id === configuredSeverityId);
+
+  /**
+   * Severidad de una alerta, en el vocabulario de colores de la pantalla.
+   *
+   * ⚠️ Había TRES vocabularios que no se cruzaban: el motor y la columna
+   * `event_logs.severity` usan `info | warning | critical`; la ruta muerta que
+   * tapaba a ésta filtraba `high | critical`; y la pantalla infiere 5 niveles
+   * (`none | low | medium | high | critical`) a partir del `event_type`,
+   * IGNORANDO la columna.
+   *
+   * El canónico es el de la columna, porque es el único que alguien escribe.
+   * Los 5 niveles se conservan: son la paleta de colores configurable por tipo
+   * de evento, que es otra cosa y funciona.
+   *
+   * Orden: configuración del tenant → columna real → inferencia por tipo.
+   */
+  const SEVERIDAD_A_NIVEL: Record<string, string> = {
+    info: 'low', warning: 'medium', critical: 'critical',
+  };
+
+  const nivelDeSeveridad = (alerta: any): string => {
+    const configurada = tenantSettings?.alert_colors?.[alerta.event_type];
+    if (configurada) return configurada;
+
+    const deLaColumna = SEVERIDAD_A_NIVEL[String(alerta.severity ?? '').toLowerCase()];
+    if (deLaColumna) return deLaColumna;
+
+    const type = (alerta.event_type || '').toUpperCase();
+    if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) return 'high';
+    if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) return 'low';
+    if (type === 'POSITION') return 'none';
+    return 'medium';
+  };
+
+  const getEventColor = (eventType: string, alerta?: any) => {
+    const nivel = alerta ? nivelDeSeveridad(alerta) : tenantSettings?.alert_colors?.[eventType];
+    if (nivel) {
+      const sev = SEVERITY_LEVELS.find(s => s.id === nivel);
       if (sev) return sev.colorClass;
     }
 
@@ -207,14 +254,7 @@ export const AlertsPage: React.FC = () => {
       ? a.vehicle?.plate?.toLowerCase().includes(search.toLowerCase()) || a.trip?.name?.toLowerCase().includes(search.toLowerCase())
       : true;
 
-    let alertSeverity = tenantSettings?.alert_colors?.[a.event_type];
-    if (!alertSeverity) {
-      const type = (a.event_type || '').toUpperCase();
-      if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
-      else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
-      else if (type === 'POSITION') alertSeverity = 'none';
-      else alertSeverity = 'medium';
-    }
+    const alertSeverity = nivelDeSeveridad(a);
 
     const matchesSeverity = severityFilter ? alertSeverity === severityFilter : true;
     const matchesCarrier = carrierFilter ? (a.vehicle as any)?.carrier?.name === carrierFilter : true;
@@ -251,14 +291,7 @@ export const AlertsPage: React.FC = () => {
         
         // Determine background based on severity
         let bgClass = 'bg-slate-500';
-        let alertSeverity = tenantSettings?.alert_colors?.[alert.event_type];
-        if (!alertSeverity) {
-          const type = (alert.event_type || '').toUpperCase();
-          if (['SPEED_VIOLATION', 'HARSH_BRAKING', 'JAMMING', 'POWER_CUT', 'PANIC_BUTTON', 'FUEL_DROP', 'FATIGUE', 'DISTRACTION'].includes(type)) alertSeverity = 'high';
-          else if (['GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'DOOR_CLOSE', 'REFUELING', 'TRAILER_CONNECT', 'ENGINE_ON', 'ENGINE_OFF'].includes(type)) alertSeverity = 'low';
-          else if (type === 'POSITION') alertSeverity = 'none';
-          else alertSeverity = 'medium';
-        }
+        const alertSeverity = nivelDeSeveridad(alert);
 
         if (alertSeverity === 'none') bgClass = 'bg-green-500';
         if (alertSeverity === 'low') bgClass = 'bg-blue-500';
@@ -283,7 +316,7 @@ export const AlertsPage: React.FC = () => {
           .setLngLat([lng, lat])
           .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
             <div style="font-family:sans-serif;font-size:12px;color:#333;line-height:1.4;min-width:180px;">
-              <strong style="font-size:13px;color:#d32f2f;display:block;margin-bottom:4px;">${translateEvent(alert.event_type)}</strong>
+              <strong style="font-size:13px;color:#d32f2f;display:block;margin-bottom:4px;">${textoDeAlerta(alert)}</strong>
               <b>${t('alerts.table.vehicle')}:</b> ${alert.vehicle?.plate || 'Desc.'}<br/>
               <b>${t('alerts.table.driver')}:</b> ${(alert as any).trip?.driver?.full_name || 'Sin Chofer'}<br/>
               <b>${t('alerts.table.time')}:</b> ${new Date(alert.triggered_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}<br/>
@@ -316,9 +349,9 @@ export const AlertsPage: React.FC = () => {
     const headers = [t('alerts.table.time'), t('alerts.table.event'), t('alerts.table.vehicle'), t('alerts.table.driver'), t('alerts.table.trip'), t('alerts.table.location'), 'Latitud', 'Longitud'];
     const rows = filtered.map(a => [
       new Date(a.triggered_at).toLocaleString(),
-      translateEvent(a.event_type),
+      textoDeAlerta(a),
       a.vehicle?.plate || 'Desconocido',
-      (a.vehicle as any)?.driver ? `${(a.vehicle as any).driver.first_name} ${(a.vehicle as any).driver.last_name}` : 'Sin Chofer',
+      (a as any).trip?.driver?.full_name || 'Sin Chofer',
       a.trip?.name || 'Viaje libre',
       a.address || t('alerts.unknown_location'),
       a.latitude || '',
@@ -332,9 +365,9 @@ export const AlertsPage: React.FC = () => {
     const headers = ['Fecha/Hora', 'Evento', 'Vehículo', 'Chofer', 'Viaje', 'Ubicación', 'Latitud', 'Longitud'];
     const row = [
       new Date(alert.triggered_at).toLocaleString(),
-      translateEvent(alert.event_type),
+      textoDeAlerta(alert),
       alert.vehicle?.plate || 'Desconocido',
-      (alert.vehicle as any)?.driver ? `${(alert.vehicle as any).driver.first_name} ${(alert.vehicle as any).driver.last_name}` : 'Sin Chofer',
+      (alert as any).trip?.driver?.full_name || 'Sin Chofer',
       alert.trip?.name || 'Viaje libre',
       alert.address || 'Ubicación desconocida',
       alert.latitude || '',
@@ -557,7 +590,7 @@ export const AlertsPage: React.FC = () => {
 
                   <div className="shrink-0 pr-2 flex items-center" style={{ width: colWidths.evento }}>
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border truncate ${getEventColor(alert.event_type)}`}>
-                      {translateEvent(alert.event_type)}
+                      {textoDeAlerta(alert)}
                     </span>
                   </div>
 

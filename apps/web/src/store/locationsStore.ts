@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { escribir, type Resultado } from '../services/avisos';
 
 interface Location {
   id: string;
@@ -20,10 +21,10 @@ interface LocationsState {
   loading: boolean;
   error: string | null;
   fetchLocations: () => Promise<void>;
-  createLocation: (data: Partial<Location>) => Promise<void>;
-  updateLocation: (id: string, data: Partial<Location>) => Promise<void>;
-  deleteLocation: (id: string) => Promise<void>;
-  toggleActive: (id: string, isActive: boolean) => Promise<void>;
+  createLocation: (data: Partial<Location>) => Promise<Resultado>;
+  updateLocation: (id: string, data: Partial<Location>) => Promise<Resultado>;
+  deleteLocation: (id: string) => Promise<Resultado>;
+  toggleActive: (id: string, isActive: boolean) => Promise<Resultado>;
 }
 
 const getAuthHeaders = () => ({
@@ -51,67 +52,53 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
   },
 
   createLocation: async (data) => {
-    try {
-      const res = await fetch('http://localhost:3000/api/v1/locations', {
+    const r = await escribir(
+      () => fetch('http://localhost:3000/api/v1/locations', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Error al crear ubicación');
-      }
-      await get().fetchLocations();
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al crear ubicación: ' + error.message);
-    }
+      }),
+      'Ubicación creada.',
+    );
+    if (r.ok) await get().fetchLocations();
+    return r;
   },
 
   updateLocation: async (id, data) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/locations/${id}`, {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/locations/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Error al actualizar ubicación');
-      }
-      await get().fetchLocations();
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al actualizar ubicación: ' + error.message);
-    }
+      }),
+      'Ubicación actualizada.',
+    );
+    if (r.ok) await get().fetchLocations();
+    return r;
   },
 
   deleteLocation: async (id) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/locations/${id}`, {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/locations/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error('Failed to delete location');
-      await get().fetchLocations();
-    } catch (error: any) {
-      console.error(error);
-    }
+      }),
+      'Ubicación eliminada.',
+    );
+    if (r.ok) await get().fetchLocations();
+    return r;
   },
 
   toggleActive: async (id, isActive) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/locations/${id}/toggle`, {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/locations/${id}/toggle`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ is_active: isActive }),
-      });
-      if (!res.ok) throw new Error('Failed to toggle active');
-      set((state) => ({
-        locations: state.locations.map((l) => (l.id === id ? { ...l, is_active: isActive } : l)),
-      }));
-    } catch (error: any) {
-      console.error(error);
-    }
+      }),
+      'Estado actualizado.',
+    );
+    if (r.ok) await get().fetchLocations();
+    return r;
   },
 }));

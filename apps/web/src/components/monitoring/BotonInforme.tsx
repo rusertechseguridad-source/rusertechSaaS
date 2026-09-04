@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FileDown, Loader2, RotateCcw } from 'lucide-react';
 import { RequirePermission } from '../RequirePermission';
 import { abrirInforme, estadoResumen, recalcularResumen, type EstadoResumen } from '../../utils/informes';
+import { avisar } from '../../services/avisos';
 
 /**
  * BOTÓN DEL INFORME DE VIAJE.
@@ -36,7 +37,7 @@ export const BotonInforme: React.FC<Props> = ({ tripId, variante = 'completo' })
     setOcupado(true);
     const r = await abrirInforme(tripId);
     setOcupado(false);
-    if (!r.ok && r.error !== 'sin_permiso') alert(`No se pudo generar el informe (${r.error}).`);
+    if (!r.ok && r.error !== 'sin_permiso') avisar.error(`No se pudo generar el informe (${r.error}).`);
   };
 
   const reintentar = async () => {

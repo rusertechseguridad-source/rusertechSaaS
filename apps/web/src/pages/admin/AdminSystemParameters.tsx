@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Plus, Edit2, Trash2, Check, X, ShieldAlert, HelpCircle } from 'lucide-react';
 import { translateParameterKey } from '../../utils/labels';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 export const AdminSystemParameters: React.FC = () => {
   const { t } = useTranslation();
@@ -71,11 +72,11 @@ export const AdminSystemParameters: React.FC = () => {
         fetchParameters();
       } else {
         const error = await res.json();
-        alert(`Error: ${error.message}`);
+        avisar.error(`Error: ${error.message}`);
       }
     } catch (err) {
       console.error(err);
-      alert('Error de conexión');
+      avisar.error('Error de conexión');
     }
   };
 

@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+// Las tres escrituras se tragaban el error en un `console.error` y el modal
+// se cerraba igual: el operador creía haber guardado.
+import { escribir, type Resultado } from '../services/avisos';
 
 export interface Device {
   id: string;
@@ -22,9 +25,9 @@ interface DevicesState {
   devices: Device[];
   loading: boolean;
   fetchDevices: () => Promise<void>;
-  createDevice: (data: Partial<Device>) => Promise<void>;
-  updateDevice: (id: string, data: Partial<Device>) => Promise<void>;
-  deleteDevice: (id: string) => Promise<void>;
+  createDevice: (data: Partial<Device>) => Promise<Resultado>;
+  updateDevice: (id: string, data: Partial<Device>) => Promise<Resultado>;
+  deleteDevice: (id: string) => Promise<Resultado>;
 }
 
 export const useDevicesStore = create<DevicesState>((set, get) => ({
@@ -51,54 +54,40 @@ export const useDevicesStore = create<DevicesState>((set, get) => ({
   },
 
   createDevice: async (data) => {
-    try {
-      const res = await fetch('http://localhost:3000/api/v1/devices', {
+    const r = await escribir(
+      () => fetch('http://localhost:3000/api/v1/devices', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        await get().fetchDevices();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      }),
+      'Dispositivo creado.',
+    );
+    if (r.ok) await get().fetchDevices();
+    return r;
   },
 
   updateDevice: async (id, data) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/devices/${id}`, {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/devices/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        await get().fetchDevices();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      }),
+      'Dispositivo actualizado.',
+    );
+    if (r.ok) await get().fetchDevices();
+    return r;
   },
 
   deleteDevice: async (id) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/devices/${id}`, {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/devices/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
-        },
-      });
-      if (res.ok) {
-        await get().fetchDevices();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
+      }),
+      'Dispositivo eliminado.',
+    );
+    if (r.ok) await get().fetchDevices();
+    return r;
   },
 }));

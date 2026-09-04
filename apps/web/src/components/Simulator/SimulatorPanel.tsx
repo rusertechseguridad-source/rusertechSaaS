@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSimulatorStore } from '../../store/simulatorStore';
 import { useAvlStore } from '../../store/avlStore';
 import { Activity, Play, Send, AlertTriangle, Trash2, Info } from 'lucide-react';
+import { avisar } from '../../services/avisos';
 
 export const SimulatorPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'info' | 'point' | 'route' | 'alert' | 'status'>('info');
@@ -34,7 +35,7 @@ export const SimulatorPanel: React.FC = () => {
       lng: parseFloat(lng),
       speedKmh: parseFloat(speed)
     });
-    alert('Punto enviado');
+    avisar.exito('Punto enviado');
   };
 
   const handleSendAlert = async (e: React.FormEvent) => {
@@ -46,7 +47,7 @@ export const SimulatorPanel: React.FC = () => {
       lng: parseFloat(lng),
       alertType
     });
-    alert('Alerta enviada');
+    avisar.exito('Alerta enviada');
   };
 
   const handleStartRoute = async (e: React.FormEvent) => {
@@ -67,7 +68,7 @@ export const SimulatorPanel: React.FC = () => {
       intervalSeconds: 5,
       speedKmh: 40
     });
-    alert('Ruta iniciada');
+    avisar.exito('Ruta iniciada');
     fetchStatus();
   };
 

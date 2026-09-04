@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { PieChart, Activity, AlertTriangle, Truck, Download } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
+import { EstadoConsulta } from '../../components/EstadoConsulta';
+import { mensajeDeError } from '../../services/avisos';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
-  // El valor NO se renderiza: la pantalla no distingue «cargando» de «sin
-  // datos», y ante un 403 muestra ceros como si fueran reales. Pintarlo es
-  // de la Tanda 6; acá se deja el hueco a la vista en vez de taparlo.
-  const [, setLoading] = useState(false);
+  // La Tanda 2 dejó esto como `[, setLoading]` con una nota: "pintarlo es de
+  // la Tanda 6". Es esta tanda.
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState('month');
   const [fleetData, setFleetData] = useState<any>(null);
   const [tripsData, setTripsData] = useState<any>(null);
@@ -20,6 +22,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const headers = { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` };
       
@@ -29,12 +32,25 @@ export const AnalyticsDashboard: React.FC = () => {
         fetch(`http://localhost:3000/api/v1/analytics/alerts?period=${period}`, { headers })
       ]);
 
-      if (resFleet.ok) setFleetData(await resFleet.json());
-      if (resTrips.ok) setTripsData(await resTrips.json());
-      if (resAlerts.ok) setAlertsData(await resAlerts.json());
+      // ⚠️ Antes: `if (res.ok) setX(...)` y nada en el `else`. Ante un 403 los
+      // tres estados quedaban en `null`, los gráficos se dibujaban con ceros, y
+      // el panel afirmaba "0 viajes" cuando la verdad era "no tenés permiso
+      // para ver esto". Un panel de analítica que muestra ceros falsos es peor
+      // que uno que no carga.
+      const fallidas = [resFleet, resTrips, resAlerts].filter((r) => !r.ok);
+      if (fallidas.length > 0) {
+        const cuerpo = await fallidas[0].json().catch(() => null);
+        setError(mensajeDeError(fallidas[0].status, cuerpo));
+        return;
+      }
 
+      setFleetData(await resFleet.json());
+      setTripsData(await resTrips.json());
+      setAlertsData(await resAlerts.json());
     } catch (e) {
-      console.error(e);
+      // eslint-disable-next-line no-console
+      console.error('[AnalyticsDashboard]', e);
+      setError('No se pudo conectar con el servidor. Revisá tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -129,6 +145,15 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Antes de este bloque, un 403 pintaba todos los KPI en cero: el panel
+          afirmaba "0 viajes" cuando la verdad era "no tenés permiso". */}
+      {(error || loading) && (
+        <EstadoConsulta cargando={loading} error={error} vacio={false}
+          entidad="datos de analítica" onReintentar={fetchData} />
+      )}
+
+      {!error && !loading && (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 shrink-0">
         <div className="bg-bgSurface border border-borderDefault rounded-xl p-6 shadow-card flex flex-col relative overflow-hidden">
           <Truck className="absolute top-4 right-4 w-16 h-16 text-textMuted opacity-20" />
@@ -201,6 +226,8 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

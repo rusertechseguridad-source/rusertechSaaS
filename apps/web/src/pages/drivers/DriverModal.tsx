@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Phone, CreditCard, FileText, Car, Upload, CheckCircle, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
+import { escribir } from '../../services/avisos';
 
 interface DriverModalProps {
   isOpen: boolean;
@@ -94,7 +95,8 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
         : 'http://localhost:3000/api/v1/drivers';
       const method = driverToEdit ? 'PUT' : 'POST';
       
-      const res = await fetch(url, {
+      const r = await escribir(
+        () => fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -113,8 +115,12 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
           carrier_id: carrierId || undefined,
           status: driverToEdit ? driverToEdit.status : 'active'
         }),
-      });
-      if (!res.ok) throw new Error('Error al guardar chofer');
+        }),
+        `Chofer ${driverToEdit ? 'actualizado' : 'creado'}.`,
+      );
+      // El modal se cierra SÓLO si guardó. Cerrarlo igual es lo que hacía
+      // creer al operador que el alta había funcionado.
+      if (!r.ok) return;
       onSaved();
       onClose();
     } catch (err: any) {

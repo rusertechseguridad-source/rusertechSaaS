@@ -1,16 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useVehiclesStore } from '../../store/vehiclesStore';
 import { Truck, Plus, Search, ShieldAlert, ShieldCheck, Edit2, Trash2, Download } from 'lucide-react';
-import { RequirePermission } from '../../components/RequirePermission';
+import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
+import { EstadoConsulta } from '../../components/EstadoConsulta';
+import { CampoImagenVehiculo } from './CampoImagenVehiculo';
 
 export const VehiclesPage: React.FC = () => {
   const { t } = useTranslation();
-  const { vehicles, fetchVehicles, toggleBlock, deleteVehicle, createVehicle, updateVehicle, loading } = useVehiclesStore();
+  const { vehicles, fetchVehicles, toggleBlock, deleteVehicle, createVehicle, updateVehicle, loading, error } = useVehiclesStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // La Tanda 4 puso `manage_vehicles` en las rutas de escritura.
+  // ⚠️ Los botones estaban envueltos en `RequirePermission`, que los escondía.
+  // La regla del proyecto es mostrar siempre y deshabilitar con el motivo: un
+  // botón ausente es indistinguible de una función que no existe. El envoltorio
+  // se sacó y cada botón lleva su `disabled` + `title`.
+  const puedeGestionarVehiculos = useTienePermiso('manage_vehicles');
+  const permisoVehiculos = propsSinPermiso(puedeGestionarVehiculos, 'manage_vehicles');
 
   // AVL Users (providers) list
   const [avlUsers, setAvlUsers] = useState<any[]>([]);
@@ -174,25 +184,9 @@ export const VehiclesPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('http://localhost:3000/api/v1/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setter(data.url);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  // `handleFileUpload` vivía acá y se pasaba el `setter` como argumento. Se
+  // movió a `CampoImagenVehiculo` junto con la vista previa y el botón de
+  // quitar: eran tres bloques idénticos con los mismos tres defectos.
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,12 +207,10 @@ export const VehiclesPage: React.FC = () => {
       image_side_url: imageSideUrl || null,
     };
 
-    if (editingId) {
-      await updateVehicle(editingId, data);
-    } else {
-      await createVehicle(data);
-    }
-    setShowModal(false);
+    // El modal se cierra SÓLO si guardó. Antes se cerraba siempre, así que un
+    // guardado fallido se veía igual que uno exitoso.
+    const r = editingId ? await updateVehicle(editingId, data) : await createVehicle(data);
+    if (r.ok) setShowModal(false);
   };
 
   const totalVehicles = vehicles.length;
@@ -235,11 +227,13 @@ export const VehiclesPage: React.FC = () => {
           <Truck className="w-8 h-8 mr-3 text-accentGreen" />
           {t('vehicles.title')}
         </h1>
-        <RequirePermission permission="manage_vehicles">
-          <button onClick={openCreateModal} className="bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20">
-            <Plus className="w-5 h-5 mr-2" /> {t('vehicles.new_vehicle')}
-          </button>
-        </RequirePermission>
+        <button
+          onClick={openCreateModal}
+          {...permisoVehiculos}
+          className={`bg-accentGreen hover:bg-accentGreen/90 text-bgStart px-4 py-2 rounded font-bold flex items-center shadow-lg shadow-accentGreen/20 ${CLASES_DESHABILITADO}`}
+        >
+          <Plus className="w-5 h-5 mr-2" /> {t('vehicles.new_vehicle')}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
@@ -297,7 +291,10 @@ export const VehiclesPage: React.FC = () => {
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {loading ? (
+          {error ? (
+            <EstadoConsulta cargando={false} error={error} vacio={false}
+              entidad="vehículos" onReintentar={fetchVehicles} />
+          ) : loading ? (
             <div className="p-12 text-center text-textMuted">{t('vehicles.loading')}</div>
           ) : (
             <table className="w-full text-left text-sm text-textSecondary">
@@ -307,9 +304,7 @@ export const VehiclesPage: React.FC = () => {
                   <th className="px-6 py-4">{t('vehicles.table.carrier')}</th>
                   <th className="px-6 py-4">{t('vehicles.table.provider')}</th>
                   <th className="px-6 py-4">{t('vehicles.table.status')}</th>
-                  <th className="px-6 py-4 text-right">
-                    <RequirePermission permission="manage_vehicles">{t('vehicles.table.actions')}</RequirePermission>
-                  </th>
+                  <th className="px-6 py-4 text-right">{t('vehicles.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-borderDefault">
@@ -356,31 +351,29 @@ export const VehiclesPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <RequirePermission permission="manage_vehicles">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleToggleBlock(v.id, v.is_blocked)}
-                            className={`p-2 rounded transition-colors ${v.is_blocked ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'}`}
-                            title={v.is_blocked ? 'Desbloquear ingesta' : 'Bloquear ingesta'}
-                          >
-                            {v.is_blocked ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={() => openEditModal(v)}
-                            className="p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors"
-                            title="Editar vehículo"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
-                            className="p-2 text-textSecondary hover:text-statusDanger hover:bg-bgSurfaceHigh rounded transition-colors"
-                            title="Eliminar vehículo"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </RequirePermission>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleToggleBlock(v.id, v.is_blocked)}
+                          {...propsSinPermiso(puedeGestionarVehiculos, 'manage_vehicles', v.is_blocked ? 'Desbloquear ingesta' : 'Bloquear ingesta')}
+                          className={`p-2 rounded transition-colors ${v.is_blocked ? 'text-statusOnline hover:bg-statusOnline/20 hover:text-white' : 'text-statusDanger hover:bg-statusDanger/20 hover:text-white'} ${CLASES_DESHABILITADO}`}
+                        >
+                          {v.is_blocked ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => openEditModal(v)}
+                          {...propsSinPermiso(puedeGestionarVehiculos, 'manage_vehicles', 'Editar vehículo')}
+                          className={`p-2 text-textSecondary hover:text-white hover:bg-bgSurfaceHigh rounded transition-colors ${CLASES_DESHABILITADO}`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => { if(confirm('¿Eliminar vehículo?')) deleteVehicle(v.id); }}
+                          {...propsSinPermiso(puedeGestionarVehiculos, 'manage_vehicles', 'Eliminar vehículo')}
+                          className={`p-2 text-textSecondary hover:text-statusDanger hover:bg-bgSurfaceHigh rounded transition-colors ${CLASES_DESHABILITADO}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -474,21 +467,21 @@ export const VehiclesPage: React.FC = () => {
                 <div className="border-t border-borderDefault pt-4 mt-4">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">{t('vehicles.modal.images')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.front')}</label>
-                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageFrontUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
-                      {imageFrontUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageFrontUrl} alt="Frente" className="w-full h-full object-cover" /></div>}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.rear')}</label>
-                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageRearUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
-                      {imageRearUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageRearUrl} alt="Trasero" className="w-full h-full object-cover" /></div>}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-textSecondary mb-1">{t('vehicles.modal.side')}</label>
-                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setImageSideUrl)} className="w-full text-xs bg-bgStart border border-borderDefault rounded p-1 text-white focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-accentGreen/20 file:text-accentGreen file:font-medium" />
-                      {imageSideUrl && <div className="mt-2 h-20 w-full rounded border border-borderDefault overflow-hidden"><img src={imageSideUrl} alt="Lateral" className="w-full h-full object-cover" /></div>}
-                    </div>
+                    <CampoImagenVehiculo
+                      etiqueta={t('vehicles.modal.front')}
+                      url={imageFrontUrl}
+                      onCambiar={setImageFrontUrl}
+                    />
+                    <CampoImagenVehiculo
+                      etiqueta={t('vehicles.modal.rear')}
+                      url={imageRearUrl}
+                      onCambiar={setImageRearUrl}
+                    />
+                    <CampoImagenVehiculo
+                      etiqueta={t('vehicles.modal.side')}
+                      url={imageSideUrl}
+                      onCambiar={setImageSideUrl}
+                    />
                   </div>
                 </div>
 

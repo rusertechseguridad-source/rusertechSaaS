@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { escribir, type Resultado } from '../services/avisos';
 
 export interface Trip {
   id: string;
@@ -37,6 +38,17 @@ interface TripsState {
   fetchTrips: () => Promise<void>;
   createTrip: (data: Partial<Trip>) => Promise<void>;
   updateTrip: (id: string, data: Partial<Trip>) => Promise<void>;
+  /**
+   * Cambio de estado del viaje. Va por `POST /trips/:id/status`, que es el
+   * ÚNICO camino que estampa `actual_start` y `actual_end`.
+   *
+   * ⚠️ Los botones de estado usaban `updateTrip` (el `PUT` genérico), que sólo
+   * escribe el campo `status`. Resultado: `actual_end` no se escribía por
+   * ninguna vía del repo, y las columnas "Inicio real" / "Fin real" salían
+   * vacías en la lista, en el CSV y en el informe PDF que se presenta ante
+   * terceros. El endpoint existía y no lo llamaba nadie.
+   */
+  cambiarEstado: (id: string, status: string, notes?: string) => Promise<Resultado>;
   deleteTrip: (id: string) => Promise<void>;
   getTrip: (id: string) => Promise<Trip | null>;
   getLinkedVehicles: (tripId: string) => Promise<any[]>;
@@ -79,6 +91,22 @@ export const useTripsStore = create<TripsState>((set, get) => ({
       throw e;
     }
   },
+  cambiarEstado: async (id, status, notes) => {
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/trips/${id}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
+        },
+        body: JSON.stringify({ status, notes }),
+      }),
+      'Estado del viaje actualizado.',
+    );
+    if (r.ok) await get().fetchTrips();
+    return r;
+  },
+
   updateTrip: async (id, data) => {
     try {
       const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {

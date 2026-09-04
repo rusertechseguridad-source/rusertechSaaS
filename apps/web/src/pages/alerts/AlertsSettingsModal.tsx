@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Save } from 'lucide-react';
+import { avisar } from '../../services/avisos';
 
 interface AlertsSettingsModalProps {
   isOpen: boolean;
@@ -100,7 +101,7 @@ const AlertsSettingsModal: React.FC<AlertsSettingsModalProps> = ({
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Error al guardar la configuración');
+      avisar.error('Error al guardar la configuración');
     } finally {
       setSaving(false);
     }

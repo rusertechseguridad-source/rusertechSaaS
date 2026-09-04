@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertTenantOwnership, tenantWhere } from '../common/tenant/tenant-scope';
 import { LivePositionsService } from '../common/live-positions/live-positions.service';
@@ -19,6 +19,23 @@ export class SensorsService {
   }
 
   async upsertConfig(data: any, tenantId: string) {
+    // ⚠️ EXIGIR `scope_id`, no seguir con `undefined`.
+    //
+    // Prisma OMITE las claves `undefined` del `where`: sin este control, un
+    // `scope_id` ausente convertía el `findFirst` de abajo en "la primera
+    // configuración de ese tipo de sensor DEL TENANT", y el `update` posterior
+    // le escribía los umbrales al vehículo equivocado. Es cadena de frío: un
+    // umbral en el camión que no es significa que las excursiones de
+    // temperatura reales no disparen alarma donde sí las hay.
+    //
+    // 400 y no un `create` con valores por defecto: una configuración de
+    // sensor sin sujeto no es un caso válido que haya que resolver adivinando.
+    if (typeof data?.scope_id !== 'string' || data.scope_id.trim() === '') {
+      throw new BadRequestException(
+        'Falta scope_id: hay que decir a qué vehículo se le aplican estos umbrales.',
+      );
+    }
+
     // Check if a config exists for this scope
     const existing = await this.prisma.sensorConfig.findFirst({
       where: {

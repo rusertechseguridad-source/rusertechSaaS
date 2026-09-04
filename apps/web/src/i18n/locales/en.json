@@ -515,7 +515,16 @@
     "range": "Range",
     "no_data": "No data",
     "loading": "Loading sensors...",
-    "not_found": "No sensors or vehicles found for your search."
+    "not_found": "No sensors or vehicles found for your search.",
+    "configure": "Configure sensor",
+    "configure_first": "Configure the first sensor",
+    "empty_title": "No sensors configured yet.",
+    "empty_hint": "This dashboard shows vehicles with temperature or humidity thresholds defined. Configure the first one to start monitoring the cold chain.",
+    "edit_thresholds": "Configure",
+    "pick_vehicle": "Choose the vehicle to configure",
+    "already_configured": "Already configured",
+    "vehicles_error": "Could not load the vehicle list.",
+    "close": "Close"
   },
   "admin": {
     "search_placeholder": "Search by name, email or company...",
@@ -869,7 +878,10 @@
       "error": "Could not save the route precision.",
       "solo_admin": "Only the account administrator can change this value.",
       "usando_default": "Installation default"
-    }
+    },
+    "activar": "Re-enable monitoring for this vehicle",
+    "activado_ok": "Monitoring re-enabled.",
+    "activado_error": "Could not re-enable monitoring."
   },
   "estadosViaje": {
     "title": "State timeline",

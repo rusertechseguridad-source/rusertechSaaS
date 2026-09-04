@@ -3,11 +3,18 @@ import { Smartphone, Signal, Plus, Search, AlertTriangle, Edit2, Trash2, X, Down
 import { useDevicesStore, type Device } from '../../store/devicesStore';
 import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
+import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
 
 export const DevicesPage: React.FC = () => {
   const { t } = useTranslation();
   const { devices, loading, fetchDevices, createDevice, updateDevice, deleteDevice } = useDevicesStore();
   const [search, setSearch] = useState('');
+  // La Tanda 4 puso `manage_devices` en las rutas de escritura. Sin esto la
+  // pantalla sigue ofreciendo botones que ahora devuelven 403.
+  // Acá el envoltorio `RequirePermission` nunca estuvo, pero faltaba el motivo:
+  // dos de los tres botones se deshabilitaban SIN decir por qué, que para el
+  // operador es lo mismo que una pantalla rota.
+  const puedeGestionarDispositivos = useTienePermiso('manage_devices');
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -75,12 +82,8 @@ export const DevicesPage: React.FC = () => {
       avl_user_id: avlUserId || null,
     };
     
-    if (editingId) {
-      await updateDevice(editingId, data);
-    } else {
-      await createDevice(data);
-    }
-    setShowModal(false);
+    const r = editingId ? await updateDevice(editingId, data) : await createDevice(data);
+    if (r.ok) setShowModal(false);
   };
 
   const handleExportDetail = () => {
@@ -155,7 +158,8 @@ export const DevicesPage: React.FC = () => {
           </div>
           <button
             onClick={handleNewDevice}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accentGreen/10 border border-accentGreen/30 text-accentGreen font-semibold text-sm hover:bg-accentGreen/20 hover:border-accentGreen/50 transition-all duration-200 shadow-[0_0_15px_rgba(0,200,100,0.15)]"
+            {...propsSinPermiso(puedeGestionarDispositivos, 'manage_devices')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accentGreen/10 border border-accentGreen/30 text-accentGreen font-semibold text-sm hover:bg-accentGreen/20 hover:border-accentGreen/50 transition-all duration-200 shadow-[0_0_15px_rgba(0,200,100,0.15)] ${CLASES_DESHABILITADO}`}
           >
             <Plus className="w-5 h-5" />
             <span className="hidden sm:inline">{t('devices.new_device')}</span>
@@ -279,15 +283,15 @@ export const DevicesPage: React.FC = () => {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEditDevice(device)}
-                            className="p-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textMuted hover:text-white hover:border-textSecondary transition-colors"
-                            title={t('devices.actions.edit')}
+                            {...propsSinPermiso(puedeGestionarDispositivos, 'manage_devices', t('devices.actions.edit'))}
+                            className={`p-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textMuted hover:text-white hover:border-textSecondary transition-colors ${CLASES_DESHABILITADO}`}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(device.id)}
-                            className="p-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textMuted hover:text-statusDanger hover:border-statusDanger/50 transition-colors"
-                            title={t('devices.actions.delete')}
+                            {...propsSinPermiso(puedeGestionarDispositivos, 'manage_devices', t('devices.actions.delete'))}
+                            className={`p-1.5 bg-bgSurfaceHigh border border-borderDefault rounded text-textMuted hover:text-statusDanger hover:border-statusDanger/50 transition-colors ${CLASES_DESHABILITADO}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

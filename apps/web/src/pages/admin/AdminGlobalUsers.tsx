@@ -3,6 +3,7 @@ import { Search, Edit2, Shield, Check, X, Minus, Pause, Play, Save, Key, Refresh
 import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
 import { translateRole } from '../../utils/labels';
+import { avisar } from '../../services/avisos';
 
 export const AdminGlobalUsers: React.FC = () => {
   const { t } = useTranslation();
@@ -83,11 +84,11 @@ export const AdminGlobalUsers: React.FC = () => {
         setEditingUser(null);
         fetchData();
       } else {
-        alert(t('admin.error_save'));
+        avisar.error(t('admin.error_save'));
       }
     } catch (err) {
       console.error(err);
-      alert(t('admin.error_connection'));
+      avisar.error(t('admin.error_connection'));
     }
   };
 
@@ -106,11 +107,11 @@ export const AdminGlobalUsers: React.FC = () => {
       if (res.ok) {
         fetchData();
       } else {
-        alert(t('admin.error_status'));
+        avisar.error(t('admin.error_status'));
       }
     } catch (err) {
       console.error(err);
-      alert(t('admin.error_connection'));
+      avisar.error(t('admin.error_connection'));
     }
   };
 
@@ -144,9 +145,9 @@ export const AdminGlobalUsers: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setRevealedPasswords(prev => ({ ...prev, [userId]: data.newPassword }));
-        alert(t('admin.reset_success').replace('{{password}}', data.newPassword));
+        avisar.exito(t('admin.reset_success').replace('{{password}}', data.newPassword));
       } else {
-        alert(t('admin.error_reset'));
+        avisar.error(t('admin.error_reset'));
       }
     } catch (err) {
       console.error(err);
@@ -155,7 +156,7 @@ export const AdminGlobalUsers: React.FC = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert(t('admin.copied'));
+    avisar.exito(t('admin.copied'));
   };
 
   const filtered = users.filter(u => {

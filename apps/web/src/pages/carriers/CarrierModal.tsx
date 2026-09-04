@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Building2, Phone, Mail, MapPin, Truck, FileText, CheckCircle, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
+import { escribir } from '../../services/avisos';
 
 interface CarrierModalProps {
   isOpen: boolean;
@@ -66,7 +67,8 @@ export const CarrierModal: React.FC<CarrierModalProps> = ({ isOpen, onClose, onS
         : 'http://localhost:3000/api/v1/carriers';
       const method = carrierToEdit ? 'PUT' : 'POST';
       
-      const res = await fetch(url, {
+      const r = await escribir(
+        () => fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -86,10 +88,12 @@ export const CarrierModal: React.FC<CarrierModalProps> = ({ isOpen, onClose, onS
           notes: notes || undefined,
           status: carrierToEdit ? carrierToEdit.status : 'active'
         }),
-      });
-
-      if (!res.ok) throw new Error('Error al guardar transportista');
-
+        }),
+        `Transportista ${carrierToEdit ? 'actualizado' : 'creado'}.`,
+      );
+      // El modal se cierra SÓLO si guardó: cerrarlo igual es lo que hacía
+      // creer al operador que el alta había funcionado.
+      if (!r.ok) return;
       onSaved();
       onClose();
     } catch (err: any) {

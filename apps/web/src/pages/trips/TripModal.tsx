@@ -3,6 +3,7 @@ import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
 import { X, CheckCircle } from 'lucide-react';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
+import { avisar } from '../../services/avisos';
 
 interface TripModalProps {
   isOpen: boolean;
@@ -157,7 +158,7 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
       onSaved();
       onClose();
     } catch (e) {
-      alert('Error al guardar el viaje');
+      avisar.error('Error al guardar el viaje');
     }
   };
 

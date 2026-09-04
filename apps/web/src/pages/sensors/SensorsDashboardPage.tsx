@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { Thermometer, Droplets, Activity, Truck } from 'lucide-react';
+import { Thermometer, Droplets, Activity, Truck, Settings, Plus } from 'lucide-react';
 import { SensorGauge } from './components/SensorGauge';
 import { SensorHistoryModal } from './SensorHistoryModal';
+import { SensorConfigModal } from './SensorConfigModal';
+import { SelectorVehiculoSensor } from './SelectorVehiculoSensor';
 import { Search, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
 
 export const SensorsDashboardPage: React.FC = () => {
   const { t } = useTranslation();
@@ -16,6 +19,22 @@ export const SensorsDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [selectedSensorType, setSelectedSensorType] = useState<string>('');
+
+  // ⚠️ LA PUERTA CERRADA DESDE AFUERA.
+  //
+  // Este tablero se arma desde `sensor_configs`. Con la tabla vacía —que es el
+  // estado real hoy: 0 filas, medido— el backend devuelve `[]` y la pantalla
+  // quedaba en "No se encontraron sensores", sin ningún camino para crear el
+  // primero: el modal de umbrales sólo se abría desde `TripDetailsPage`, es
+  // decir desde adentro de un viaje. Una pantalla que sólo se puede usar si ya
+  // está usada no se puede usar nunca.
+  //
+  // Ahora hay dos entradas: el botón de la cabecera (elegir vehículo) y el
+  // botón "Configurar" de cada tarjeta (editar los umbrales que ya tiene).
+  const puedeGestionarSensores = useTienePermiso('manage_sensors');
+  const permisoSensores = propsSinPermiso(puedeGestionarSensores, 'manage_sensors');
+  const [mostrarSelector, setMostrarSelector] = useState(false);
+  const [vehiculoAConfigurar, setVehiculoAConfigurar] = useState<any>(null);
 
   const fetchData = async () => {
     try {
@@ -153,12 +172,21 @@ export const SensorsDashboardPage: React.FC = () => {
             {avls.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
 
-          <button 
+          <button
             onClick={exportToExcel}
             className="flex items-center gap-2 bg-bgSurface/80 hover:bg-bgSurfaceHigh text-white px-4 py-1.5 text-sm rounded-lg border border-borderDefault transition-colors"
           >
             <Download size={16} className="text-accentBlue" />
             {t('sensors.export_csv')}
+          </button>
+
+          <button
+            onClick={() => setMostrarSelector(true)}
+            {...permisoSensores}
+            className={`flex items-center gap-2 bg-accentGreen text-bgStart px-4 py-1.5 text-sm font-bold rounded-lg hover:bg-accentGreen/90 transition-colors ${CLASES_DESHABILITADO}`}
+          >
+            <Plus size={16} />
+            {t('sensors.configure')}
           </button>
         </div>
       </div>
@@ -180,6 +208,16 @@ export const SensorsDashboardPage: React.FC = () => {
                   <span className="text-xs text-textMuted truncate max-w-[120px]">{v.alias || t('sensors.no_alias')}</span>
                 </div>
                 {v.carrier?.name && <div className="text-xs text-textMuted flex items-center gap-1"><Truck size={12}/> {v.carrier.name}</div>}
+                {/* Editar los umbrales de este vehículo sin salir del tablero.
+                    Antes había que entrar a un viaje para llegar al modal. */}
+                <button
+                  onClick={() => setVehiculoAConfigurar(v)}
+                  {...propsSinPermiso(puedeGestionarSensores, 'manage_sensors', t('sensors.edit_thresholds'))}
+                  className={`mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-textSecondary hover:text-white border border-borderDefault hover:border-textSecondary rounded-md px-2 py-1 transition-colors ${CLASES_DESHABILITADO}`}
+                >
+                  <Settings size={12} />
+                  {t('sensors.edit_thresholds')}
+                </button>
               </div>
 
               <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-6">
@@ -240,7 +278,28 @@ export const SensorsDashboardPage: React.FC = () => {
         {filteredData.length === 0 && !loading && (
           <div className="col-span-full py-20 text-center text-textMuted">
             <Activity size={48} className="mx-auto mb-4 opacity-20" />
-            <p>{t('sensors.not_found')}</p>
+            {/*
+              Dos vacíos distintos, dos mensajes distintos. Antes los dos decían
+              "no se encontraron sensores o vehículos para tu búsqueda", que
+              cuando la tabla está vacía es directamente falso: no hay ninguna
+              búsqueda involucrada, no hay nada configurado todavía.
+            */}
+            {data.length === 0 ? (
+              <>
+                <p className="text-white font-semibold mb-1">{t('sensors.empty_title')}</p>
+                <p className="max-w-md mx-auto text-sm">{t('sensors.empty_hint')}</p>
+                <button
+                  onClick={() => setMostrarSelector(true)}
+                  {...permisoSensores}
+                  className={`mt-5 inline-flex items-center gap-2 bg-accentGreen text-bgStart px-5 py-2 text-sm font-bold rounded-lg hover:bg-accentGreen/90 transition-colors ${CLASES_DESHABILITADO}`}
+                >
+                  <Plus size={16} />
+                  {t('sensors.configure_first')}
+                </button>
+              </>
+            ) : (
+              <p>{t('sensors.not_found')}</p>
+            )}
           </div>
         )}
       </div>
@@ -254,6 +313,25 @@ export const SensorsDashboardPage: React.FC = () => {
           vehicle={selectedVehicle}
           sensorType={selectedSensorType}
           token={token || ''}
+        />
+      )}
+
+      {mostrarSelector && (
+        <SelectorVehiculoSensor
+          yaConfigurados={new Set(data.map((d) => d.vehicle?.id).filter(Boolean))}
+          onElegir={(v) => { setMostrarSelector(false); setVehiculoAConfigurar(v); }}
+          onClose={() => setMostrarSelector(false)}
+        />
+      )}
+
+      {vehiculoAConfigurar && (
+        <SensorConfigModal
+          vehicleId={vehiculoAConfigurar.id}
+          vehicleLabel={vehiculoAConfigurar.plate}
+          onClose={() => setVehiculoAConfigurar(null)}
+          // Sin esto el vehículo recién configurado no aparece hasta el
+          // refresco de 10 s, y el operador cree que no se guardó.
+          onSaved={fetchData}
         />
       )}
     </div>

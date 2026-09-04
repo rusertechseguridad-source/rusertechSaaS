@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { TripModal } from './TripModal';
 import { useTranslation } from 'react-i18next';
 import { BotonInforme } from '../../components/monitoring/BotonInforme';
+import { EstadoConsulta } from '../../components/EstadoConsulta';
 
 /* ─────────────── helpers ─────────────── */
 const STATUS_COLOR: Record<string, string> = {
@@ -182,7 +183,7 @@ export const TripsPage: React.FC = () => {
   const { t } = useTranslation();
   // `createTrip` se destructuraba sin usarse: el alta la hace el modal,
   // que llama al store por su cuenta.
-  const { trips, fetchTrips, loading } = useTripsStore();
+  const { trips, fetchTrips, loading, error } = useTripsStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [carrierFilter, setCarrierFilter] = useState('');
@@ -387,7 +388,14 @@ export const TripsPage: React.FC = () => {
 
         {/* Table Body */}
         <div className="flex-1 flex flex-col w-max min-w-full pb-8">
-          {loading ? (
+          {/* El ERROR va PRIMERO: una consulta que falló devuelve lista vacía,
+              y mostrar "no hay viajes" sería la mentira. */}
+          {error ? (
+            <div className="w-full absolute left-0">
+              <EstadoConsulta cargando={false} error={error} vacio={false}
+                entidad="viajes" onReintentar={fetchTrips} />
+            </div>
+          ) : loading ? (
             <div className="flex flex-col items-center justify-center h-48 gap-3 w-full absolute left-0">
               <div className="w-8 h-8 border-2 border-accentGreen/30 border-t-accentGreen rounded-full animate-spin" />
               <p className="text-textMuted text-sm">{t('trips.loading')}</p>

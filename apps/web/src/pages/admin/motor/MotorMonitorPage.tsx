@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cpu, RefreshCw, AlertTriangle, Radar, X } from 'lucide-react';
-import { useSaludMotor, useVehiculosMonitoreados, useDesactivarMonitoreo } from './api';
+import { useSaludMotor, useVehiculosMonitoreados, useDesactivarMonitoreo, useActivarMonitoreo } from './api';
 import { useMotorCatalogos } from '../../../hooks/useMotorCatalogos';
 import { useToleranciaRecorrido, useCambiarToleranciaRecorrido } from './api';
 import { useAuthStore } from '../../../store/authStore';
@@ -52,6 +52,7 @@ export const MotorMonitorPage: React.FC = () => {
   const { data: monitoreados } = useVehiculosMonitoreados();
   const { data: catalogos } = useMotorCatalogos();
   const desactivar = useDesactivarMonitoreo();
+  const activar = useActivarMonitoreo();
   const { user } = useAuthStore();
   const puedeEditarConfig = Boolean(user?.permissions?.includes('manage_settings'));
   const { data: tolerancia } = useToleranciaRecorrido();
@@ -80,8 +81,24 @@ export const MotorMonitorPage: React.FC = () => {
     try {
       await desactivar.mutateAsync(vehicleId);
       addToast(t('motor.desactivado_ok'), 'success');
-    } catch {
-      addToast(t('motor.desactivado_error'), 'error');
+    } catch (e) {
+      // El motivo real, no un texto genérico: si el backend explicó por qué
+      // no se pudo, el operador tiene que poder leerlo.
+      addToast(e instanceof Error ? e.message : t('motor.desactivado_error'), 'error');
+    }
+  };
+
+  /**
+   * ⚠️ Esto no existía: la pantalla sólo sabía DESACTIVAR. El operador apagaba
+   * el monitoreo de un vehículo y no había forma de volver a encenderlo sin
+   * tocar la base. El endpoint estaba desde la Etapa 1.
+   */
+  const handleActivar = async (vehicleId: string) => {
+    try {
+      await activar.mutateAsync(vehicleId);
+      addToast(t('motor.activado_ok'), 'success');
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : t('motor.activado_error'), 'error');
     }
   };
 
@@ -186,6 +203,15 @@ export const MotorMonitorPage: React.FC = () => {
                             title={t('motor.desactivar')}
                           >
                             <X className="w-4 h-4" />
+                          </button>
+                          {/* La otra mitad de la puerta: el monitoreo se podía
+                              apagar y no encender. El endpoint ya existía. */}
+                          <button
+                            onClick={() => handleActivar(v.vehicle_id)}
+                            className="ml-2 text-textMuted hover:text-accentGreen transition-colors"
+                            title={t('motor.activar')}
+                          >
+                            <Radar className="w-4 h-4" />
                           </button>
                         </RequirePermission>
                       </td>

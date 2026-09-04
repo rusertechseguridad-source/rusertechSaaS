@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { avisar } from '../services/avisos';
 
 interface AvlUser {
   id: string;
@@ -247,12 +248,12 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
       if (!res.ok) throw new Error('Failed to import dictionary');
       const result = await res.json();
-      alert(`Importación completada:\n- Insertados: ${result.imported}\n- Actualizados: ${result.updated}\n- Errores: ${result.errors}`);
+      avisar.error(`Importación completada:\n- Insertados: ${result.imported}\n- Actualizados: ${result.updated}\n- Errores: ${result.errors}`);
       await get().fetchDictionary(userId);
       await get().fetchUnknownCodes(userId);
     } catch (error: any) {
       console.error(error);
-      alert('Error al importar el diccionario');
+      avisar.error('Error al importar el diccionario');
     }
   },
 }));

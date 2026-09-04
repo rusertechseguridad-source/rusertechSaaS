@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { escribir, type Resultado } from '../services/avisos';
 
 interface Vehicle {
   id: string;
@@ -24,10 +25,13 @@ interface VehiclesState {
   loading: boolean;
   error: string | null;
   fetchVehicles: () => Promise<void>;
-  createVehicle: (data: Partial<Vehicle>) => Promise<void>;
-  updateVehicle: (id: string, data: Partial<Vehicle>) => Promise<void>;
-  deleteVehicle: (id: string) => Promise<void>;
-  toggleBlock: (id: string, blocked: boolean, reason?: string) => Promise<void>;
+  // Devuelven `Resultado` y no `void`: la pantalla necesita saber si salió
+  // bien para decidir si cierra el modal. Cerrarlo igual es lo que hacía
+  // creer al operador que había guardado.
+  createVehicle: (data: Partial<Vehicle>) => Promise<Resultado>;
+  updateVehicle: (id: string, data: Partial<Vehicle>) => Promise<Resultado>;
+  deleteVehicle: (id: string) => Promise<Resultado>;
+  toggleBlock: (id: string, blocked: boolean, reason?: string) => Promise<Resultado>;
 }
 
 const getAuthHeaders = () => ({
@@ -55,71 +59,49 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
   },
 
   createVehicle: async (data) => {
-    try {
-      const res = await fetch('http://localhost:3000/api/v1/vehicles', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Error al crear vehículo');
-      }
-      await get().fetchVehicles();
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al crear vehículo: ' + error.message);
-    }
+    // Antes: `res.text()` + un `alert` del navegador. El operador veía el JSON crudo del
+    // backend en una ventana del navegador, y un alta exitosa no avisaba nada.
+    const r = await escribir(
+      () => fetch('http://localhost:3000/api/v1/vehicles', {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(data),
+      }),
+      'Vehículo creado.',
+    );
+    if (r.ok) await get().fetchVehicles();
+    return r;
   },
 
   updateVehicle: async (id, data) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Error al actualizar vehículo');
-      }
-      await get().fetchVehicles();
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al actualizar vehículo: ' + error.message);
-    }
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
+        method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(data),
+      }),
+      'Vehículo actualizado.',
+    );
+    if (r.ok) await get().fetchVehicles();
+    return r;
   },
 
   deleteVehicle: async (id) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error('Failed to delete vehicle');
-      await get().fetchVehicles();
-    } catch (error: any) {
-      console.error(error);
-    }
+    // Éste era el único de su store que fallaba MUDO: ni siquiera un alert.
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
+        method: 'DELETE', headers: getAuthHeaders(),
+      }),
+      'Vehículo eliminado.',
+    );
+    if (r.ok) await get().fetchVehicles();
+    return r;
   },
 
   toggleBlock: async (id, blocked, reason) => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/vehicles/${id}/block`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ blocked, reason }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Error al cambiar estado de bloqueo');
-      }
-      
-      // Re-fetch to get the updated state from server
-      await get().fetchVehicles();
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al cambiar estado de bloqueo: ' + error.message);
-    }
+    const r = await escribir(
+      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}/block`, {
+        method: 'PATCH', headers: getAuthHeaders(), body: JSON.stringify({ blocked, reason }),
+      }),
+      blocked ? 'Vehículo bloqueado.' : 'Vehículo desbloqueado.',
+    );
+    if (r.ok) await get().fetchVehicles();
+    return r;
   },
 }));

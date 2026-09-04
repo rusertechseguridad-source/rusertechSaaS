@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Phone } from 'lucide-react';
 import { RequirePermission } from '../RequirePermission';
+import { avisar } from '../../services/avisos';
 
 interface VehicleCardProps {
   vehicle: any;
@@ -29,18 +30,18 @@ export function VehicleCard({ vehicle, tripId, onClose }: VehicleCardProps) {
       if (res.ok) {
         setCalled(true);
         // Toast o mensaje de confirmación
-        alert(t('vehicle.callDriverSuccess', 'Solicitud de contacto enviada al chofer.'));
+        avisar.exito(t('vehicle.callDriverSuccess', 'Solicitud de contacto enviada al chofer.'));
         
         // Deshabilitar por 60 segundos
         setTimeout(() => {
           setCalled(false);
         }, 60000);
       } else {
-        alert('Error al contactar al chofer');
+        avisar.error('Error al contactar al chofer');
       }
     } catch (error) {
       console.error(error);
-      alert('Error al contactar al chofer');
+      avisar.error('Error al contactar al chofer');
     } finally {
       setLoading(false);
     }

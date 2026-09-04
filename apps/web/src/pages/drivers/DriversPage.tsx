@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Search, UserCheck, UserX, UserPlus } from 'lucide-react';
-import { RequirePermission } from '../../components/RequirePermission';
+import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
 
 import { DriverModal } from './DriverModal';
 import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 export const DriversPage: React.FC = () => {
   const { t } = useTranslation();
   const [drivers, setDrivers] = useState<any[]>([]);
+  // La Tanda 4 puso `manage_drivers` en las rutas de escritura. Sin esto la
+  // pantalla sigue ofreciendo botones que ahora devuelven 403.
+  //
+  // ⚠️ Estos botones estaban ADEMÁS envueltos en `RequirePermission`, que los
+  // escondía antes de que el `disabled` llegara a dibujarse. El envoltorio se
+  // sacó: mostrar siempre, deshabilitar con el motivo.
+  const puedeGestionarConductores = useTienePermiso('manage_drivers');
+  const permisoConductores = propsSinPermiso(puedeGestionarConductores, 'manage_drivers');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -45,7 +54,7 @@ export const DriversPage: React.FC = () => {
       if (!res.ok) throw new Error('Error al actualizar estado');
       await fetchDrivers();
     } catch (err: any) {
-      alert(err.message);
+      avisar.exito(err.message);
     }
   };
 
@@ -82,15 +91,14 @@ export const DriversPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">{t('drivers.subtitle')}</p>
         </div>
-        <RequirePermission permission="manage_drivers">
-          <button 
-            onClick={() => { setDriverToEdit(null); setShowModal(true); }}
-            className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition flex items-center gap-2"
-          >
-            <UserPlus className="w-5 h-5" />
-            <span>{t('drivers.new_driver')}</span>
-          </button>
-        </RequirePermission>
+        <button
+          onClick={() => { setDriverToEdit(null); setShowModal(true); }}
+          {...permisoConductores}
+          className={`px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition flex items-center gap-2 ${CLASES_DESHABILITADO}`}
+        >
+          <UserPlus className="w-5 h-5" />
+          <span>{t('drivers.new_driver')}</span>
+        </button>
       </div>
 
       <DriverModal 
@@ -177,9 +185,7 @@ export const DriversPage: React.FC = () => {
                         <th className="px-6 py-4">{t('drivers.table.license')}</th>
                         <th className="px-6 py-4">{t('drivers.table.carrier')}</th>
                         <th className="px-6 py-4">{t('drivers.table.status')}</th>
-                        <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="manage_drivers">{t('drivers.table.actions')}</RequirePermission>
-                        </th>
+                        <th className="px-6 py-4 text-right">{t('drivers.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-borderDefault">
@@ -214,22 +220,24 @@ export const DriversPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <RequirePermission permission="manage_drivers">
-                              <div className="flex justify-end gap-3 items-center">
-                                <button 
-                                  onClick={() => { setDriverToEdit(driver); setShowModal(true); }}
-                                  className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
-                                >
-                                  {t('drivers.actions.edit')}
-                                </button>
-                                <button 
-                                  onClick={() => toggleStatus(driver.id, driver.status)}
-                                  className={`text-xs underline font-bold ${driver.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
-                                >
-                                  {driver.status === 'active' ? t('drivers.actions.suspend') : t('drivers.actions.reactivate')}
-                                </button>
-                              </div>
-                            </RequirePermission>
+                            <div className="flex justify-end gap-3 items-center">
+                              <button
+                                onClick={() => { setDriverToEdit(driver); setShowModal(true); }}
+                                {...permisoConductores}
+                                className={`text-xs font-bold text-textSecondary hover:text-white transition-colors ${CLASES_DESHABILITADO}`}
+                              >
+                                {t('drivers.actions.edit')}
+                              </button>
+                              {/* Suspender/reactivar es una escritura: le falta el
+                                  mismo permiso. Antes se apoyaba en el envoltorio. */}
+                              <button
+                                onClick={() => toggleStatus(driver.id, driver.status)}
+                                {...permisoConductores}
+                                className={`text-xs underline font-bold ${driver.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'} ${CLASES_DESHABILITADO}`}
+                              >
+                                {driver.status === 'active' ? t('drivers.actions.suspend') : t('drivers.actions.reactivate')}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

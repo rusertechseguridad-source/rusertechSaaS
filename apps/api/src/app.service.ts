@@ -9,19 +9,9 @@ export class AppService {
     return 'Hello World!';
   }
 
-  async getCriticalAlerts(tenantId: string) {
-    return this.prisma.eventLog.findMany({
-      where: {
-        tenant_id: tenantId,
-        severity: { in: ['high', 'critical'] },
-        status: 'open'
-      },
-      orderBy: { triggered_at: 'desc' },
-      take: 50,
-      include: {
-        vehicle: true,
-        trip: true
-      }
-    });
-  }
+  // `getCriticalAlerts` se eliminó con la ruta que la usaba: filtraba
+  // `severity IN ('high','critical')` —un vocabulario que ningún escritor
+  // produce— y su ruta tapaba al AlertsController entero. Si algún día hace
+  // falta un panel de "sólo críticas", va con su propio nombre de ruta, no
+  // reusando la dirección de otra cosa.
 }

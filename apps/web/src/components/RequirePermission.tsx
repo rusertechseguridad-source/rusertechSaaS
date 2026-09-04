@@ -57,3 +57,69 @@ export const SinPermiso: React.FC<{ permission: string }> = ({ permission }) => 
     </p>
   </div>
 );
+
+/**
+ * La misma decisión que `RequirePermission`, como valor.
+ *
+ * Existe para poder DESHABILITAR un botón en vez de esconderlo. Es una
+ * decisión deliberada y sigue el criterio del propio proyecto:
+ *
+ *   > "un botón ausente es indistinguible de una función que no existe"
+ *
+ * Un botón escondido le enseña al operador que la función no existe; uno
+ * deshabilitado, con un título que dice por qué, le enseña que existe y que le
+ * falta permiso — que es la verdad, y es accionable: puede pedírselo a su
+ * administrador.
+ *
+ * Se esconde, en cambio, lo que no tiene sentido ni mencionar (una pantalla
+ * entera de otro módulo). Para eso está `RequirePermission`.
+ */
+export function useTienePermiso(permission: PermissionKey): boolean {
+  const { user } = useAuthStore();
+  if (!user) return false;
+  if (isAdminRole(user.role ?? (user as any).role_code)) return true;
+  return (user.permissions ?? []).includes(permission);
+}
+
+/** Título uniforme para un control deshabilitado por falta de permiso. */
+export const SIN_PERMISO = 'No tenés permiso para esta acción. Pedísela al administrador de la cuenta.';
+
+/**
+ * El mismo motivo, nombrando el permiso cuando se lo conoce.
+ *
+ * Nombrarlo no es un detalle técnico: el operador le pide el permiso a su
+ * administrador, y el administrador tiene que saber cuál habilitar. "No tenés
+ * permiso" a secas obliga a adivinar entre veinte.
+ */
+export function motivoSinPermiso(permission?: string): string {
+  if (!permission) return SIN_PERMISO;
+  return `${SIN_PERMISO} Requiere el permiso ${permission}.`;
+}
+
+/**
+ * Clases del estado deshabilitado, en un solo lugar.
+ *
+ * Un botón deshabilitado tiene que VERSE deshabilitado. Sin esto queda idéntico
+ * a uno habilitado y el operador cree que la pantalla no responde.
+ */
+export const CLASES_DESHABILITADO = 'disabled:opacity-40 disabled:cursor-not-allowed';
+
+/**
+ * Props de un control de escritura sujeto a permiso.
+ *
+ * Devuelve `disabled` y `title` juntos porque van juntos siempre: deshabilitar
+ * sin decir por qué es la mitad del problema que estamos corrigiendo.
+ *
+ * `tituloHabilitado` es el tooltip normal del control (el que ya tenía cuando
+ * el permiso está); si no hay, queda sin tooltip.
+ */
+export function propsSinPermiso(
+  tienePermiso: boolean,
+  permission?: string,
+  tituloHabilitado?: string,
+): { disabled: boolean; title: string | undefined } {
+  return {
+    disabled: !tienePermiso,
+    title: tienePermiso ? tituloHabilitado : motivoSinPermiso(permission),
+  };
+}

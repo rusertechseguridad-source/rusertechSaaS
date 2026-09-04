@@ -8,6 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
+import { EstadoConsulta } from '../../components/EstadoConsulta';
 
 const selectStyles = {
   control: (base: any) => ({
@@ -30,7 +31,7 @@ const selectStyles = {
 
 export const LocationsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, toggleActive, loading } = useLocationsStore();
+  const { locations, fetchLocations, deleteLocation, createLocation, updateLocation, toggleActive, loading, error } = useLocationsStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -256,7 +257,10 @@ export const LocationsPage: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2">
-            {loading ? (
+            {error ? (
+              <EstadoConsulta cargando={false} error={error} vacio={false}
+                entidad="ubicaciones" onReintentar={fetchLocations} />
+            ) : loading ? (
               <div className="text-center text-textMuted p-8">{t('locations.loading')}</div>
             ) : filtered.length === 0 ? (
               <div className="text-center text-textMuted p-8">{t('locations.no_locations')}</div>

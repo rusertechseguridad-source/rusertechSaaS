@@ -3,6 +3,7 @@ import { Plus, Shield, Check, Search, Save } from 'lucide-react';
 import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
 import { translateRole } from '../../utils/labels';
+import { avisar } from '../../services/avisos';
 
 export const AdminRolesPermissions: React.FC = () => {
   const { t } = useTranslation();
@@ -62,7 +63,7 @@ export const AdminRolesPermissions: React.FC = () => {
         fetchRoles();
       } else {
         const error = await res.json();
-        alert(error.message || 'Error al crear rol');
+        avisar.error(error.message || 'Error al crear rol');
       }
     } catch (err) {
       console.error(err);
@@ -96,13 +97,13 @@ export const AdminRolesPermissions: React.FC = () => {
       });
       if (res.ok) {
         setRoles(roles.map(r => r.id === selectedRole.id ? selectedRole : r));
-        alert(t('admin_roles.save_success'));
+        avisar.exito(t('admin_roles.save_success'));
       } else {
-        alert(t('admin_roles.save_error'));
+        avisar.error(t('admin_roles.save_error'));
       }
     } catch (err) {
       console.error(err);
-      alert(t('admin_roles.error_conn'));
+      avisar.error(t('admin_roles.error_conn'));
     }
   };
 

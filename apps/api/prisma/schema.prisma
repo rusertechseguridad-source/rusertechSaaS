@@ -241,6 +241,15 @@ model Carrier {
   google_maps_link String?             @db.VarChar(500)
   operating_bases  String?
   contact_name     String?             @db.VarChar(200)
+  /// Las tres las agregó Gustavo por SQL directo (decisión de producto: un
+  /// transportista lleva tamaño de flota, datos del seguro y notas). Se
+  /// escriben acá a mano porque `prisma db pull` no puede correr en este
+  /// entorno —los motores están bloqueados con 403— y VERIFICADAS contra
+  /// information_schema de la base real: integer / text / text, las tres
+  /// nullable.
+  fleet_size       Int?
+  insurance_info   String?
+  notes            String?
   tenant           Tenant              @relation(fields: [tenant_id], references: [id])
   drivers          Driver[]
   trips            Trip[]

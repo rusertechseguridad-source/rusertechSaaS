@@ -11,11 +11,22 @@ import { DIRECTORIO_UPLOADS, PREFIJO_UPLOADS } from './common/config/directorio-
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get('alerts')
-  @UseGuards(JwtAuthGuard)
-  getAlerts(@CurrentUser() user: any) {
-    return this.appService.getCriticalAlerts(user.tenantId);
-  }
+  // Acá vivía un `@Get('alerts')` que colisionaba con AlertsController: los dos
+  // registran `GET /api/v1/alerts`, y AppController se registra primero, así
+  // que GANABA. Resultado: la ruta servía `getCriticalAlerts()`, que filtra
+  // `severity IN ('high','critical')`, y el AlertsController completo —con
+  // tenant, restricciones de acceso y todas las alertas abiertas— NUNCA corría.
+  //
+  // Verificado en producción durante la Tanda 5: la alerta `warning` que
+  // escribió el motor no aparecía, y la pantalla decía "No se encontraron
+  // incidentes abiertos". Cambiándola a `critical` a mano, aparecía.
+  //
+  // Se comprobó antes de borrarla quién dependía de "sólo las críticas":
+  //   · AppLayout.tsx:28 → sólo quiere saber SI hay alertas abiertas para el
+  //     punto rojo del menú, y ya filtra `status !== 'resolved'` por su cuenta.
+  //   · alertsStore.ts:34 → quiere la lista completa.
+  // Ninguno de los dos necesitaba el filtro, así que no hizo falta una ruta
+  // nueva con otro nombre: la buena ya existía y estaba tapada.
 
   @Get()
   getHello(): string {
@@ -25,7 +36,8 @@ export class AppController {
   // Sin guard, esta ruta era el único endpoint anónimo del backend: cualquiera
   // en internet escribía archivos de cualquier tamaño en el disco del servidor
   // y recibía la URL pública para servirlos (verificación integral, §2.5).
-  // El `@Get('alerts')` de arriba, en este mismo archivo, sí lo tenía.
+  // (La ruta de alertas que había arriba, y que sí llevaba guard, se eliminó
+  // en la Tanda 6 por colisionar con AlertsController.)
   @Post('upload')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', {

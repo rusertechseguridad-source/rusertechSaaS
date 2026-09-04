@@ -16,10 +16,11 @@ import type { LivePosition } from '../../types/monitoring';
 import { FRESCURA_COLORS } from '../../constants/freshness';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { avisar } from '../../services/avisos';
 
 export const TripDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getTrip, updateTrip, getLinkedVehicles, unlinkVehicle } = useTripsStore();
+  const { getTrip, updateTrip, cambiarEstado, getLinkedVehicles, unlinkVehicle } = useTripsStore();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -178,7 +179,7 @@ export const TripDetailsPage: React.FC = () => {
       loadLinkedVehicles(trip.id);
     } catch (e) {
       console.error(e);
-      alert('Error al desenlazar el vehículo');
+      avisar.error('Error al desenlazar el vehículo');
     }
   };
 
@@ -195,7 +196,7 @@ export const TripDetailsPage: React.FC = () => {
       loadTrip(trip.id); // Reload to get updated metadata
     } catch (e) {
       console.error(e);
-      alert('Error al generar código móvil');
+      avisar.error('Error al generar código móvil');
     }
   };
 
@@ -208,10 +209,10 @@ export const TripDetailsPage: React.FC = () => {
     const text = `*📱 Rusertech Mobile - Credenciales de Viaje*\n\n*Placa:* ${plate}\n*Chofer (DNI):* ${dni}\n*Código de Enlace:* ${code}\n\nIngresa estos datos en la App para activar el GPS.`;
     
     navigator.clipboard.writeText(text).then(() => {
-      alert('Credenciales copiadas al portapapeles. Ya puedes pegarlas en WhatsApp.');
+      avisar.exito('Credenciales copiadas al portapapeles. Ya puedes pegarlas en WhatsApp.');
     }).catch(err => {
       console.error('Error al copiar: ', err);
-      alert('No se pudo copiar al portapapeles.');
+      avisar.error('No se pudo copiar al portapapeles.');
     });
   };
 
@@ -263,7 +264,9 @@ export const TripDetailsPage: React.FC = () => {
   const handleChangeStatus = async (newStatus: string) => {
     if (!trip) return;
     setUpdating(true);
-    await updateTrip(trip.id, { status: newStatus });
+    // `cambiarEstado` y no `updateTrip`: el PUT genérico no estampa
+    // `actual_start` ni `actual_end`.
+    await cambiarEstado(trip.id, newStatus);
     await loadTrip(trip.id);
     setUpdating(false);
   };

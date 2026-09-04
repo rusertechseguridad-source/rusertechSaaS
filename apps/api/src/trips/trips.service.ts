@@ -58,6 +58,12 @@ export class TripsService {
         vehicle: {
           include: { avl_user: true, carrier: true }
         },
+        // ⚠️ El conductor se asigna, se persiste y NO volvía: `driver` no
+        // estaba en ningún `include` salvo el de `generateMobilePairing`.
+        // Resultado: columna "Conductor" vacía en la tabla y el CSV, popup del
+        // mapa sin chofer, y el WhatsApp de emparejamiento saliendo con
+        // `Chofer (DNI): -`, así que el conductor no podía vincular la app.
+        driver: { select: { id: true, full_name: true, document: true, phone: true } },
         carrier: true,
         operation: true,
         origin_location: true,
@@ -86,6 +92,12 @@ export class TripsService {
         vehicle: {
           include: { avl_user: true, carrier: true }
         },
+        // ⚠️ El conductor se asigna, se persiste y NO volvía: `driver` no
+        // estaba en ningún `include` salvo el de `generateMobilePairing`.
+        // Resultado: columna "Conductor" vacía en la tabla y el CSV, popup del
+        // mapa sin chofer, y el WhatsApp de emparejamiento saliendo con
+        // `Chofer (DNI): -`, así que el conductor no podía vincular la app.
+        driver: { select: { id: true, full_name: true, document: true, phone: true } },
         carrier: true,
         operation: true,
         origin_location: true,

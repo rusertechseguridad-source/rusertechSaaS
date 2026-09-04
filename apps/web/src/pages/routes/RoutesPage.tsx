@@ -9,6 +9,8 @@ import { kml } from '@tmcw/togeojson';
 import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
+import { EstadoConsulta } from '../../components/EstadoConsulta';
+import { avisar } from '../../services/avisos';
 
 const selectStyles = {
   control: (base: any) => ({
@@ -31,7 +33,7 @@ const selectStyles = {
 
 export const RoutesPage: React.FC = () => {
   const { t } = useTranslation();
-  const { routes, fetchRoutes, deleteRoute, createRoute, loading } = useRoutesStore();
+  const { routes, fetchRoutes, deleteRoute, createRoute, loading, error } = useRoutesStore();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [kmlContent, setKmlContent] = useState('');
@@ -148,7 +150,7 @@ export const RoutesPage: React.FC = () => {
   };
 
   const handleCreateManual = () => {
-    window.alert(t('routes.manual_creation_alert'));
+    avisar.info(t('routes.manual_creation_alert'));
   };
 
   const handleImport = async (e: React.FormEvent) => {
@@ -169,7 +171,7 @@ export const RoutesPage: React.FC = () => {
     }
 
     if (!lineStringGeoJSON) {
-      window.alert(t('routes.invalid_kml'));
+      avisar.error(t('routes.invalid_kml'));
       return;
     }
 
@@ -267,7 +269,10 @@ export const RoutesPage: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            {loading ? (
+            {error ? (
+              <EstadoConsulta cargando={false} error={error} vacio={false}
+                entidad="recorridos" onReintentar={fetchRoutes} />
+            ) : loading ? (
               <div className="text-center text-textMuted p-8">{t('routes.loading')}</div>
             ) : Object.keys(groupedRoutes).length === 0 ? (
               <div className="text-center text-textMuted p-8">{t('routes.no_routes')}</div>

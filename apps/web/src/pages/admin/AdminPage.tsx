@@ -4,6 +4,7 @@ import { AdminGlobalUsers } from './AdminGlobalUsers';
 import { AdminRolesPermissions } from './AdminRolesPermissions';
 import { AdminSystemParameters } from './AdminSystemParameters';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 export const AdminPage: React.FC = () => {
   const { t } = useTranslation();
@@ -69,15 +70,15 @@ export const AdminPage: React.FC = () => {
       });
       if (!res.ok) {
         const error = await res.json();
-        alert(error.message || 'Error al crear');
+        avisar.error(error.message || 'Error al crear');
         return;
       }
-      alert('Tenant creado. Revisa la consola del backend para la contraseña temporal.');
+      avisar.exito('Tenant creado. Revisa la consola del backend para la contraseña temporal.');
       setShowModal(false);
       fetchTenants();
     } catch (err) {
       console.error(err);
-      alert('Error de conexión');
+      avisar.error('Error de conexión');
     }
   };
 
@@ -119,11 +120,11 @@ export const AdminPage: React.FC = () => {
         fetchTenants();
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Error al actualizar el tenant');
+        avisar.error(errData.message || 'Error al actualizar el tenant');
       }
     } catch (err) {
       console.error(err);
-      alert('Error de conexión');
+      avisar.error('Error de conexión');
     }
   };
 
@@ -156,7 +157,7 @@ export const AdminPage: React.FC = () => {
       if (res.ok) {
         if (editingTenant) loadTenantUsers(editingTenant.id);
       } else {
-        alert('Error al cambiar el estado del usuario');
+        avisar.error('Error al cambiar el estado del usuario');
       }
     } catch (err) {
       console.error(err);

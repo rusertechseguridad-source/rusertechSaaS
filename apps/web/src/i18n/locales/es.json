@@ -515,7 +515,16 @@
     "range": "Rango",
     "no_data": "Sin datos",
     "loading": "Cargando sensores...",
-    "not_found": "No se encontraron sensores o vehículos para tu búsqueda."
+    "not_found": "No se encontraron sensores o vehículos para tu búsqueda.",
+    "configure": "Configurar sensor",
+    "configure_first": "Configurar el primer sensor",
+    "empty_title": "Todavía no hay ningún sensor configurado.",
+    "empty_hint": "Este tablero muestra los vehículos que tienen umbrales de temperatura o humedad definidos. Configurá el primero para empezar a monitorear la cadena de frío.",
+    "edit_thresholds": "Configurar",
+    "pick_vehicle": "Elegí el vehículo a configurar",
+    "already_configured": "Ya configurado",
+    "vehicles_error": "No se pudo cargar la lista de vehículos.",
+    "close": "Cerrar"
   },
   "admin": {
     "search_placeholder": "Buscar por nombre, email o empresa...",
@@ -869,7 +878,10 @@
       "error": "No se pudo guardar la precisión del recorrido.",
       "solo_admin": "Solo el administrador de la cuenta puede cambiar este valor.",
       "usando_default": "Valor por defecto de la instalación"
-    }
+    },
+    "activar": "Reactivar el monitoreo de este vehículo",
+    "activado_ok": "Monitoreo reactivado.",
+    "activado_error": "No se pudo reactivar el monitoreo."
   },
   "estadosViaje": {
     "title": "Línea de tiempo de estados",

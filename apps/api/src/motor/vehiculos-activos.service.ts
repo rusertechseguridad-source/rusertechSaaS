@@ -6,6 +6,14 @@ export interface ResultadoSincronizacion {
   activados_por_estado: number;
   activados_por_red_seguridad: number;
   desactivados: number;
+  /**
+   * Cuántos vehículos quedan monitoreados y por qué motivo, DESPUÉS de correr.
+   *
+   * No es lo mismo que los tres números de arriba: esos son el delta de esta
+   * corrida, esto es el estado. Ver el comentario de `sincronizar`.
+   */
+  total_monitoreados: number;
+  por_motivo: Record<string, number>;
 }
 
 /**
@@ -43,6 +51,23 @@ export class VehiculosActivosService {
    *
    * Se corre periódicamente y es idempotente: activa lo que corresponde,
    * desactiva lo que dejó de corresponder, y no toca lo que ya está bien.
+   *
+   * ⚠️ QUÉ CUENTAN LOS TRES NÚMEROS (y por qué la línea del log mentía).
+   *
+   * `porEstado`, `porRed` y `bajas` son filas afectadas por ESTA corrida: un
+   * delta, no un total. Las activaciones manuales no pasan por acá —las hace
+   * `activarManual` desde el controlador— así que nunca aparecían en la línea.
+   * Y hay algo peor: el `DO UPDATE` del paso 1 lleva
+   * `WHERE motor_vehiculos_activos.motivo <> 'manual'` para no pisar la
+   * decisión de un operador, así que un vehículo activado a mano que ADEMÁS
+   * tiene un viaje monitoreable no actualiza ninguna fila y tampoco suma en
+   * `porEstado`. O sea que activar un vehículo a mano BAJABA el número que
+   * mostraba el log.
+   *
+   * "4 por estado, 0 por red de seguridad, 0 bajas" se lee como "hay 4
+   * vehículos monitoreados", y no es eso lo que dice. Por eso ahora la línea
+   * lleva también el estado resultante, desglosado por motivo: una consulta
+   * más sobre una tabla que por diseño tiene una fila por viaje activo.
    */
   async sincronizar(): Promise<ResultadoSincronizacion> {
     // ── 1. Por estado monitoreable ──────────────────────────────────────────
@@ -91,9 +116,29 @@ export class VehiculosActivosService {
         )
     `;
 
+    // ── 4. Estado resultante ────────────────────────────────────────────────
+    // El recuento va DESPUÉS de los tres pasos, sobre la tabla ya sincronizada.
+    // Incluye los `manual`, que es justamente lo que faltaba.
+    const conteo = await this.prisma.$queryRaw<{ motivo: string; total: bigint }[]>`
+      SELECT motivo, count(*) AS total
+      FROM motor_vehiculos_activos
+      GROUP BY motivo
+      ORDER BY motivo
+    `;
+
+    // `count(*)` viene como BigInt y `BigInt + number` explota en runtime.
+    const porMotivo: Record<string, number> = {};
+    for (const fila of conteo) porMotivo[fila.motivo] = Number(fila.total);
+    const totalMonitoreados = Object.values(porMotivo).reduce((a, b) => a + b, 0);
+
     if (porEstado + porRed + bajas > 0) {
+      const desglose = Object.entries(porMotivo)
+        .map(([motivo, total]) => `${total} ${motivo}`)
+        .join(', ');
       this.logger.log(
-        `Monitoreo sincronizado: ${porEstado} por estado, ${porRed} por red de seguridad, ${bajas} bajas.`,
+        `Monitoreo sincronizado: +${porEstado} por estado, +${porRed} por red de seguridad, ` +
+          `-${bajas} bajas · quedan ${totalMonitoreados} monitoreados` +
+          (desglose ? ` (${desglose})` : ''),
       );
     }
 
@@ -101,6 +146,8 @@ export class VehiculosActivosService {
       activados_por_estado: porEstado,
       activados_por_red_seguridad: porRed,
       desactivados: bajas,
+      total_monitoreados: totalMonitoreados,
+      por_motivo: porMotivo,
     };
   }
 
@@ -119,7 +166,7 @@ export class VehiculosActivosService {
     // estaba asimétrica.
     await assertTenantOwnership(this.prisma.vehicle, vehicleId, tenantId, 'Vehículo');
 
-    await this.prisma.$executeRaw`
+    const filas = await this.prisma.$executeRaw`
       INSERT INTO motor_vehiculos_activos (vehicle_id, tenant_id, trip_id, motivo, desde)
       VALUES (${vehicleId}::uuid, ${tenantId}::uuid, ${tripId}::uuid, 'manual', now())
       ON CONFLICT (vehicle_id) DO UPDATE SET
@@ -127,14 +174,26 @@ export class VehiculosActivosService {
         trip_id = EXCLUDED.trip_id
       WHERE motor_vehiculos_activos.tenant_id = ${tenantId}::uuid
     `;
+
+    // Una activación manual no pasa por `sincronizar`, así que hasta ahora no
+    // dejaba NINGÚN rastro en el log: el operador activaba un vehículo y el
+    // sistema no decía nada. Deja el suyo.
+    this.logger.log(
+      `Monitoreo activado a mano: vehículo ${vehicleId} (viaje ${tripId ?? 'sin viaje'}), ` +
+        `${filas} fila(s) afectada(s).`,
+    );
   }
 
   /** Baja manual. */
   async desactivar(vehicleId: string, tenantId: string): Promise<void> {
-    await this.prisma.$executeRaw`
+    const filas = await this.prisma.$executeRaw`
       DELETE FROM motor_vehiculos_activos
       WHERE vehicle_id = ${vehicleId}::uuid AND tenant_id = ${tenantId}::uuid
     `;
+
+    // `0` acá no es un error: puede que el vehículo ya no estuviera
+    // monitoreado. Pero tiene que poder distinguirse de una baja efectiva.
+    this.logger.log(`Monitoreo dado de baja: vehículo ${vehicleId}, ${filas} fila(s) borrada(s).`);
   }
 
   /**

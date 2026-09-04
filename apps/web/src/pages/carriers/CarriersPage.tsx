@@ -1,15 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Search, Briefcase, CheckCircle, XCircle } from 'lucide-react';
-import { RequirePermission } from '../../components/RequirePermission';
+import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
 
 import { CarrierModal } from './CarrierModal';
 import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { avisar } from '../../services/avisos';
 
 export const CarriersPage: React.FC = () => {
   const { t } = useTranslation();
   const [carriers, setCarriers] = useState<any[]>([]);
+  // La Tanda 4 puso `manage_carriers` en las rutas de escritura. Sin esto la
+  // pantalla sigue ofreciendo botones que ahora devuelven 403.
+  //
+  // ⚠️ Estos botones estaban ADEMÁS envueltos en `RequirePermission`, que los
+  // escondía antes de que el `disabled` llegara a dibujarse: el `title` con el
+  // motivo era código muerto. El envoltorio se sacó. La regla del proyecto es
+  // mostrar siempre y deshabilitar con el motivo — un botón ausente es
+  // indistinguible de una función que no existe.
+  const puedeGestionarTransportistas = useTienePermiso('manage_carriers');
+  const permisoTransportistas = propsSinPermiso(puedeGestionarTransportistas, 'manage_carriers');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -45,7 +56,7 @@ export const CarriersPage: React.FC = () => {
       if (!res.ok) throw new Error('Error al actualizar estado');
       await fetchCarriers();
     } catch (err: any) {
-      alert(err.message);
+      avisar.exito(err.message);
     }
   };
 
@@ -84,14 +95,13 @@ export const CarriersPage: React.FC = () => {
           </h1>
           <p className="text-textMuted mt-2">{t('carriers.subtitle')}</p>
         </div>
-        <RequirePermission permission="manage_carriers">
-          <button 
-            onClick={() => { setCarrierToEdit(null); setShowModal(true); }}
-            className="px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition"
-          >
-            + {t('carriers.new_carrier')}
-          </button>
-        </RequirePermission>
+        <button
+          onClick={() => { setCarrierToEdit(null); setShowModal(true); }}
+          {...permisoTransportistas}
+          className={`px-6 py-2 bg-accentGreen text-bgStart font-medium rounded-lg shadow-sm hover:bg-accentGreen/90 transition ${CLASES_DESHABILITADO}`}
+        >
+          + {t('carriers.new_carrier')}
+        </button>
       </div>
 
       <CarrierModal 
@@ -178,9 +188,7 @@ export const CarriersPage: React.FC = () => {
                         <th className="px-6 py-4">{t('carriers.table.vehicles')}</th>
                         <th className="px-6 py-4">{t('carriers.table.drivers')}</th>
                         <th className="px-6 py-4">{t('carriers.table.status')}</th>
-                        <th className="px-6 py-4 text-right">
-                          <RequirePermission permission="manage_carriers">{t('carriers.table.actions')}</RequirePermission>
-                        </th>
+                        <th className="px-6 py-4 text-right">{t('carriers.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-borderDefault">
@@ -211,22 +219,25 @@ export const CarriersPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <RequirePermission permission="manage_carriers">
-                              <div className="flex justify-end gap-3 items-center">
-                                <button 
-                                  onClick={() => { setCarrierToEdit(carrier); setShowModal(true); }}
-                                  className="text-xs font-bold text-textSecondary hover:text-white transition-colors"
-                                >
-                                  {t('carriers.actions.edit')}
-                                </button>
-                                <button 
-                                  onClick={() => toggleStatus(carrier.id, carrier.status)}
-                                  className={`text-xs underline font-bold ${carrier.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'}`}
-                                >
-                                  {carrier.status === 'active' ? t('carriers.actions.suspend') : t('carriers.actions.reactivate')}
-                                </button>
-                              </div>
-                            </RequirePermission>
+                            <div className="flex justify-end gap-3 items-center">
+                              <button
+                                onClick={() => { setCarrierToEdit(carrier); setShowModal(true); }}
+                                {...permisoTransportistas}
+                                className={`text-xs font-bold text-textSecondary hover:text-white transition-colors ${CLASES_DESHABILITADO}`}
+                              >
+                                {t('carriers.actions.edit')}
+                              </button>
+                              {/* Suspender/reactivar es una escritura (PUT /carriers/:id):
+                                  le falta el mismo permiso que a las otras dos. Antes se
+                                  apoyaba sólo en el envoltorio; sin él necesita el suyo. */}
+                              <button
+                                onClick={() => toggleStatus(carrier.id, carrier.status)}
+                                {...permisoTransportistas}
+                                className={`text-xs underline font-bold ${carrier.status === 'active' ? 'text-statusDanger hover:text-red-400' : 'text-statusOnline hover:text-green-400'} ${CLASES_DESHABILITADO}`}
+                              >
+                                {carrier.status === 'active' ? t('carriers.actions.suspend') : t('carriers.actions.reactivate')}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

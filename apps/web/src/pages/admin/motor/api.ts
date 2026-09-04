@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { mensajeDeError } from '../../../services/avisos';
 
 const API_URL = 'http://localhost:3000/api/v1/motor';
 
@@ -52,6 +53,32 @@ export const useVehiculosMonitoreados = () =>
     },
   });
 
+/**
+ * Reactivar el monitoreo de un vehículo.
+ *
+ * ⚠️ El endpoint (`POST /motor/monitoreados/:vehicleId`) existía desde la
+ * Etapa 1 y **la pantalla sólo tenía el de desactivar**: una puerta de una
+ * sola dirección. El operador apagaba el monitoreo de un vehículo y no había
+ * forma de volver a encenderlo sin tocar la base.
+ */
+export const useActivarMonitoreo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vehicleId: string) => {
+      const res = await fetch(`${API_URL}/monitoreados/${vehicleId}`, {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const cuerpo = await res.json().catch(() => null);
+        throw new Error(mensajeDeError(res.status, cuerpo));
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['motor-monitoreados'] }),
+  });
+};
+
 export const useDesactivarMonitoreo = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -60,7 +87,10 @@ export const useDesactivarMonitoreo = () => {
         method: 'DELETE',
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('No se pudo desactivar el monitoreo');
+      if (!res.ok) {
+        const cuerpo = await res.json().catch(() => null);
+        throw new Error(mensajeDeError(res.status, cuerpo));
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['motor-monitoreados'] }),
   });

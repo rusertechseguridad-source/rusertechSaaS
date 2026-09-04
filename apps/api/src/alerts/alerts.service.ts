@@ -23,7 +23,14 @@ export class AlertsService {
       orderBy: { triggered_at: 'desc' },
       include: {
         vehicle: { select: { plate: true, alias: true } },
-        trip: { select: { id: true, name: true, trip_code: true } },
+        // El conductor: la pantalla mostraba "Sin Chofer" siempre porque el
+        // `select` no lo traía. Se piden sólo los tres campos que se muestran.
+        trip: {
+          select: {
+            id: true, name: true, trip_code: true,
+            driver: { select: { id: true, full_name: true, document: true } },
+          },
+        },
         rule: { select: { name: true } },
         acknowledger: { select: { full_name: true, email: true } },
       },

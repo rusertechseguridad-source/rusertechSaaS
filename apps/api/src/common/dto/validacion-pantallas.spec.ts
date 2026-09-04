@@ -331,15 +331,39 @@ describe('Validación del cuerpo · las seis pantallas de edición', () => {
       expect(mensaje).toContain('notes');
     });
 
-    it('transportistas: fleet_size, insurance_info y notes → 400 que los nombra', async () => {
-      const res = await request(app.getHttpServer())
+    // ⚠️ ESTA PRUEBA CAMBIÓ DE SUJETO, NO SE BORRÓ.
+    //
+    // Hasta la Tanda 6 afirmaba lo contrario: que `fleet_size`,
+    // `insurance_info` y `notes` se rechazaban con un 400, porque el
+    // formulario los mandaba y la tabla `carriers` no los tenía. Eso era
+    // correcto ENTONCES y es lo que hizo visible el problema.
+    //
+    // La decisión de producto se tomó después: las tres columnas van (un
+    // transportista lleva tamaño de flota, datos del seguro y notas), y
+    // Gustavo corrió el ALTER. Verificado contra `information_schema` de la
+    // base real: integer / text / text, las tres nullable.
+    //
+    // Se conserva la prueba dada vuelta porque el riesgo cambió de lado: si
+    // alguien vuelve a sacar los tres campos del DTO, el formulario de
+    // transportistas deja de guardar otra vez, y eso tiene que fallar acá.
+    it('transportistas: fleet_size, insurance_info y notes YA son columnas y se aceptan', async () => {
+      servicios.carriers.update.mockResolvedValue({ id: UUID });
+      await request(app.getHttpServer())
         .put(`/api/v1/carriers/${UUID}`)
         .send({ name: 'T', fleet_size: 12, insurance_info: 'Póliza', notes: 'nota' })
+        .expect(200);
+      expect(servicios.carriers.update.mock.calls[0][2]).toEqual({
+        name: 'T', fleet_size: 12, insurance_info: 'Póliza', notes: 'nota',
+      });
+    });
+
+    it('transportistas: un campo que SIGUE sin existir se rechaza y se nombra', async () => {
+      // El control no se aflojó: lo que se amplió es el DTO, no la política.
+      const res = await request(app.getHttpServer())
+        .put(`/api/v1/carriers/${UUID}`)
+        .send({ name: 'T', campo_que_no_existe: 'x' })
         .expect(400);
-      const mensaje = JSON.stringify(res.body.message);
-      expect(mensaje).toContain('fleet_size');
-      expect(mensaje).toContain('insurance_info');
-      expect(mensaje).toContain('notes');
+      expect(JSON.stringify(res.body.message)).toContain('campo_que_no_existe');
     });
   });
 

@@ -3,11 +3,20 @@ import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert, Key, Cpu, ChevronDown, BarChart3 } from 'lucide-react';
+import { isAdminRole } from '../constants/adminRoles';
+import { motivoSinPermiso } from '../components/RequirePermission';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
   const userRole = user?.role || user?.role_code || '';
-  const isAdmin = userRole === 'SUPERADMIN' || userRole === 'rusertech_admin' || userRole === 'super_admin' || user?.permissions?.includes('admin_global');
+  // ⚠️ REAPERTURA. Esto reimplementaba el chequeo de administrador con
+  // `SUPERADMIN` y `super_admin`, los dos strings que la Fase E eliminó del
+  // backend precisamente porque no existen en el seed: alcanzaba con que
+  // alguien creara un rol llamado `super_admin` desde la pantalla de roles para
+  // obtener acceso total sin que nadie lo hubiera decidido.
+  // `isAdminRole` es la fuente única, y su espejo del backend es
+  // `common/constants/admin-roles.ts`.
+  const isAdmin = isAdminRole(userRole) || user?.permissions?.includes('admin_global');
   const isManagerOrOwner = userRole === 'TENANT_OWNER' || userRole === 'TENANT_MANAGER' || userRole === 'account_owner' || userRole === 'manager' || user?.permissions?.includes('manage_settings');
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,20 +102,47 @@ export const AppLayout: React.FC = () => {
               Reglas que implementa este bloque:
                · cada entrada e ítem lleva un tooltip que DESCRIBE, no repite
                  el nombre;
-               · los ítems respetan permisos y roles: sin permiso, no aparecen;
+               · los ítems respetan permisos y roles, pero SIN ESCONDERLOS: sin
+                 permiso el ítem se muestra apagado y sin enlace, con el motivo
+                 y el nombre del permiso que falta (ver más abajo);
                · un grupo sin ningún ítem visible no se muestra (un desplegable
                  vacío es peor que nada);
                · la ruta activa resalta también al grupo padre.
+
+              ⚠️ CAMBIO DE CRITERIO (corrección de la Tanda 6). Antes acá había
+              un único `puedeVer` que devolvía `false` y el ítem no se dibujaba.
+              Eso le enseñaba al operador que la función NO EXISTE: el ítem de
+              Dispositivos, por ejemplo, simplemente no estaba, y no había nada
+              en la pantalla que le dijera que existe y que le falta permiso.
+              Ahora la decisión está partida en dos, porque son dos preguntas
+              distintas:
+
+                · `estaFueraDeAlcance` → el ítem NO es de este usuario en
+                  ningún escenario razonable (administración global de la
+                  plataforma, configuración reservada al dueño de la cuenta).
+                  Eso se sigue escondiendo: mencionárselo a un operador no le
+                  da nada accionable.
+                · `estaHabilitado` → el ítem SÍ es de su mundo pero le falta el
+                  permiso. Se muestra apagado, con el motivo. Es accionable:
+                  puede pedírselo a su administrador, y el motivo nombra cuál.
             */}
             <div className="flex-auto flex justify-center items-center gap-1.5 min-w-0 px-2">
               {(() => {
                 type Item = { path: string; label: string; icon: any; perm?: string; soloAdminOTenant?: boolean; soloAdmin?: boolean; tooltip: string };
                 type Entrada = { id: string; label: string; icon: any; tooltip: string; items?: Item[]; path?: string; perm?: string; soloAdmin?: boolean };
 
-                const puedeVer = (it: { perm?: string; soloAdminOTenant?: boolean; soloAdmin?: boolean }): boolean => {
-                  if (it.soloAdmin && !isAdmin) return false;
-                  if (it.soloAdminOTenant && !(isManagerOrOwner || isAdmin)) return false;
-                  if (userRole === 'SUPERADMIN' || userRole === 'super_admin') return true;
+                type Gate = { perm?: string; soloAdminOTenant?: boolean; soloAdmin?: boolean };
+
+                /** Fuera de alcance: no es su módulo. Se esconde. */
+                const estaFueraDeAlcance = (it: Gate): boolean => {
+                  if (it.soloAdmin && !isAdmin) return true;
+                  if (it.soloAdminOTenant && !(isManagerOrOwner || isAdmin)) return true;
+                  return false;
+                };
+
+                /** Dentro de alcance: ¿tiene el permiso? Si no, se muestra apagado. */
+                const estaHabilitado = (it: Gate): boolean => {
+                  if (isAdminRole(userRole)) return true;
                   if (!it.perm) return true;
                   if (isAdmin) return true;
                   return Boolean(user?.permissions?.includes(it.perm));
@@ -137,7 +173,9 @@ export const AppLayout: React.FC = () => {
                   { id: 'reportes', label: t('nav.reportes'), icon: BarChart3, tooltip: t('nav.tips.reports_group'), items: [
                     { path: '/reportes', label: t('nav.reportes'), icon: BarChart3, perm: 'view_analytics', tooltip: t('nav.tips.reportes') },
                     { path: '/analytics', label: t('nav.analytics'), icon: PieChart, perm: 'view_analytics', tooltip: t('nav.tips.analytics') },
-                    { path: '/carbon', label: t('nav.carbon'), icon: Leaf, perm: 'view_carbon', tooltip: t('nav.tips.carbon') },
+                    { path: '/carbon', label: t('nav.carbon'), icon: Leaf, // El backend de carbon exige `manage_carbon`/`view_analytics`;
+                      // `view_carbon` abría la puerta a un 403.
+                      perm: 'view_analytics', tooltip: t('nav.tips.carbon') },
                   ]},
                   { id: 'config', label: t('nav.config'), icon: Settings, tooltip: t('nav.tips.config_group'), items: [
                     { path: '/avl', label: t('nav.avl'), icon: Radio, perm: 'view_avl', tooltip: t('nav.tips.avl') },
@@ -151,31 +189,55 @@ export const AppLayout: React.FC = () => {
                     tooltip: t('nav.tips.admin') },
                 ];
 
+                // Clases del ítem apagado. En un solo lugar para que el menú
+                // principal y el submenú se vean igual de apagados.
+                const CLASES_APAGADO = 'opacity-40 cursor-not-allowed select-none';
+
                 return ENTRADAS.map((entrada) => {
                   // Entrada directa (sin submenú)
                   if (entrada.path) {
-                    if (!puedeVer(entrada)) return null;
-                    const isActive = location.pathname.startsWith(entrada.path);
-                    const isAlerts = entrada.path === '/alerts' && hasAlerts;
+                    if (estaFueraDeAlcance(entrada)) return null;
+                    const habilitada = estaHabilitado(entrada);
+                    const isActive = habilitada && location.pathname.startsWith(entrada.path);
+                    const isAlerts = habilitada && entrada.path === '/alerts' && hasAlerts;
+                    const contenido = (
+                      <>
+                        <entrada.icon className={`w-[18px] h-[18px] ${isAlerts ? 'text-red-400' : isActive ? 'text-accentGreen' : 'text-white'}`} />
+                        <span className="text-[10px] font-bold tracking-wide">{entrada.label}</span>
+                      </>
+                    );
+                    const base = 'flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-lg transition-all duration-150 flex-shrink-0 min-w-[72px]';
+
+                    if (!habilitada) {
+                      return (
+                        <div key={entrada.id} aria-disabled="true"
+                          title={motivoSinPermiso(entrada.perm)}
+                          className={`${base} text-white border border-transparent ${CLASES_APAGADO}`}>
+                          {contenido}
+                        </div>
+                      );
+                    }
+
                     return (
                       <Link key={entrada.id} to={entrada.path} title={entrada.tooltip}
-                        className={`flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-lg transition-all duration-150 flex-shrink-0 min-w-[72px] ${
+                        className={`${base} ${
                           isAlerts
                             ? 'bg-red-600/40 text-white border border-red-500 shadow-[0_0_14px_rgba(255,0,0,0.7)] animate-pulse'
                             : isActive
                               ? 'bg-accentGreen/10 text-white border border-accentGreen/40'
                               : 'text-white hover:bg-white/10 border border-transparent hover:border-white/20'
                         }`}>
-                        <entrada.icon className={`w-[18px] h-[18px] ${isAlerts ? 'text-red-400' : isActive ? 'text-accentGreen' : 'text-white'}`} />
-                        <span className="text-[10px] font-bold tracking-wide">{entrada.label}</span>
+                        {contenido}
                       </Link>
                     );
                   }
 
-                  // Grupo con submenú
-                  const visibles = (entrada.items ?? []).filter(puedeVer);
+                  // Grupo con submenú. `visibles` ya NO significa "puede
+                  // entrar": significa "es de su mundo". Los que no tiene
+                  // permiso viajan acá adentro y se dibujan apagados.
+                  const visibles = (entrada.items ?? []).filter((it) => !estaFueraDeAlcance(it));
                   if (visibles.length === 0) return null;   // desplegable vacío: no se muestra
-                  const grupoActivo = visibles.some((it) => location.pathname.startsWith(it.path));
+                  const grupoActivo = visibles.some((it) => estaHabilitado(it) && location.pathname.startsWith(it.path));
                   const abierto = grupoAbierto === entrada.id;
 
                   return (
@@ -204,17 +266,37 @@ export const AppLayout: React.FC = () => {
                           <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 min-w-[220px] rounded-xl border border-borderDefault shadow-2xl overflow-hidden"
                             style={{ background: 'rgba(10,18,30,0.97)', backdropFilter: 'blur(14px)' }}>
                             {visibles.map((it) => {
-                              const itemActivo = location.pathname.startsWith(it.path);
-                              return (
-                                <Link key={it.path} to={it.path} title={it.tooltip}
-                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                    itemActivo ? 'bg-accentGreen/10 text-accentGreen' : 'text-textSecondary hover:bg-white/5 hover:text-white'
-                                  }`}>
+                              const itemHabilitado = estaHabilitado(it);
+                              const itemActivo = itemHabilitado && location.pathname.startsWith(it.path);
+                              const baseItem = 'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors';
+                              const cuerpo = (
+                                <>
                                   <it.icon className="w-4 h-4 flex-shrink-0" />
                                   <span className="min-w-0">
                                     <span className="block font-bold">{it.label}</span>
-                                    <span className="block text-[10px] text-textMuted leading-tight">{it.tooltip}</span>
+                                    <span className="block text-[10px] text-textMuted leading-tight">
+                                      {itemHabilitado ? it.tooltip : motivoSinPermiso(it.perm)}
+                                    </span>
                                   </span>
+                                </>
+                              );
+
+                              if (!itemHabilitado) {
+                                return (
+                                  <div key={it.path} aria-disabled="true"
+                                    title={motivoSinPermiso(it.perm)}
+                                    className={`${baseItem} text-textSecondary ${CLASES_APAGADO}`}>
+                                    {cuerpo}
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <Link key={it.path} to={it.path} title={it.tooltip}
+                                  className={`${baseItem} ${
+                                    itemActivo ? 'bg-accentGreen/10 text-accentGreen' : 'text-textSecondary hover:bg-white/5 hover:text-white'
+                                  }`}>
+                                  {cuerpo}
                                 </Link>
                               );
                             })}

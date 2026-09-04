@@ -9,6 +9,8 @@ const NdrPanel = lazy(() => import('./ndr/NdrPanel').then(m => ({ default: m.Ndr
 const OperativosPanel = lazy(() => import('./operativos/OperativosPanel').then(m => ({ default: m.OperativosPanel })));
 const MonitoreoPanel = lazy(() => import('./monitoreo/MonitoreoPanel').then(m => ({ default: m.MonitoreoPanel })));
 import { useTranslation } from 'react-i18next';
+import { isAdminRole } from '../../constants/adminRoles';
+import { avisar } from '../../services/avisos';
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -117,7 +119,9 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     fetchProfile();
     const role = user?.role || user?.role_code;
-    if (role === 'account_owner' || role === 'manager' || role === 'rusertech_admin' || role === 'admin_master_rusertech') {
+    // `admin_master_rusertech` no existe: ni en el seed, ni en ADMIN_ROLES, ni
+    // en ninguna parte de apps/api. Era un cuarto string muerto.
+    if (role === 'account_owner' || role === 'manager' || isAdminRole(role)) {
       fetchUsers();
       fetchConfigs();
     }
@@ -131,7 +135,7 @@ export const SettingsPage: React.FC = () => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name })
     });
-    if (res.ok) alert('Perfil actualizado');
+    if (res.ok) avisar.exito('Perfil actualizado');
   };
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -143,13 +147,13 @@ export const SettingsPage: React.FC = () => {
       body: JSON.stringify({ email: inviteEmail, full_name: inviteName, role_code: inviteRole })
     });
     if (res.ok) {
-      alert('Usuario invitado exitosamente con contraseña temporal TempPassword123!');
+      avisar.exito('Usuario invitado exitosamente con contraseña temporal TempPassword123!');
       setInviteEmail('');
       setInviteName('');
       fetchUsers();
     } else {
       const err = await res.json();
-      alert(err.message || 'Error al invitar');
+      avisar.error(err.message || 'Error al invitar');
     }
   };
 
@@ -171,7 +175,7 @@ export const SettingsPage: React.FC = () => {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) fetchUsers();
-    else alert('Error al eliminar usuario o no tienes permisos.');
+    else avisar.error('Error al eliminar usuario o no tienes permisos.');
   };
 
   const changeRole = async (id: string, roleCode: string) => {
@@ -182,7 +186,7 @@ export const SettingsPage: React.FC = () => {
       body: JSON.stringify({ role_code: roleCode })
     });
     if (res.ok) fetchUsers();
-    else alert('Solo el propietario puede editar usuarios');
+    else avisar.exito('Solo el propietario puede editar usuarios');
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -198,7 +202,7 @@ export const SettingsPage: React.FC = () => {
       setEditingUser(null);
       fetchUsers();
     } else {
-      alert('Solo el propietario puede editar usuarios');
+      avisar.exito('Solo el propietario puede editar usuarios');
     }
   };
 
@@ -236,7 +240,7 @@ export const SettingsPage: React.FC = () => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ climatiq: climatiqConfig })
     });
-    alert('Configuración de carbono guardada');
+    avisar.exito('Configuración de carbono guardada');
   };
 
   const createForwarder = async (e: React.FormEvent) => {
