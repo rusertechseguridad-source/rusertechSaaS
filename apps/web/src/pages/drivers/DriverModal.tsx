@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Phone, CreditCard, FileText, Car, Upload, CheckCircle, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
 import { escribir } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface DriverModalProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
 
   const fetchCarriers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/carriers', {
+      const res = await fetch(`${API_URL}/api/v1/carriers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (res.ok) setCarriers(await res.json());
@@ -70,7 +71,7 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
     formData.append('file', file);
     setUploadingFile(true);
     try {
-      const res = await fetch('http://localhost:3000/api/v1/upload', {
+      const res = await fetch(`${API_URL}/api/v1/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: formData
@@ -91,8 +92,8 @@ export const DriverModal: React.FC<DriverModalProps> = ({ isOpen, onClose, onSav
     setError(null);
     try {
       const url = driverToEdit 
-        ? `http://localhost:3000/api/v1/drivers/${driverToEdit.id}`
-        : 'http://localhost:3000/api/v1/drivers';
+        ? `${API_URL}/api/v1/drivers/${driverToEdit.id}`
+        : `${API_URL}/api/v1/drivers`;
       const method = driverToEdit ? 'PUT' : 'POST';
       
       const r = await escribir(

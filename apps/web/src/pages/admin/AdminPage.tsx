@@ -5,6 +5,7 @@ import { AdminRolesPermissions } from './AdminRolesPermissions';
 import { AdminSystemParameters } from './AdminSystemParameters';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AdminPage: React.FC = () => {
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export const AdminPage: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/tenants', {
+      const res = await fetch(`${API_URL}/api/v1/admin/tenants`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -60,7 +61,7 @@ export const AdminPage: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/tenants', {
+      const res = await fetch(`${API_URL}/api/v1/admin/tenants`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ export const AdminPage: React.FC = () => {
     if (!window.confirm(`¿Seguro que deseas ${currentlyActive ? 'suspender' : 'activar'} a esta empresa?`)) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/tenants/${id}/suspend`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/tenants/${id}/suspend`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ export const AdminPage: React.FC = () => {
     if (!editingTenant) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/tenants/${editingTenant.id}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/tenants/${editingTenant.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ export const AdminPage: React.FC = () => {
   const loadTenantUsers = async (tenantId: string) => {
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/tenants/${tenantId}/users`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/tenants/${tenantId}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -146,7 +147,7 @@ export const AdminPage: React.FC = () => {
     if (!window.confirm(`¿Seguro que deseas ${currentStatus === 'active' ? 'suspender' : 'activar'} este usuario?`)) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/users/${userId}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

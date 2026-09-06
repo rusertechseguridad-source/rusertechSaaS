@@ -11,6 +11,7 @@ import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
 import { EstadoConsulta } from '../../components/EstadoConsulta';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 const selectStyles = {
   control: (base: any) => ({
@@ -120,7 +121,7 @@ export const RoutesPage: React.FC = () => {
 
   const fetchOperations = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/operations', {
+      const res = await fetch(`${API_URL}/api/v1/operations`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (res.ok) setOperations(await res.json());
@@ -129,7 +130,7 @@ export const RoutesPage: React.FC = () => {
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/locations', {
+      const res = await fetch(`${API_URL}/api/v1/locations`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (res.ok) setLocations(await res.json());

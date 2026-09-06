@@ -1,12 +1,99 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import { ResultadoEnvio, motivoLegible } from './resultado-envio';
+
+/** Remitente de prueba de Resend: sólo entrega al dueño de la cuenta. */
+const REMITENTE_POR_DEFECTO = 'Rusertech <onboarding@resend.dev>';
 
 @Injectable()
 export class MailService {
-  private resend: Resend;
+  private readonly logger = new Logger(MailService.name);
+  private resend: Resend | null = null;
 
-  constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+  /**
+   * ⚠️ EL CLIENTE SE CONSTRUYE TARDE, Y NO ES UN DETALLE.
+   *
+   * Antes el constructor hacía `new Resend(process.env.RESEND_API_KEY)`. El SDK
+   * LANZA si la clave es `undefined` ("Missing API key. Pass it to the
+   * constructor"), y este servicio lo instancia Nest al levantar el módulo: sin
+   * `RESEND_API_KEY`, **la API entera no arrancaba**, con un mensaje que no
+   * menciona ninguna variable de entorno ni el correo.
+   *
+   * Lo encontró la prueba de esta tanda al borrar la variable, no una lectura
+   * del código: el `.env` de desarrollo siempre la tenía.
+   *
+   * Que falte la clave tiene que dejar la aplicación SIN CORREO, no sin
+   * aplicación — el correo es opcional y el chequeo de arranque ya lo avisa
+   * con todas las letras. Por eso el cliente se crea en el primer envío.
+   */
+  private cliente(): Resend | null {
+    const clave = process.env.RESEND_API_KEY?.trim();
+    if (!clave) return null;
+    if (!this.resend) this.resend = new Resend(clave);
+    return this.resend;
+  }
+
+  /**
+   * De dónde sale el remitente.
+   *
+   * Estaba escrito en dos constantes distintas dentro de este archivo
+   * (`onboarding@resend.dev` y `alertas@resend.dev`), así que verificar un
+   * dominio propio obligaba a tocar el código y volver a desplegar. Ahora sale
+   * de `MAIL_FROM` y el valor por defecto es el de prueba, que es lo que
+   * corresponde en desarrollo.
+   *
+   * Se lee en cada envío, no en el constructor, para que una prueba pueda
+   * cambiar la variable sin reconstruir el servicio.
+   */
+  private remitente(): string {
+    return process.env.MAIL_FROM?.trim() || REMITENTE_POR_DEFECTO;
+  }
+
+  /**
+   * Envía y devuelve QUÉ PASÓ. Nunca lanza.
+   *
+   * ⚠️ Los dos caminos de fallo son distintos y hay que cubrir los dos:
+   *   · la promesa se rechaza  → problema de red, o el SDK no pudo ni hablar;
+   *   · la promesa RESUELVE con `{ data: null, error }` → la API rechazó el
+   *     envío. Éste es el que se estaba perdiendo: no hay excepción, así que
+   *     un `try/catch` alrededor no ve nada y el llamador concluye que salió.
+   */
+  private async enviar(params: {
+    to: string[];
+    subject: string;
+    html: string;
+  }): Promise<ResultadoEnvio> {
+    const resend = this.cliente();
+    if (!resend) {
+      return {
+        enviado: false,
+        motivo:
+          'No hay RESEND_API_KEY configurada: no se intentó enviar el correo. ' +
+          'Ver README_DESPLIEGUE.md § Correo.',
+      };
+    }
+
+    try {
+      const respuesta = await resend.emails.send({
+        from: this.remitente(),
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+      });
+
+      if (respuesta.error) {
+        const motivo = motivoLegible(respuesta.error);
+        this.logger.error(`Envío rechazado para ${params.to.join(', ')}: ${motivo}`);
+        return { enviado: false, motivo };
+      }
+
+      this.logger.log(`Correo enviado a ${params.to.join(', ')} (id ${respuesta.data?.id ?? '—'})`);
+      return { enviado: true, id: respuesta.data?.id ?? null };
+    } catch (error) {
+      const motivo = `No se pudo contactar al proveedor de correo: ${(error as Error).message}`;
+      this.logger.error(motivo);
+      return { enviado: false, motivo };
+    }
   }
 
   async sendInvitation(params: {
@@ -15,8 +102,11 @@ export class MailService {
     tempPassword: string;
     tenantName: string;
     loginUrl?: string;
-  }) {
-    const loginUrl = params.loginUrl || 'http://localhost:5173/login';
+  }): Promise<ResultadoEnvio> {
+    // El enlace del botón del correo. `APP_URL` porque apunta al FRONTEND, que
+    // puede vivir en otro dominio que la API.
+    const loginUrl =
+      params.loginUrl || `${process.env.APP_URL?.trim() || 'http://localhost:5173'}/login`;
 
     const html = `
 <!DOCTYPE html>
@@ -121,19 +211,14 @@ export class MailService {
 </html>
     `.trim();
 
-    try {
-      const result = await this.resend.emails.send({
-        from: 'Rusertech <onboarding@resend.dev>',
-        to: [params.to],
-        subject: `Invitación a Rusertech — ${params.tenantName}`,
-        html,
-      });
-      console.log(`[MailService] Invitation sent to ${params.to}:`, result);
-      return result;
-    } catch (error) {
-      console.error(`[MailService] Failed to send invitation to ${params.to}:`, error);
-      throw error;
-    }
+    // ⚠️ Sin `try/catch` acá y sin `throw`: `enviar()` no lanza nunca y
+    // devuelve el resultado. Quien invita TIENE que mirarlo — que era
+    // justamente lo que no pasaba.
+    return this.enviar({
+      to: [params.to],
+      subject: `Invitación a Rusertech — ${params.tenantName}`,
+      html,
+    });
   }
 
   async sendVehicleBlockedAlert(params: {
@@ -141,7 +226,7 @@ export class MailService {
     reason: string;
     toEmails: string[];
     tenantName?: string;
-  }) {
+  }): Promise<ResultadoEnvio> {
     const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -249,19 +334,13 @@ export class MailService {
 </html>
     `.trim();
 
-    try {
-      const result = await this.resend.emails.send({
-        from: 'Rusertech <alertas@resend.dev>',
-        to: params.toEmails,
-        subject: `⚠️ ALERTA: Vehículo ${params.plate} Bloqueado`,
-        html,
-      });
-      console.log(`[MailService] Block alert sent for ${params.plate} to ${params.toEmails.join(', ')}:`, result);
-      return result;
-    } catch (error) {
-      console.error(`[MailService] Failed to send block alert for ${params.plate}:`, error);
-      // No lanzamos error para que no interrumpa el bloqueo en DB
-      return null;
-    }
+    // El bloqueo del vehículo NO se revierte si el correo falla: el vehículo
+    // ya está bloqueado y eso es lo importante. Pero el fallo queda en el log
+    // con su motivo (lo hace `enviar`) en vez de perderse.
+    return this.enviar({
+      to: params.toEmails,
+      subject: `⚠️ ALERTA: Vehículo ${params.plate} Bloqueado`,
+      html,
+    });
   }
 }

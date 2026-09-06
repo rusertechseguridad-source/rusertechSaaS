@@ -12,6 +12,7 @@ import {
 import { etiquetaFrescura, formatearAntiguedad } from '../../utils/freshness';
 import type { LivePosition, LiveResponse, MonitoringSummary, MonitoringThresholds } from '../../types/monitoring';
 import { SUMMARY_VACIO, THRESHOLDS_POR_DEFECTO } from '../../types/monitoring';
+import { API_URL } from '../../services/api';
 
 /**
  * MAPA GLOBAL DE FLOTA.
@@ -194,7 +195,7 @@ function buildPopupHTML(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3000/api/v1';
+const API_BASE = `${API_URL}/api/v1`;
 
 export const MapPage: React.FC = () => {
   const { t } = useTranslation();

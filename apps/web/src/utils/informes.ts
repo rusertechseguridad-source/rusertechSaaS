@@ -1,3 +1,4 @@
+import { API_URL } from '../services/api';
 /**
  * ACCESO AL INFORME DE VIAJE — helper compartido.
  *
@@ -8,7 +9,7 @@
  * window.open(url): se descarga con fetch y se abre el blob.
  */
 
-const API = 'http://localhost:3000/api/v1/informes';
+const API = `${API_URL}/api/v1/informes`;
 
 const headers = () => ({ Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` });
 

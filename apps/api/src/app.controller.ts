@@ -2,10 +2,12 @@ import { Controller, Get, Post, UseInterceptors, UploadedFile, BadRequestExcepti
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { randomBytes } from 'crypto';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CurrentUser } from './common/decorators/current-user.decorator';
 import { DIRECTORIO_UPLOADS, PREFIJO_UPLOADS } from './common/config/directorio-uploads';
+import { direccionPublica } from './common/config/direccion-publica';
 
 @Controller('api/v1')
 export class AppController {
@@ -50,19 +52,22 @@ export class AppController {
       // escritas por separado es lo que producía el 404.
       destination: DIRECTORIO_UPLOADS,
       filename: (req, file, cb) => {
-        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-        cb(null, `${randomName}${extname(file.originalname)}`);
+        // ⚠️ Encontrado al tocar esta ruta por la URL de abajo, y va con ella:
+        // el nombre salía de `Math.random()`, que es un PRNG predecible, no un
+        // generador criptográfico. Y `/uploads` se sirve como estático SIN
+        // autenticación: quien pudiera predecir nombres leía las fotos de los
+        // viajes de cualquier cliente. `randomBytes` sí es impredecible.
+        cb(null, `${randomBytes(16).toString('hex')}${extname(file.originalname)}`);
       }
     })
   }))
   uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file uploaded');
-    // ⚠️ La URL absoluta a localhost se DEJA como está. Es una de las 164 que
-    // atan la aplicación a localhost (Tanda 7), pero acá es carga útil: el
-    // frontend corre en :5173 y la API en :3000, así que una ruta relativa
-    // resolvería contra el servidor de Vite y daría 404. Cambiarla sin mover
-    // también el origen sería introducir el mismo error que esta corrección
-    // viene a arreglar.
-    return { url: `http://localhost:3000${PREFIJO_UPLOADS}${file.filename}` };
+    // La URL sigue siendo ABSOLUTA, y eso es deliberado: en desarrollo el
+    // frontend vive en :5173 y la API en :3000, así que una ruta relativa
+    // resolvería contra el servidor de Vite y daría 404. Lo que cambia es de
+    // dónde sale el host: `PUBLIC_API_URL`, con el 3000 local por defecto.
+    // Ver common/config/direccion-publica.ts.
+    return { url: `${direccionPublica()}${PREFIJO_UPLOADS}${file.filename}` };
   }
 }

@@ -4,6 +4,7 @@ import { formatOperationOption } from '../../components/Operations/OperationFlow
 import { X, CheckCircle } from 'lucide-react';
 import { useTripsStore, type Trip } from '../../store/tripsStore';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface TripModalProps {
   isOpen: boolean;
@@ -77,12 +78,12 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
     const headers = { Authorization: `Bearer ${token}` };
     try {
       const [vRes, dRes, oRes, lRes, rRes, cRes] = await Promise.all([
-        fetch('http://localhost:3000/api/v1/vehicles', { headers }),
-        fetch('http://localhost:3000/api/v1/drivers', { headers }),
-        fetch('http://localhost:3000/api/v1/operations', { headers }),
-        fetch('http://localhost:3000/api/v1/locations', { headers }),
-        fetch('http://localhost:3000/api/v1/routes', { headers }),
-        fetch('http://localhost:3000/api/v1/carriers', { headers }),
+        fetch(`${API_URL}/api/v1/vehicles`, { headers }),
+        fetch(`${API_URL}/api/v1/drivers`, { headers }),
+        fetch(`${API_URL}/api/v1/operations`, { headers }),
+        fetch(`${API_URL}/api/v1/locations`, { headers }),
+        fetch(`${API_URL}/api/v1/routes`, { headers }),
+        fetch(`${API_URL}/api/v1/carriers`, { headers }),
       ]);
       if (vRes.ok) { const d = await vRes.json(); setVehicles(Array.isArray(d) ? d : (d.data || [])); }
       if (dRes.ok) { const d = await dRes.json(); setDrivers(Array.isArray(d) ? d : []); }
@@ -143,7 +144,7 @@ export const TripModal: React.FC<TripModalProps> = ({ isOpen, onClose, tripToEdi
         if (tripToEdit.name !== payload.name) changedFields.push(`Nombre (de ${tripToEdit.name} a ${payload.name})`);
         
         if (changedFields.length > 0) {
-           await fetch(`http://localhost:3000/api/v1/trips/${tripToEdit.id}/logs`, {
+           await fetch(`${API_URL}/api/v1/trips/${tripToEdit.id}/logs`, {
              method: 'POST',
              headers: { 
                'Content-Type': 'application/json',

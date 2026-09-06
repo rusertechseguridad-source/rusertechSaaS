@@ -37,6 +37,7 @@ import { OperationalProtocolsModule } from './operational-protocols/operational-
 import { SecurityKeysModule } from './security-keys/security-keys.module';
 import { MotorModule } from './motor/motor.module';
 import { InformesModule } from './informes/informes.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -75,6 +76,9 @@ import { InformesModule } from './informes/informes.module';
     SecurityKeysModule,
     MotorModule,
     InformesModule,
+    // GET /health y /health/vivo. Sin autenticación a propósito: quien
+    // chequea salud es el balanceador, que no tiene credenciales.
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

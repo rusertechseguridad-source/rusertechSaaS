@@ -11,6 +11,7 @@ const MonitoreoPanel = lazy(() => import('./monitoreo/MonitoreoPanel').then(m =>
 import { useTranslation } from 'react-i18next';
 import { isAdminRole } from '../../constants/adminRoles';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -59,7 +60,7 @@ export const SettingsPage: React.FC = () => {
 
   const fetchProfile = async () => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch('http://localhost:3000/api/v1/settings/profile', {
+    const res = await fetch(`${API_URL}/api/v1/settings/profile`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) {
@@ -71,7 +72,7 @@ export const SettingsPage: React.FC = () => {
 
   const fetchUsers = async () => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch('http://localhost:3000/api/v1/settings/users', {
+    const res = await fetch(`${API_URL}/api/v1/settings/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) {
@@ -84,11 +85,11 @@ export const SettingsPage: React.FC = () => {
     const headers = { Authorization: `Bearer ${token}` };
     
     // Params
-    let res = await fetch('http://localhost:3000/api/v1/settings/parameters', { headers });
+    let res = await fetch(`${API_URL}/api/v1/settings/parameters`, { headers });
     if (res.ok) setParameters(await res.json());
 
     // Notifications
-    res = await fetch('http://localhost:3000/api/v1/settings/notifications', { headers });
+    res = await fetch(`${API_URL}/api/v1/settings/notifications`, { headers });
     if (res.ok) {
       const data = await res.json();
       if (data.smtp) setSmtpConfig(data.smtp);
@@ -96,23 +97,23 @@ export const SettingsPage: React.FC = () => {
     }
 
     // Carbon
-    res = await fetch('http://localhost:3000/api/v1/settings/carbon', { headers });
+    res = await fetch(`${API_URL}/api/v1/settings/carbon`, { headers });
     if (res.ok) {
       const data = await res.json();
       if (data.climatiq) setClimatiqConfig(data.climatiq);
     }
 
     // Forwarding
-    res = await fetch('http://localhost:3000/api/v1/forwarding', { headers });
+    res = await fetch(`${API_URL}/api/v1/forwarding`, { headers });
     if (res.ok) {
       setForwarders(await res.json());
     }
 
     // Entities
-    res = await fetch('http://localhost:3000/api/v1/vehicles', { headers });
+    res = await fetch(`${API_URL}/api/v1/vehicles`, { headers });
     if (res.ok) setAllVehicles(await res.json());
 
-    res = await fetch('http://localhost:3000/api/v1/locations', { headers });
+    res = await fetch(`${API_URL}/api/v1/locations`, { headers });
     if (res.ok) setAllLocations(await res.json());
   };
 
@@ -130,7 +131,7 @@ export const SettingsPage: React.FC = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch('http://localhost:3000/api/v1/settings/profile', {
+    const res = await fetch(`${API_URL}/api/v1/settings/profile`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name })
@@ -141,25 +142,47 @@ export const SettingsPage: React.FC = () => {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch('http://localhost:3000/api/v1/settings/users/invite', {
+    const res = await fetch(`${API_URL}/api/v1/settings/users/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email: inviteEmail, full_name: inviteName, role_code: inviteRole })
     });
     if (res.ok) {
-      avisar.exito('Usuario invitado exitosamente con contraseña temporal TempPassword123!');
+      // ⚠️ Acá decía: "Usuario invitado exitosamente con contraseña temporal
+      // TempPassword123!". Dos mentiras en una línea:
+      //
+      //  1. Esa contraseña NO existe. El backend genera una aleatoria y la
+      //     manda por correo; el texto era un resto de una versión vieja. Un
+      //     operador que se la dictara al usuario nuevo no lo dejaba entrar.
+      //  2. Decía "exitosamente" mirando sólo el código HTTP. El alta puede
+      //     salir bien y el correo NO — es lo que está pasando hoy, con la
+      //     cuenta de Resend en modo de prueba. El usuario queda creado sin
+      //     forma de entrar, y la pantalla felicitaba.
+      //
+      // El backend ya devuelve `emailSent` y, cuando falla, `emailError` con
+      // el motivo. Acá se lee.
+      const creado = await res.json().catch(() => ({}));
       setInviteEmail('');
       setInviteName('');
       fetchUsers();
+
+      if (creado?.emailSent === false) {
+        avisar.error(
+          `Usuario creado, pero el correo con su contraseña NO se envió. ` +
+            `${creado.emailError ?? ''} Regenerale la clave desde Administración.`,
+        );
+      } else {
+        avisar.exito('Usuario invitado. Le llegó por correo su contraseña temporal.');
+      }
     } else {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       avisar.error(err.message || 'Error al invitar');
     }
   };
 
   const toggleUserStatus = async (id: string, isActive: boolean) => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/settings/users/${id}/toggle`, {
+    const res = await fetch(`${API_URL}/api/v1/settings/users/${id}/toggle`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ is_active: !isActive })
@@ -170,7 +193,7 @@ export const SettingsPage: React.FC = () => {
   const deleteUser = async (id: string) => {
     if (!window.confirm('¿Estás seguro de eliminar este usuario permanentemente?')) return;
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/settings/users/${id}`, {
+    const res = await fetch(`${API_URL}/api/v1/settings/users/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -180,7 +203,7 @@ export const SettingsPage: React.FC = () => {
 
   const changeRole = async (id: string, roleCode: string) => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/settings/users/${id}`, {
+    const res = await fetch(`${API_URL}/api/v1/settings/users/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role_code: roleCode })
@@ -193,7 +216,7 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     if (!editingUser) return;
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/settings/users/${editingUser.id}`, {
+    const res = await fetch(`${API_URL}/api/v1/settings/users/${editingUser.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role_code: editRole, full_name: editName, entity_restrictions: editEntityRestrictions })
@@ -208,7 +231,7 @@ export const SettingsPage: React.FC = () => {
 
   const saveParameter = async (key: string, value: string) => {
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/settings/parameters`, {
+    await fetch(`${API_URL}/api/v1/settings/parameters`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ key, value })
@@ -218,7 +241,7 @@ export const SettingsPage: React.FC = () => {
 
   const restoreParameter = async (key: string) => {
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/settings/parameters/restore`, {
+    await fetch(`${API_URL}/api/v1/settings/parameters/restore`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ key })
@@ -235,7 +258,7 @@ export const SettingsPage: React.FC = () => {
   const saveCarbonConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/settings/carbon`, {
+    await fetch(`${API_URL}/api/v1/settings/carbon`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ climatiq: climatiqConfig })
@@ -246,7 +269,7 @@ export const SettingsPage: React.FC = () => {
   const createForwarder = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('rusertech_token');
-    await fetch('http://localhost:3000/api/v1/forwarding', {
+    await fetch(`${API_URL}/api/v1/forwarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(newForwarder)
@@ -258,7 +281,7 @@ export const SettingsPage: React.FC = () => {
   const deleteForwarder = async (id: string) => {
     if (!window.confirm('¿Eliminar este reenvío?')) return;
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/forwarding/${id}`, {
+    await fetch(`${API_URL}/api/v1/forwarding/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -267,7 +290,7 @@ export const SettingsPage: React.FC = () => {
 
   const toggleForwarder = async (id: string, isActive: boolean) => {
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/forwarding/${id}/toggle`, {
+    await fetch(`${API_URL}/api/v1/forwarding/${id}/toggle`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ is_active: !isActive })
@@ -277,7 +300,7 @@ export const SettingsPage: React.FC = () => {
 
   const resetCircuit = async (id: string) => {
     const token = localStorage.getItem('rusertech_token');
-    await fetch(`http://localhost:3000/api/v1/forwarding/${id}/reset-circuit`, {
+    await fetch(`${API_URL}/api/v1/forwarding/${id}/reset-circuit`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}` }
     });

@@ -2,8 +2,11 @@ import { Injectable, ConflictException, NotFoundException, Logger } from '@nestj
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-import * as nodemailer from 'nodemailer'; // We need to install this
+// `crypto` y `nodemailer` estaban importados y NO se usaban: `crypto` quedó
+// libre al mover la generación de claves a `generarClaveTemporal`, y
+// `nodemailer` nunca se usó (el correo va por Resend). Un import muerto de una
+// librería de correo confunde a quien busca por dónde sale el correo.
+import { generarClaveTemporal } from '../common/crypto/clave-temporal';
 import { exigirRolAsignable } from '../settings/roles-asignables';
 
 @Injectable()
@@ -66,7 +69,8 @@ export class AdminService {
     if (existing) throw new ConflictException('El slug del tenant ya existe.');
     
     // Generar password temporal
-    const tempPassword = crypto.randomBytes(4).toString('hex') + 'Aa1!';
+    // 4 bytes = 32 bits. Ver common/crypto/clave-temporal.ts.
+    const tempPassword = generarClaveTemporal();
     const hash = await bcrypt.hash(tempPassword, 10);
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -236,8 +240,10 @@ export class AdminService {
   }
 
   async resetUserPassword(userId: string): Promise<{ newPassword: string }> {
-    // Generate a new secure random password
-    const newPassword = crypto.randomBytes(4).toString('hex').toUpperCase() + 'Rr1@';
+    // El encargo nombraba sólo `createTenant`, pero es LA MISMA línea con
+    // otro sufijo, en el mismo archivo, generando la misma clase de secreto.
+    // Dejar una en 4 bytes mientras se sube la otra a 16 no sería defendible.
+    const newPassword = generarClaveTemporal();
     const hash = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
@@ -264,23 +270,37 @@ export class AdminService {
     tenantName: string,
     tempPass: string,
   ): Promise<boolean> {
+    // ⚠️ El `try/catch` que había acá NO cubría el caso real. El SDK de Resend
+    // resuelve con `{ data: null, error }` cuando la API rechaza el envío (por
+    // ejemplo, la cuenta en modo de prueba), así que no había excepción que
+    // capturar y esto devolvía `true` con el correo sin salir. Ahora
+    // `sendInvitation` devuelve el resultado y se lo mira.
+    // El `try/catch` se conserva, pero ya NO es el mecanismo: `sendInvitation`
+    // se comprometió a no lanzar y a devolver el resultado. Queda como red de
+    // seguridad porque esto corre DESPUÉS de que la transacción confirmó, y un
+    // error inesperado del cliente de correo no puede tirar abajo la respuesta
+    // de un tenant que ya existe.
+    let envio: { enviado: boolean; motivo?: string };
     try {
-      await this.mailService.sendInvitation({
+      envio = await this.mailService.sendInvitation({
         to: email,
         fullName: name,
         tempPassword: tempPass,
         tenantName,
       });
-      return true;
     } catch (error) {
-      // El error se registra SIN la contraseña: ese era justamente el problema.
-      this.logger.error(
-        `No se pudo enviar el correo de alta a ${email}: ${(error as Error).message}. ` +
-          'El tenant quedó creado pero su administrador no recibió la clave: ' +
-          'regenerarla con POST /admin/users/:id/reset-password.',
-      );
-      return false;
+      envio = { enviado: false, motivo: (error as Error).message };
     }
+
+    if (envio.enviado) return true;
+
+    // El motivo se registra SIN la contraseña: ese era justamente el problema.
+    this.logger.error(
+      `No se pudo enviar el correo de alta a ${email}: ${envio.motivo ?? 'sin motivo'} ` +
+        'El tenant quedó creado pero su administrador no recibió la clave: ' +
+        'regenerarla con POST /admin/users/:id/reset-password.',
+    );
+    return false;
   }
 
   // --- GLOBAL PARAMETERS ---

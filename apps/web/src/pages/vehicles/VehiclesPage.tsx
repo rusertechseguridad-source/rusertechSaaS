@@ -6,6 +6,7 @@ import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
 import { EstadoConsulta } from '../../components/EstadoConsulta';
 import { CampoImagenVehiculo } from './CampoImagenVehiculo';
+import { API_URL } from '../../services/api';
 
 export const VehiclesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -52,7 +53,7 @@ export const VehiclesPage: React.FC = () => {
 
   const fetchAvlUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/avl-users', {
+      const res = await fetch(`${API_URL}/api/v1/avl-users`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
@@ -69,7 +70,7 @@ export const VehiclesPage: React.FC = () => {
 
   const fetchCarriers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/carriers', {
+      const res = await fetch(`${API_URL}/api/v1/carriers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (res.ok) setCarriers(await res.json());
@@ -80,7 +81,7 @@ export const VehiclesPage: React.FC = () => {
 
   const fetchDictionaryCategories = async (userId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/dictionary`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,

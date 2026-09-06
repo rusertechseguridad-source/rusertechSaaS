@@ -17,6 +17,7 @@ import { FRESCURA_COLORS } from '../../constants/freshness';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const TripDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -123,7 +124,7 @@ export const TripDetailsPage: React.FC = () => {
     setCargandoPosicion(true);
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/vehicles/${vehicleId}`, {
+      const res = await fetch(`${API_URL}/api/v1/vehicles/${vehicleId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -219,7 +220,7 @@ export const TripDetailsPage: React.FC = () => {
   const loadLogs = async (tripId: string) => {
     setLoadingLogs(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/logs`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/logs`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (res.ok) setOperatorLogs(await res.json());
@@ -232,7 +233,7 @@ export const TripDetailsPage: React.FC = () => {
   const handleAddLog = async () => {
     if (!newLogText.trim() || !trip) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${trip.id}/logs`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${trip.id}/logs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

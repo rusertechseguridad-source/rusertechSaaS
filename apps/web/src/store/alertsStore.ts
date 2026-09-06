@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_URL } from '../services/api';
 
 export interface AlertData {
   id: string;
@@ -31,7 +32,7 @@ export const useAlertsStore = create<AlertsState>((set) => ({
     set({ loading: true });
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/alerts', {
+      const res = await fetch(`${API_URL}/api/v1/alerts`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -48,7 +49,7 @@ export const useAlertsStore = create<AlertsState>((set) => ({
   resolveAlert: async (id: string, resolution_note: string) => {
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/alerts/${id}/resolve`, {
+      const res = await fetch(`${API_URL}/api/v1/alerts/${id}/resolve`, {
         method: 'PUT',
         headers: { 
           Authorization: `Bearer ${token}`,

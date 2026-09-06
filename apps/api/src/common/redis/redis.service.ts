@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Redis } from 'ioredis';
+import { normalizarUrlRedis } from '../config/redis-conexion';
 
 /**
  * Acceso a Redis.
@@ -31,18 +32,38 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    let connectionUrl = configurado;
+    // La conversión https:// → rediss:// vive en `normalizarUrlRedis`, junto
+    // con la de BullMQ. Estaban duplicadas, con el puerto escrito dos veces.
+    const connectionUrl = normalizarUrlRedis(configurado);
 
-    // Upstash entrega una URL https://; ioredis necesita rediss://
-    if (connectionUrl.startsWith('https://')) {
-      const url = new URL(connectionUrl);
-      const host = url.host;
-      const password = process.env.REDIS_TOKEN || '';
-      connectionUrl = `rediss://default:${password}@${host}:6379`;
+    if (connectionUrl === null) {
+      // El arranque ya rechaza este caso (`problemasDeRedis`). Esto es la red
+      // de seguridad por si alguien llama al servicio fuera de ese camino: se
+      // deja Redis apagado en vez de abrir un cliente que no puede funcionar.
+      this.logger.error(
+        'REDIS_URL tiene un formato que ioredis no entiende y no se pudo ' +
+          'convertir. Redis queda deshabilitado en vez de abrir una conexión ' +
+          'que encolaría comandos para siempre.',
+      );
+      return;
     }
 
     this.client = new Redis(connectionUrl, {
-      maxRetriesPerRequest: null,
+      // ⚠️ ACÁ ESTABA EL CUELGUE, y no en el esquema de la URL.
+      //
+      // Antes: `maxRetriesPerRequest: null` (reintentar sin límite) más el
+      // `enableOfflineQueue` que viene activado por defecto. Con Redis
+      // inalcanzable, cada comando quedaba encolado esperando una conexión que
+      // no llegaba: la promesa nunca resolvía, el pedido HTTP que la disparó
+      // nunca terminaba, y su conexión de Prisma quedaba retenida. Con
+      // suficientes pedidos así el pool se agota y la API deja de responder
+      // ENTERA — incluidas las rutas que no tocan Redis.
+      //
+      // Ahora falla rápido y ruidoso. Un flujo que necesita Redis devuelve un
+      // error en segundos; los que no lo necesitan siguen andando.
+      maxRetriesPerRequest: 2,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
       enableReadyCheck: false,
       tls: connectionUrl.startsWith('rediss://') ? {} : undefined,
     });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Building2, Phone, Mail, MapPin, Truck, FileText, CheckCircle, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
 import { escribir } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface CarrierModalProps {
   isOpen: boolean;
@@ -63,8 +64,8 @@ export const CarrierModal: React.FC<CarrierModalProps> = ({ isOpen, onClose, onS
     setError(null);
     try {
       const url = carrierToEdit 
-        ? `http://localhost:3000/api/v1/carriers/${carrierToEdit.id}`
-        : 'http://localhost:3000/api/v1/carriers';
+        ? `${API_URL}/api/v1/carriers/${carrierToEdit.id}`
+        : `${API_URL}/api/v1/carriers`;
       const method = carrierToEdit ? 'PUT' : 'POST';
       
       const r = await escribir(

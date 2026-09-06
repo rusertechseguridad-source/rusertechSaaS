@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { NdrSettings } from './types';
+import { API_URL } from '../../../services/api';
 
-const API_URL = 'http://localhost:3000/api/v1/settings/parameters';
+/** Prefijo de este módulo. La base sale de `services/api`. */
+const BASE = `${API_URL}/api/v1/settings/parameters`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('rusertech_token');
@@ -15,7 +17,7 @@ export const useNdrSettings = () => {
   return useQuery<NdrSettings>({
     queryKey: ['settings-ndr'],
     queryFn: async () => {
-      const res = await fetch(API_URL, { headers: getHeaders() });
+      const res = await fetch(BASE, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al cargar configuración NDR');
       const data = await res.json();
       
@@ -44,7 +46,7 @@ export const useUpdateNdrSettings = () => {
   return useMutation({
     mutationFn: async (data: NdrSettings) => {
       const promises = Object.entries(data).map(([key, value]) => {
-        return fetch(API_URL, {
+        return fetch(BASE, {
           method: 'PUT',
           headers: getHeaders(),
           body: JSON.stringify({ key, value: String(value) })

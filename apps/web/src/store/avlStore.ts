@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { avisar } from '../services/avisos';
+import { API_URL } from '../services/api';
 
 interface AvlUser {
   id: string;
@@ -81,7 +82,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
   fetchUsers: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/avl-users', {
+      const res = await fetch(`${API_URL}/api/v1/avl-users`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch AVL users');
@@ -94,7 +95,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   toggleActive: async (id, isActive) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${id}/toggle`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${id}/toggle`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ is_active: isActive }),
@@ -110,7 +111,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   regenerateApiKey: async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${id}/regenerate-api-key`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${id}/regenerate-api-key`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -126,7 +127,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   createUser: async (data) => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/avl-users', {
+      const res = await fetch(`${API_URL}/api/v1/avl-users`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -140,7 +141,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   updateUser: async (id, data) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -154,7 +155,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   fetchDictionary: async (userId) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/dictionary`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch dictionary');
@@ -167,7 +168,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   fetchUnknownCodes: async (userId) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/unknown-codes`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/unknown-codes`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch unknown codes');
@@ -180,7 +181,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   addDictionaryEntry: async (userId, data) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/dictionary`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -195,7 +196,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   updateDictionaryEntry: async (dictId, data) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/dictionary/${dictId}`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/dictionary/${dictId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -213,7 +214,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
 
   exportDictionary: async (userId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary/export`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/dictionary/export`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to export dictionary');
@@ -237,7 +238,7 @@ export const useAvlStore = create<AvlStore>((set, get) => ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`http://localhost:3000/api/v1/avl-users/${userId}/dictionary/import`, {
+      const res = await fetch(`${API_URL}/api/v1/avl-users/${userId}/dictionary/import`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,

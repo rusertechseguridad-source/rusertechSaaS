@@ -4,6 +4,7 @@ import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
 import { translateRole } from '../../utils/labels';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AdminRolesPermissions: React.FC = () => {
   const { t } = useTranslation();
@@ -18,7 +19,7 @@ export const AdminRolesPermissions: React.FC = () => {
   const fetchRoles = async () => {
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/roles', {
+      const res = await fetch(`${API_URL}/api/v1/admin/roles`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -48,7 +49,7 @@ export const AdminRolesPermissions: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/roles', {
+      const res = await fetch(`${API_URL}/api/v1/admin/roles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export const AdminRolesPermissions: React.FC = () => {
     if (!selectedRole) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/roles/${selectedRole.id}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/roles/${selectedRole.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

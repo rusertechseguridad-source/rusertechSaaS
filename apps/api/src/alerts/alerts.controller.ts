@@ -14,6 +14,13 @@ export class AlertsController {
     return this.alertsService.findAll(req.user);
   }
 
+  // ⚠️ Cerrado en la Tanda 7. Sin permiso, esta ruta entregaba
+  // `tenants.settings_json` entero —con la contraseña SMTP adentro— a
+  // cualquier usuario autenticado. Ahora son las DOS cosas: el mismo permiso
+  // que la ruta hermana de escritura, y la respuesta enmascarada en el
+  // servicio. El permiso solo no alcanzaba: un `manager` legítimo tampoco
+  // necesita ver la contraseña.
+  @RequirePermissions('manage_settings')
   @Get('settings')
   getSettings(@Request() req: any) {
     return this.alertsService.getSettings(req.user.tenantId);
@@ -23,10 +30,6 @@ export class AlertsController {
   // donde viven las credenciales SMTP). Mismo permiso que la ruta hermana de
   // `settings`, que sí lo exigía: `manage_settings`.
   //
-  // ⚠️ El `GET settings` de arriba NO lleva permiso en esta tanda, a propósito:
-  // el encargo nombra las rutas de ESCRITURA. Pero sigue entregando la
-  // contraseña SMTP a cualquier usuario autenticado (informe §2.2, asignado a
-  // la Tanda 7). Cerrarlo antes es agregarle la misma línea que tiene el PUT.
   @RequirePermissions('manage_settings')
   @Put('settings')
   updateSettings(@Request() req: any, @Body() body: any) {

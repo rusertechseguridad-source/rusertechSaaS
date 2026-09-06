@@ -7,6 +7,7 @@ import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const CarriersPage: React.FC = () => {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ export const CarriersPage: React.FC = () => {
 
   const fetchCarriers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/carriers', {
+      const res = await fetch(`${API_URL}/api/v1/carriers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (!res.ok) throw new Error(t('carriers.error_loading'));
@@ -45,7 +46,7 @@ export const CarriersPage: React.FC = () => {
     if (!confirm(currentStatus === 'active' ? t('carriers.confirm.suspend') : t('carriers.confirm.reactivate'))) return;
     
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/carriers/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/carriers/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

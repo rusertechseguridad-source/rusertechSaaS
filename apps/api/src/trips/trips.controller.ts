@@ -54,7 +54,13 @@ export class TripsController {
     return this.tripsService.getLogs(id, user.tenantId);
   }
 
+  // ⚠️ Escribe la bitácora del viaje: quién dijo qué y cuándo, firmado con el
+  // usuario. Sin permiso, un `viewer` —que sólo debería mirar— podía FALSIFICAR
+  // el registro operativo, que es la evidencia con la que después se reconstruye
+  // un incidente. `manage_trips` lo tienen rusertech_admin, account_owner,
+  // manager, operator y key_user: nadie que hoy escriba bitácora lo pierde.
   @Post(':id/logs')
+  @RequirePermissions('manage_trips')
   addLog(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
     return this.tripsService.addLog(id, data.text, user);
   }
@@ -92,7 +98,12 @@ export class TripsController {
     return this.tripsService.contactDriverAttempt(id, user);
   }
 
+  // La hermana de arriba (`driver-contact-attempt`) SÍ tenía el permiso; ésta
+  // no. Registra si el conductor respondió, que es una de las dos dimensiones
+  // de contexto con las que el motor elige protocolo: afirmarlo en falso
+  // cambia qué protocolo se aplica ante una situación real.
   @Post(':id/driver-contact-response')
+  @RequirePermissions('manage_trips')
   contactDriverResponse(@Param('id') id: string, @Body() data: any, @CurrentUser() user: any) {
     return this.tripsService.contactDriverResponse(id, user.tenantId, data);
   }

@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mensajeDeError } from '../../../services/avisos';
+import { API_URL } from '../../../services/api';
 
-const API_URL = 'http://localhost:3000/api/v1/motor';
+/** Prefijo de este módulo. La base sale de `services/api`. */
+const BASE = `${API_URL}/api/v1/motor`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('rusertech_token');
@@ -35,7 +37,7 @@ export const useSaludMotor = () =>
     queryKey: ['motor-salud'],
     refetchInterval: 10_000,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/salud`, { headers: getHeaders() });
+      const res = await fetch(`${BASE}/salud`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al consultar la salud del motor');
       return res.json();
     },
@@ -46,7 +48,7 @@ export const useVehiculosMonitoreados = () =>
     queryKey: ['motor-monitoreados'],
     refetchInterval: 30_000,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/monitoreados`, { headers: getHeaders() });
+      const res = await fetch(`${BASE}/monitoreados`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al consultar los vehículos monitoreados');
       const data = await res.json();
       return Array.isArray(data) ? data : [];
@@ -65,7 +67,7 @@ export const useActivarMonitoreo = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vehicleId: string) => {
-      const res = await fetch(`${API_URL}/monitoreados/${vehicleId}`, {
+      const res = await fetch(`${BASE}/monitoreados/${vehicleId}`, {
         method: 'POST',
         headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -83,7 +85,7 @@ export const useDesactivarMonitoreo = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vehicleId: string) => {
-      const res = await fetch(`${API_URL}/monitoreados/${vehicleId}`, {
+      const res = await fetch(`${BASE}/monitoreados/${vehicleId}`, {
         method: 'DELETE',
         headers: getHeaders(),
       });
@@ -115,7 +117,7 @@ export const useHistorialViaje = (tripId: string | undefined) =>
     queryKey: ['motor-historial', tripId],
     enabled: Boolean(tripId),
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/viajes/${tripId}/historial`, { headers: getHeaders() });
+      const res = await fetch(`${BASE}/viajes/${tripId}/historial`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al cargar el historial de estados');
       const data = await res.json();
       return Array.isArray(data) ? data : [];
@@ -133,7 +135,7 @@ export function useToleranciaRecorrido() {
   return useQuery<ToleranciaRecorrido>({
     queryKey: ['motor', 'tolerancia-recorrido'],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/config/recorrido`, { headers: getHeaders() });
+      const res = await fetch(`${BASE}/config/recorrido`, { headers: getHeaders() });
       if (!res.ok) throw new Error(`No se pudo leer la precisión del recorrido (HTTP ${res.status}).`);
       return res.json();
     },
@@ -144,7 +146,7 @@ export function useCambiarToleranciaRecorrido() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (tolerancia_m: number) => {
-      const res = await fetch(`${API_URL}/config/recorrido`, {
+      const res = await fetch(`${BASE}/config/recorrido`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ tolerancia_m }),

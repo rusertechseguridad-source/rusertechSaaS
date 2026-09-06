@@ -4,6 +4,7 @@ import { PERMISSION_LIST } from '../../constants/permissions';
 import { useTranslation } from 'react-i18next';
 import { translateRole } from '../../utils/labels';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AdminGlobalUsers: React.FC = () => {
   const { t } = useTranslation();
@@ -29,8 +30,8 @@ export const AdminGlobalUsers: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('rusertech_token');
       const [uRes, rRes] = await Promise.all([
-        fetch('http://localhost:3000/api/v1/admin/users', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:3000/api/v1/admin/roles', { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_URL}/api/v1/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/v1/admin/roles`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       if (uRes.ok && rRes.ok) {
         setUsers(await uRes.json());
@@ -68,7 +69,7 @@ export const AdminGlobalUsers: React.FC = () => {
     if (!editingUser) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/users/${editingUser.id}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export const AdminGlobalUsers: React.FC = () => {
     try {
       const newStatus = user.status === 'active' ? 'suspended' : 'active';
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/users/${user.id}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +139,7 @@ export const AdminGlobalUsers: React.FC = () => {
     if (!window.confirm(t('admin.prompt_reset').replace('{{email}}', userEmail))) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/users/${userId}/reset-password`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/users/${userId}/reset-password`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });

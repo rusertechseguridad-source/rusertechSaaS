@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_URL } from '../services/api';
 
 /**
  * CATÁLOGOS DEL MOTOR.
@@ -13,7 +14,8 @@ import { useQuery } from '@tanstack/react-query';
  * pueden desincronizarse.
  */
 
-const API_URL = 'http://localhost:3000/api/v1/motor/catalogos';
+/** Prefijo de este módulo. La base sale de `services/api`. */
+const BASE = `${API_URL}/api/v1/motor/catalogos`;
 
 export interface NivelRiesgo {
   codigo: string;
@@ -75,7 +77,7 @@ export const useMotorCatalogos = () =>
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(BASE, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Error al cargar los catálogos del motor');
       const data = await res.json();
       return { ...VACIO, ...(data ?? {}) };

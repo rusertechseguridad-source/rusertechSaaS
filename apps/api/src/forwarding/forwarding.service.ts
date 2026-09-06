@@ -1,15 +1,34 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { cifrarJson, CONTEXTO } from '../common/crypto/secretos-cifrados';
+
+/** Lo que la fila tiene de credencial, sin la credencial. */
+type FilaReenviador = { auth_credentials: unknown; [k: string]: unknown };
+
+/**
+ * Saca la credencial de la respuesta y deja en su lugar SI hay una.
+ *
+ * ⚠️ Es la mitad que no se puede saltear. Cifrar la columna protege la base;
+ * si la API sigue devolviendo el valor, un `manager` lo lee desde la consola
+ * del navegador y el cifrado no sirvió de nada. Y a diferencia de las
+ * credenciales de `avl_users` —que existen para que una persona las copie—
+ * ésta la usa el backend: nadie necesita verla.
+ */
+function sinCredencial<T extends FilaReenviador>(fila: T) {
+  const { auth_credentials, ...resto } = fila;
+  return { ...resto, tiene_credencial: auth_credentials !== null && auth_credentials !== undefined };
+}
 
 @Injectable()
 export class ForwardingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getForwarders(tenantId: string) {
-    return this.prisma.positionForwarder.findMany({
+    const filas = await this.prisma.positionForwarder.findMany({
       where: { tenant_id: tenantId },
       orderBy: { created_at: 'desc' }
     });
+    return filas.map(sinCredencial);
   }
 
   async createForwarder(tenantId: string, data: any) {
@@ -19,7 +38,10 @@ export class ForwardingService {
         name: data.name,
         target_url: data.target_url,
         auth_type: data.auth_type || 'none',
-        auth_credentials: data.auth_credentials || null,
+        // El bearer token de la integración del cliente. Se cifra al entrar:
+        // quien lea la base —un backup, un dump, el panel de Supabase— no se
+        // lleva las credenciales de las integraciones de todos los clientes.
+        auth_credentials: cifrarJson(data.auth_credentials, CONTEXTO.forwarderAuthCredentials) ?? undefined,
         payload_format: data.payload_format || 'rusertech_v1',
         is_active: data.is_active ?? true
       }
@@ -27,6 +49,21 @@ export class ForwardingService {
   }
 
   async getForwarder(tenantId: string, id: string) {
+    const forwarder = await this.prisma.positionForwarder.findFirst({
+      where: { id, tenant_id: tenantId }
+    });
+    if (!forwarder) throw new NotFoundException('Forwarder no encontrado');
+    return sinCredencial(forwarder);
+  }
+
+  /**
+   * La fila COMPLETA, con la credencial cifrada. Sólo para el procesador.
+   *
+   * Separada de `getForwarder` a propósito: que la versión que sirve a la API
+   * y la que usa el envío sean el mismo método es exactamente cómo una
+   * credencial termina en una respuesta HTTP sin que nadie lo decida.
+   */
+  async getForwarderConCredencial(tenantId: string, id: string) {
     const forwarder = await this.prisma.positionForwarder.findFirst({
       where: { id, tenant_id: tenantId }
     });
@@ -41,7 +78,15 @@ export class ForwardingService {
         name: data.name,
         target_url: data.target_url,
         auth_type: data.auth_type,
-        auth_credentials: data.auth_credentials,
+        // ⚠️ `undefined` y no `null` cuando no vienen credenciales: Prisma OMITE
+        // las claves `undefined`, así que editar el nombre de un reenviador sin
+        // reenviar la credencial la CONSERVA. Con `null` la borraría en
+        // silencio, y el reenvío empezaría a fallar con 401 sin que nadie
+        // hubiera pedido eso.
+        auth_credentials:
+          data.auth_credentials === undefined
+            ? undefined
+            : (cifrarJson(data.auth_credentials, CONTEXTO.forwarderAuthCredentials) ?? undefined),
         payload_format: data.payload_format,
         is_active: data.is_active
       }

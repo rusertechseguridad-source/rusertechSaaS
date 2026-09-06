@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MonitoreoSettings } from './types';
 import { MONITOREO_POR_DEFECTO } from './types';
+import { API_URL } from '../../../services/api';
 
-const API_URL = 'http://localhost:3000/api/v1/settings/monitoring';
+/** Prefijo de este módulo. La base sale de `services/api`. */
+const BASE = `${API_URL}/api/v1/settings/monitoring`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('rusertech_token');
@@ -21,7 +23,7 @@ export const useMonitoreoSettings = () =>
   useQuery<MonitoreoSettings>({
     queryKey: ['settings-monitoreo'],
     queryFn: async () => {
-      const res = await fetch(API_URL, { headers: getHeaders() });
+      const res = await fetch(BASE, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al cargar la configuración de monitoreo');
       const data = await res.json();
       return { ...MONITOREO_POR_DEFECTO, ...(data ?? {}) } as MonitoreoSettings;
@@ -32,7 +34,7 @@ export const useUpdateMonitoreoSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: MonitoreoSettings): Promise<MonitoreoSettings> => {
-      const res = await fetch(API_URL, {
+      const res = await fetch(BASE, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(data),

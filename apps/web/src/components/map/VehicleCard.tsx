@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Phone } from 'lucide-react';
 import { RequirePermission } from '../RequirePermission';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface VehicleCardProps {
   vehicle: any;
@@ -20,7 +21,7 @@ export function VehicleCard({ vehicle, tripId, onClose }: VehicleCardProps) {
     setLoading(true);
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/driver-contact-attempt`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/driver-contact-attempt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

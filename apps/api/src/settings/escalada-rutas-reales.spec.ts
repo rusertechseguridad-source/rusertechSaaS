@@ -51,7 +51,14 @@ describe('Escalada de privilegios · las TRES rutas que escriben role_code', () 
     user: { update: jest.fn(), create: jest.fn(), findUnique: jest.fn() },
     tenant: { findUnique: jest.fn() },
   };
-  const mail = { sendInvitation: jest.fn(), sendVehicleBlockedAlert: jest.fn() };
+  // ⚠️ El mock devuelve el `ResultadoEnvio` que `MailService` devuelve desde la
+  // Tanda 7. Con `jest.fn()` a secas resolvía `undefined` y el servicio, que
+  // ahora MIRA el resultado en vez de esperar una excepción, respondía 500 —
+  // enmascarando lo que esta suite viene a probar, que es la escalada.
+  const mail = {
+    sendInvitation: jest.fn().mockResolvedValue({ enviado: true, id: 'msg-1' }),
+    sendVehicleBlockedAlert: jest.fn().mockResolvedValue({ enviado: true, id: 'msg-2' }),
+  };
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({

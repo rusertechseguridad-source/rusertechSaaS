@@ -33,7 +33,7 @@ export class FiltroDeExcepciones implements ExceptionFilter {
     const respuesta = ctx.getResponse<Response>();
     const peticion = ctx.getRequest<Request>();
 
-    const { estado, mensaje, detalleInterno, esperado } = this.traducir(excepcion);
+    const { estado, mensaje, detalleInterno, cuerpoPropio, esperado } = this.traducir(excepcion);
 
     // El contexto que faltaba. `usuario` y `tenant` salen de req.user, que pone
     // JwtStrategy; en una ruta sin token quedan como 'anónimo', que también es
@@ -55,6 +55,14 @@ export class FiltroDeExcepciones implements ExceptionFilter {
       }
     }
 
+    if (cuerpoPropio) {
+      // `statusCode` se agrega igual para que la forma no cambie entre una
+      // respuesta con cuerpo propio y una genérica, pero sin pisar nada de lo
+      // que el handler puso.
+      respuesta.status(estado).json({ statusCode: estado, ...cuerpoPropio });
+      return;
+    }
+
     respuesta.status(estado).json({
       statusCode: estado,
       message: mensaje,
@@ -63,10 +71,24 @@ export class FiltroDeExcepciones implements ExceptionFilter {
     });
   }
 
+  /**
+   * ¿El cuerpo de la excepción lo armó un handler, o es el genérico de Nest?
+   *
+   * El genérico son exactamente `statusCode`, `message` y `error`. Cualquier
+   * clave fuera de esas tres significa que alguien puso información ahí a
+   * propósito, y tirarla sería descartar justo lo que quiso decir.
+   */
+  private esCuerpoPropio(cuerpo: unknown): boolean {
+    if (typeof cuerpo !== 'object' || cuerpo === null || Array.isArray(cuerpo)) return false;
+    const genericas = new Set(['statusCode', 'message', 'error']);
+    return Object.keys(cuerpo).some((clave) => !genericas.has(clave));
+  }
+
   private traducir(excepcion: unknown): {
     estado: number;
     mensaje: string | string[];
     detalleInterno?: string;
+    cuerpoPropio?: Record<string, unknown>;
     esperado: boolean;
   } {
     // Las excepciones de Nest ya traen su código y su mensaje, y son las que usan
@@ -80,6 +102,27 @@ export class FiltroDeExcepciones implements ExceptionFilter {
         typeof cuerpo === 'string'
           ? cuerpo
           : ((cuerpo as any)?.message ?? excepcion.message);
+
+      // ⚠️ CUERPO ESTRUCTURADO: se devuelve TAL CUAL, sin aplanarlo.
+      //
+      // Encontrado arrancando el binario compilado, no leyendo el código. Con
+      // la base caída, `GET /health` devolvía el 503 correcto pero con el
+      // cuerpo genérico de este filtro: "Service Unavailable Exception". O sea
+      // que el diagnóstico —qué dependencia falló, con qué error y en cuántos
+      // milisegundos— se perdía EXACTAMENTE cuando hace falta.
+      //
+      // El criterio general: si un handler se tomó el trabajo de armar un
+      // objeto como cuerpo de su excepción, ese objeto ES la respuesta. Sólo
+      // se aplana cuando el cuerpo es la forma por defecto de Nest
+      // (`{ statusCode, message, error }`), donde no hay nada propio que
+      // conservar. Esto también preserva el 409 con el inventario de
+      // dependencias de `trips.remove()`, que hasta ahora perdía todo menos
+      // `message` pese a que el comentario de arriba decía lo contrario.
+      if (this.esCuerpoPropio(cuerpo)) {
+        return { estado, mensaje, cuerpoPropio: cuerpo as Record<string, unknown>,
+                 esperado: estado < HttpStatus.INTERNAL_SERVER_ERROR };
+      }
+
       return { estado, mensaje, esperado: estado < HttpStatus.INTERNAL_SERVER_ERROR };
     }
 

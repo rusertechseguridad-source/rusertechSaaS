@@ -9,6 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import AlertsSettingsModal, { SEVERITY_LEVELS } from './AlertsSettingsModal';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AlertsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ export const AlertsPage: React.FC = () => {
       const token = localStorage.getItem('rusertech_token');
       if (!token) return;
 
-      const settingsRes = await fetch('http://localhost:3000/api/v1/alerts/settings', {
+      const settingsRes = await fetch(`${API_URL}/api/v1/alerts/settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (settingsRes.ok) {
@@ -155,7 +156,7 @@ export const AlertsPage: React.FC = () => {
 
   const handleSaveSettings = async (newSettings: any) => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch('http://localhost:3000/api/v1/alerts/settings', {
+    const res = await fetch(`${API_URL}/api/v1/alerts/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

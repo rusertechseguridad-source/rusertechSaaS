@@ -7,6 +7,7 @@ import { exportToCsv } from '../../utils/export';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const DriversPage: React.FC = () => {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ export const DriversPage: React.FC = () => {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/drivers', {
+      const res = await fetch(`${API_URL}/api/v1/drivers`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (!res.ok) throw new Error(t('drivers.error_loading'));
@@ -43,7 +44,7 @@ export const DriversPage: React.FC = () => {
     if (!confirm(currentStatus === 'active' ? t('drivers.confirm.suspend') : t('drivers.confirm.reactivate'))) return;
     
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/drivers/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/drivers/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

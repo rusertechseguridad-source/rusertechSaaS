@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { escribir, type Resultado } from '../services/avisos';
+import { API_URL } from '../services/api';
 
 interface Vehicle {
   id: string;
@@ -47,7 +48,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
   fetchVehicles: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/vehicles', {
+      const res = await fetch(`${API_URL}/api/v1/vehicles`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch vehicles');
@@ -62,7 +63,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
     // Antes: `res.text()` + un `alert` del navegador. El operador veía el JSON crudo del
     // backend en una ventana del navegador, y un alta exitosa no avisaba nada.
     const r = await escribir(
-      () => fetch('http://localhost:3000/api/v1/vehicles', {
+      () => fetch(`${API_URL}/api/v1/vehicles`, {
         method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(data),
       }),
       'Vehículo creado.',
@@ -73,7 +74,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
 
   updateVehicle: async (id, data) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
+      () => fetch(`${API_URL}/api/v1/vehicles/${id}`, {
         method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(data),
       }),
       'Vehículo actualizado.',
@@ -85,7 +86,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
   deleteVehicle: async (id) => {
     // Éste era el único de su store que fallaba MUDO: ni siquiera un alert.
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}`, {
+      () => fetch(`${API_URL}/api/v1/vehicles/${id}`, {
         method: 'DELETE', headers: getAuthHeaders(),
       }),
       'Vehículo eliminado.',
@@ -96,7 +97,7 @@ export const useVehiclesStore = create<VehiclesState>((set, get) => ({
 
   toggleBlock: async (id, blocked, reason) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/vehicles/${id}/block`, {
+      () => fetch(`${API_URL}/api/v1/vehicles/${id}/block`, {
         method: 'PATCH', headers: getAuthHeaders(), body: JSON.stringify({ blocked, reason }),
       }),
       blocked ? 'Vehículo bloqueado.' : 'Vehículo desbloqueado.',

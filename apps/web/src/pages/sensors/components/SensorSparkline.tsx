@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_URL } from '../../../services/api';
 
 interface SensorSparklineProps {
   vehicleId: string;
@@ -15,7 +16,7 @@ export const SensorSparkline: React.FC<SensorSparklineProps> = ({ vehicleId, sen
     const fetchHistory = async () => {
       if (!token) return;
       try {
-        const res = await fetch(`http://localhost:3000/api/v1/sensors/history/${vehicleId}?sensorType=${sensorType}&period=1h`, {
+        const res = await fetch(`${API_URL}/api/v1/sensors/history/${vehicleId}?sensorType=${sensorType}&period=1h`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {

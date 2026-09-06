@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 const CHANNEL_TYPE_ICONS: Record<string, React.ReactNode> = {
   email:     <Mail className="w-4 h-4" />,
@@ -53,7 +54,7 @@ export const NotificationChannelsTab: React.FC = () => {
   const fetchChannels = async () => {
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/notifications/channels', {
+      const res = await fetch(`${API_URL}/api/v1/notifications/channels`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) setChannels(await res.json());
@@ -93,8 +94,8 @@ export const NotificationChannelsTab: React.FC = () => {
       const token = localStorage.getItem('rusertech_token');
       const method = editingChannel ? 'PUT' : 'POST';
       const url = editingChannel
-        ? `http://localhost:3000/api/v1/notifications/channels/${editingChannel.id}`
-        : `http://localhost:3000/api/v1/notifications/channels`;
+        ? `${API_URL}/api/v1/notifications/channels/${editingChannel.id}`
+        : `${API_URL}/api/v1/notifications/channels`;
 
       const res = await fetch(url, {
         method,
@@ -113,7 +114,7 @@ export const NotificationChannelsTab: React.FC = () => {
 
   const toggleActive = async (id: string) => {
     const token = localStorage.getItem('rusertech_token');
-    const res = await fetch(`http://localhost:3000/api/v1/notifications/channels/${id}/toggle`, {
+    const res = await fetch(`${API_URL}/api/v1/notifications/channels/${id}/toggle`, {
       method: 'PATCH', headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) fetchChannels();
@@ -123,7 +124,7 @@ export const NotificationChannelsTab: React.FC = () => {
     if (!window.confirm(t('settings_notifications.confirm_delete'))) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/notifications/channels/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/notifications/channels/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
     });
     if (res.ok) fetchChannels();

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, Search, Truck, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EstadoConsulta } from '../../components/EstadoConsulta';
+import { API_URL } from '../../services/api';
 
 interface Props {
   /** Ids de los vehículos que YA tienen al menos un sensor configurado. */
@@ -34,7 +35,7 @@ export const SelectorVehiculoSensor: React.FC<Props> = ({ yaConfigurados, onEleg
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:3000/api/v1/vehicles', {
+      const res = await fetch(`${API_URL}/api/v1/vehicles`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (!res.ok) throw new Error(t('sensors.vehicles_error'));

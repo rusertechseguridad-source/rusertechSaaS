@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
 import { formatOperationOption } from '../../components/Operations/OperationFlowBadge';
 import { EstadoConsulta } from '../../components/EstadoConsulta';
+import { API_URL } from '../../services/api';
 
 const selectStyles = {
   control: (base: any) => ({
@@ -115,7 +116,7 @@ export const LocationsPage: React.FC = () => {
 
   const fetchOperations = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/operations', {
+      const res = await fetch(`${API_URL}/api/v1/operations`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,

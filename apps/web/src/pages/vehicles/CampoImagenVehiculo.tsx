@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Trash2, Upload, Loader2 } from 'lucide-react';
 import { avisar, mensajeDeError } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface Props {
   etiqueta: string;
@@ -45,7 +46,7 @@ export const CampoImagenVehiculo: React.FC<Props> = ({
     cuerpo.append('file', archivo);
     setSubiendo(true);
     try {
-      const res = await fetch('http://localhost:3000/api/v1/upload', {
+      const res = await fetch(`${API_URL}/api/v1/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: cuerpo,

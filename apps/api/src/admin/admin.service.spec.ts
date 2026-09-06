@@ -87,7 +87,13 @@ describe('AdminService', () => {
 
     it('manda la clave por correo y NO la escribe en la salida del proceso', async () => {
       const espiaLog = jest.spyOn(console, 'log').mockImplementation(() => {});
-      mailMock.sendInvitation.mockResolvedValue(undefined);
+      // ⚠️ EL CONTRATO DE `sendInvitation` CAMBIÓ EN LA TANDA 7, y el mock
+      // tenía que seguirlo. Antes se comunicaba por excepciones; ahora
+      // devuelve `{ enviado, ... }` y NUNCA lanza, porque el SDK de Resend
+      // resuelve con `{ data: null, error }` cuando la API rechaza el envío y
+      // el `try/catch` de antes no veía nada. Lo que esta prueba afirma no
+      // cambió: la clave se manda por correo y no se imprime.
+      mailMock.sendInvitation.mockResolvedValue({ enviado: true, id: 'msg-1' });
 
       const respuesta = await service.createTenant(alta);
 
@@ -109,7 +115,28 @@ describe('AdminService', () => {
     it('si el correo falla, el tenant sobrevive pero la respuesta lo dice', async () => {
       // Sin este aviso el tenant nace inaccesible en silencio: la clave ya no
       // queda en ningún otro lado.
-      mailMock.sendInvitation.mockRejectedValue(new Error('SMTP caído'));
+      //
+      // El fallo se simula como lo devuelve HOY el servicio —RESUELTO, no
+      // lanzado—, que es exactamente el caso que antes se colaba: la cuenta de
+      // Resend en modo de prueba rechaza el envío SIN lanzar, así que el
+      // `try/catch` de la versión anterior no lo veía y esto devolvía `true`.
+      mailMock.sendInvitation.mockResolvedValue({
+        enviado: false,
+        motivo: 'La cuenta de Resend está en modo de prueba.',
+      });
+
+      const respuesta = await service.createTenant(alta);
+
+      expect(respuesta.tenantId).toBe('t9');
+      expect(respuesta.emailSent).toBe(false);
+    });
+
+    it('un fallo INESPERADO del cliente de correo tampoco tira abajo el alta', async () => {
+      // `sendInvitation` se comprometió a no lanzar, pero esto corre DESPUÉS de
+      // que la transacción confirmó: el tenant ya existe y un error del cliente
+      // de correo no puede convertirlo en un 500. De ahí el `try/catch` que se
+      // conserva como red de seguridad, no como mecanismo.
+      mailMock.sendInvitation.mockRejectedValue(new Error('el SDK explotó'));
 
       const respuesta = await service.createTenant(alta);
 

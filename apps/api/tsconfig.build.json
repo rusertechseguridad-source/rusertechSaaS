@@ -7,5 +7,19 @@
   // compila a CommonJS. La exclusión del padre existía y no servía de nada.
   // Reproducido: `tsc -p tsconfig.build.json --noEmit` daba 1 error y
   // `tsc --noEmit` (tsconfig.json) daba 0.
+  // ⚠️ `include` EXPLÍCITO — esto es lo que arregla `npm run start:prod`.
+  //
+  // Sin `include`, TypeScript compila todo lo que no esté excluido. En la raíz
+  // de `apps/api` viven 14 scripts sueltos (`check_db.ts`, `query.ts`,
+  // `seed_demo_data.ts`, …) más 7 en `prisma/`, y al entrar en la compilación
+  // corrían el `rootDir` un nivel arriba de `src`. Resultado: la salida quedaba
+  // en `dist/src/main.js` mientras `start:prod` ejecutaba `node dist/main`.
+  //
+  // Medido antes del cambio: `dist/` contenía `check_db.js`, `clean_trips.js`,
+  // `run-sql.js`, `seed_demo_data.js` y compañía. O sea que el artefacto de
+  // producción EMPAQUETABA un ejecutor de SQL arbitrario y un borrador masivo
+  // de viajes. Acotar `include` a `src` arregla la ruta y saca esos scripts del
+  // despliegue de una sola vez, sin borrar nada del repositorio.
+  "include": ["src/**/*"],
   "exclude": ["prisma.config.ts", "node_modules", "test", "dist", "**/*spec.ts"]
 }

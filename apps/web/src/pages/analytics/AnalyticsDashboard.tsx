@@ -4,6 +4,7 @@ import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { EstadoConsulta } from '../../components/EstadoConsulta';
 import { mensajeDeError } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -27,9 +28,9 @@ export const AnalyticsDashboard: React.FC = () => {
       const headers = { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` };
       
       const [resFleet, resTrips, resAlerts] = await Promise.all([
-        fetch(`http://localhost:3000/api/v1/analytics/fleet?period=${period}`, { headers }),
-        fetch(`http://localhost:3000/api/v1/analytics/trips?period=${period}`, { headers }),
-        fetch(`http://localhost:3000/api/v1/analytics/alerts?period=${period}`, { headers })
+        fetch(`${API_URL}/api/v1/analytics/fleet?period=${period}`, { headers }),
+        fetch(`${API_URL}/api/v1/analytics/trips?period=${period}`, { headers }),
+        fetch(`${API_URL}/api/v1/analytics/alerts?period=${period}`, { headers })
       ]);
 
       // ⚠️ Antes: `if (res.ok) setX(...)` y nada en el `else`. Ante un 403 los

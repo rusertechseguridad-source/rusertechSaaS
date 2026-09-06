@@ -23,6 +23,102 @@ export function redisDisponible(): boolean {
   return Boolean(process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '');
 }
 
+/**
+ * ESQUEMAS QUE `ioredis` ENTIENDE.
+ *
+ * Upstash muestra en su panel DOS direcciones y son cosas distintas:
+ *   · `https://<algo>.upstash.io`  → API REST. Se habla con `fetch` y un token.
+ *   · `rediss://default:<token>@<algo>.upstash.io:6379` → protocolo Redis.
+ * `ioredis` y BullMQ hablan lo segundo. Copiar la primera es un error fácil de
+ * cometer y hasta ahora no lo decía nadie.
+ */
+const ESQUEMAS_VALIDOS = ['redis://', 'rediss://'];
+
+/**
+ * Convierte una URL de API REST de Upstash al esquema del protocolo Redis.
+ *
+ * Vivía duplicada en `redis-conexion` y en `RedisService`, con el mismo puerto
+ * escrito dos veces. Ahora es una sola.
+ *
+ * Devuelve `null` si no se puede convertir — que es distinto de "convertida a
+ * algo que no anda", y por eso quien llama tiene que decidir qué hacer.
+ */
+export function normalizarUrlRedis(crudo: string): string | null {
+  const url = crudo.trim();
+  if (ESQUEMAS_VALIDOS.some((e) => url.startsWith(e))) return url;
+
+  if (url.startsWith('https://')) {
+    const token = process.env.REDIS_TOKEN?.trim();
+    // Sin token la conversión produce `rediss://default:@host:6379`, que se
+    // conecta y falla la autenticación en cada comando. Es peor que no
+    // convertir: parece configurado.
+    if (!token) return null;
+    try {
+      return `rediss://default:${token}@${new URL(url).host}:6379`;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Problemas de la configuración de Redis, para el chequeo de arranque.
+ *
+ * ⚠️ POR QUÉ ES UN ERROR Y NO UN AVISO cuando la URL está mal formada.
+ *
+ * Redis es OPCIONAL: sin `REDIS_URL` la aplicación arranca y opera (las
+ * posiciones en vivo salen de Postgres). Pero una `REDIS_URL` PRESENTE Y MAL
+ * es otra cosa: el código de abajo la toma por buena, abre el cliente, y cada
+ * comando queda encolado esperando una conexión que nunca llega. El pedido
+ * HTTP que lo disparó no termina nunca, y mientras tanto retiene su conexión
+ * de Prisma. Con suficientes pedidos así, el pool se agota y la API deja de
+ * responder entera — medido en producción, sin un solo mensaje que lo
+ * explicara.
+ *
+ * "Configurada mal" es peor que "no configurada". Por eso frena el arranque.
+ */
+export function problemasDeRedis(): { errores: string[]; avisos: string[] } {
+  const crudo = process.env.REDIS_URL?.trim();
+
+  if (!crudo) {
+    return {
+      errores: [],
+      avisos: [
+        'REDIS_URL no está definida: Redis queda deshabilitado. La aplicación ' +
+          'funciona (las posiciones en vivo salen de Postgres), pero quedan sin ' +
+          'servicio las colas de BullMQ: huella de carbono, reenvío de posiciones ' +
+          'y el simulador de rutas.',
+      ],
+    };
+  }
+
+  if (normalizarUrlRedis(crudo) !== null) return { errores: [], avisos: [] };
+
+  if (crudo.startsWith('https://')) {
+    return {
+      errores: [
+        'REDIS_URL es la dirección de la API REST de Upstash (https://…) y falta ' +
+          'REDIS_TOKEN para poder convertirla. Sin el token, el cliente se conecta ' +
+          'y falla la autenticación en cada comando, que es exactamente el caso ' +
+          'que cuelga la aplicación. Poné REDIS_TOKEN, o usá directamente la URL ' +
+          'rediss:// que Upstash muestra en su panel.',
+      ],
+      avisos: [],
+    };
+  }
+
+  return {
+    errores: [
+      `REDIS_URL tiene un esquema que ioredis no entiende: "${crudo.slice(0, 24)}…". ` +
+        'Se espera redis:// o rediss:// (o https:// de Upstash junto con REDIS_TOKEN). ' +
+        'Dejarla vacía es una opción válida: Redis es opcional.',
+    ],
+    avisos: [],
+  };
+}
+
 /** Opciones de conexión para BullModule.forRoot. */
 export function conexionBull(): Record<string, unknown> {
   if (!redisDisponible()) {
@@ -42,12 +138,26 @@ export function conexionBull(): Record<string, unknown> {
     };
   }
 
-  let url = process.env.REDIS_URL as string;
-  if (url.startsWith('https://')) {
-    // Upstash entrega la URL https; BullMQ necesita el esquema rediss.
-    const parsed = new URL(url);
-    const password = process.env.REDIS_TOKEN || '';
-    url = `rediss://default:${password}@${parsed.host}:6379`;
+  // La conversión vive en `normalizarUrlRedis`, en un solo lugar. Si devuelve
+  // null la configuración está mal, pero acá no se puede hacer nada útil con
+  // eso: el arranque ya la rechazó (`problemasDeRedis`). Se cae a la rama
+  // centinela para que el fallo sea rápido en vez de infinito.
+  const url = normalizarUrlRedis(process.env.REDIS_URL as string);
+  if (url === null) {
+    return {
+      host: '127.0.0.1',
+      port: 1,
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: null,
+      retryStrategy: () => null,
+      reconnectOnError: () => false,
+    };
   }
+
+  // ⚠️ `maxRetriesPerRequest: null` = reintentar para siempre. Para un WORKER
+  // de BullMQ es lo correcto: si Redis vuelve, el trabajo sigue; nadie está
+  // esperando del otro lado. Es en el camino de un pedido HTTP donde esa misma
+  // opción cuelga la aplicación — ver `RedisService`, que usa lo contrario.
   return { url, maxRetriesPerRequest: null };
 }

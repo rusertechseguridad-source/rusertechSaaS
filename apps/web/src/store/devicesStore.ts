@@ -2,6 +2,7 @@ import { create } from 'zustand';
 // Las tres escrituras se tragaban el error en un `console.error` y el modal
 // se cerraba igual: el operador creía haber guardado.
 import { escribir, type Resultado } from '../services/avisos';
+import { API_URL } from '../services/api';
 
 export interface Device {
   id: string;
@@ -37,7 +38,7 @@ export const useDevicesStore = create<DevicesState>((set, get) => ({
   fetchDevices: async () => {
     set({ loading: true });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/devices', {
+      const res = await fetch(`${API_URL}/api/v1/devices`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('rusertech_token')}`,
         },
@@ -55,7 +56,7 @@ export const useDevicesStore = create<DevicesState>((set, get) => ({
 
   createDevice: async (data) => {
     const r = await escribir(
-      () => fetch('http://localhost:3000/api/v1/devices', {
+      () => fetch(`${API_URL}/api/v1/devices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: JSON.stringify(data),
@@ -68,7 +69,7 @@ export const useDevicesStore = create<DevicesState>((set, get) => ({
 
   updateDevice: async (id, data) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/devices/${id}`, {
+      () => fetch(`${API_URL}/api/v1/devices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
         body: JSON.stringify(data),
@@ -81,7 +82,7 @@ export const useDevicesStore = create<DevicesState>((set, get) => ({
 
   deleteDevice: async (id) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/devices/${id}`, {
+      () => fetch(`${API_URL}/api/v1/devices/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       }),

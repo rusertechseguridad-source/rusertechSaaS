@@ -3,6 +3,7 @@ import { Settings, Plus, Edit2, Trash2, Check, X, ShieldAlert, HelpCircle } from
 import { translateParameterKey } from '../../utils/labels';
 import { useTranslation } from 'react-i18next';
 import { avisar } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 export const AdminSystemParameters: React.FC = () => {
   const { t } = useTranslation();
@@ -23,7 +24,7 @@ export const AdminSystemParameters: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch('http://localhost:3000/api/v1/admin/parameters', {
+      const res = await fetch(`${API_URL}/api/v1/admin/parameters`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -53,8 +54,8 @@ export const AdminSystemParameters: React.FC = () => {
       };
 
       const url = editingParam 
-        ? `http://localhost:3000/api/v1/admin/parameters/${editingParam.id}`
-        : 'http://localhost:3000/api/v1/admin/parameters';
+        ? `${API_URL}/api/v1/admin/parameters/${editingParam.id}`
+        : `${API_URL}/api/v1/admin/parameters`;
         
       const method = editingParam ? 'PUT' : 'POST';
 
@@ -84,7 +85,7 @@ export const AdminSystemParameters: React.FC = () => {
     if (!window.confirm(t('admin_params.confirm_delete', { paramKey }))) return;
     try {
       const token = localStorage.getItem('rusertech_token');
-      const res = await fetch(`http://localhost:3000/api/v1/admin/parameters/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/admin/parameters/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

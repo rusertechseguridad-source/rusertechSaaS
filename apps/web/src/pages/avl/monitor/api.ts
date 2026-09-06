@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { RespuestaMonitorAvl, RespuestaVehiculosAvl } from './types';
+import { API_URL } from '../../../services/api';
 
-const API_BASE = 'http://localhost:3000/api/v1/avl-users';
+const API_BASE = `${API_URL}/api/v1/avl-users`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('rusertech_token');

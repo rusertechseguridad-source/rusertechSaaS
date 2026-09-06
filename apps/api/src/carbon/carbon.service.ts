@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { cifrarSecreto, hayCredencial, CONTEXTO } from '../common/crypto/secretos-cifrados';
 import { InjectQueue } from '@nestjs/bullmq';
 import { redisDisponible } from '../common/config/redis-conexion';
 import { Queue } from 'bullmq';
@@ -29,37 +30,54 @@ export class CarbonService {
         data: { tenant_id: tenantId },
       });
     }
-    return settings;
+    // La clave NO viaja al navegador: la usa el backend contra la API de
+    // Climatiq, así que nadie del otro lado necesita verla. Se informa si hay
+    // una guardada, que es lo que la pantalla tiene que mostrar.
+    const { climatiq_api_key, ...resto } = settings;
+    return { ...resto, tiene_climatiq_api_key: hayCredencial(climatiq_api_key) };
   }
 
   async updateSettings(tenantId: string, data: any) {
+    // ⚠️ `undefined` y no `null` cuando no viene la clave: Prisma omite las
+    // claves `undefined`, así que cambiar el método de cálculo sin reenviar la
+    // clave la CONSERVA. Con `null` se borraría en silencio y la huella de
+    // carbono pasaría a calcularse por fórmula sin que nadie lo decidiera.
+    const clave =
+      data.climatiq_api_key === undefined
+        ? undefined
+        : (cifrarSecreto(data.climatiq_api_key, CONTEXTO.climatiqApiKey) ?? null);
+
     return this.prisma.carbonSetting.upsert({
       where: { tenant_id: tenantId },
       update: {
         use_climatiq_api: data.use_climatiq_api,
-        climatiq_api_key: data.climatiq_api_key,
+        climatiq_api_key: clave,
         default_method: data.default_method,
       },
       create: {
         tenant_id: tenantId,
         use_climatiq_api: data.use_climatiq_api,
-        climatiq_api_key: data.climatiq_api_key,
+        climatiq_api_key: clave ?? null,
         default_method: data.default_method || 'formula',
       },
     });
   }
 
   async toggleClimatiq(tenantId: string, useClimatiq: boolean, apiKey?: string) {
+    const clave = apiKey === undefined
+      ? undefined
+      : (cifrarSecreto(apiKey, CONTEXTO.climatiqApiKey) ?? null);
+
     return this.prisma.carbonSetting.upsert({
       where: { tenant_id: tenantId },
       update: {
         use_climatiq_api: useClimatiq,
-        ...(apiKey !== undefined && { climatiq_api_key: apiKey }),
+        ...(clave !== undefined && { climatiq_api_key: clave }),
       },
       create: {
         tenant_id: tenantId,
         use_climatiq_api: useClimatiq,
-        climatiq_api_key: apiKey,
+        climatiq_api_key: clave ?? null,
       },
     });
   }

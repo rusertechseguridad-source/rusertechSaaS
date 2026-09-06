@@ -1,12 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { generarClaveTemporal } from '../common/crypto/clave-temporal';
+import {
+  enmascararSettingsJson,
+  cifrarCredencialesNotificaciones,
+} from '../common/crypto/credenciales-notificaciones';
 import * as bcrypt from 'bcrypt';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { exigirRolAsignable } from './roles-asignables';
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
@@ -47,8 +54,11 @@ export class SettingsService {
       throw new BadRequestException('El correo ya está registrado.');
     }
 
-    // Generate a readable temporary password
-    const tempPassword = `Temp-${Math.random().toString(36).slice(2, 8).toUpperCase()}!`;
+    // ⚠️ Era `Math.random()`, que no es aleatorio: de unas pocas salidas se
+    // reconstruye el estado del generador y se predicen las siguientes. Quien
+    // pidiera un par de invitaciones a direcciones propias podía predecir la
+    // contraseña de la siguiente invitación, fuera de quien fuera.
+    const tempPassword = generarClaveTemporal();
     const hash = await bcrypt.hash(tempPassword, 10);
 
     const user = await this.prisma.user.create({
@@ -68,22 +78,46 @@ export class SettingsService {
       select: { name: true }
     });
 
-    // Send invitation email (non-blocking — failure won't roll back user creation)
+    // ⚠️ ACÁ ESTABA EL AGUJERO, y no en la ausencia de `emailSent`.
+    //
+    // El `emailSent` ya existía, pero se decidía con un `try/catch` alrededor
+    // de `sendInvitation`, y el SDK de Resend NO LANZA cuando la API rechaza
+    // el envío: resuelve con `{ data: null, error }`. El rechazo por modo de
+    // prueba —"You can only send testing emails to your own email address"—
+    // llega por ese camino. Así que el catch nunca corría, `emailSent` valía
+    // `true`, y la pantalla decía que el usuario había sido invitado mientras
+    // su contraseña temporal no llegaba a ninguna parte.
+    //
+    // Ahora `sendInvitation` devuelve el resultado y hay que mirarlo. El
+    // usuario se crea igual (borrarlo por un fallo de correo sería peor), pero
+    // se informa el motivo para que quien invita pueda accionarlo: la clave se
+    // regenera con POST /admin/users/:id/reset-password.
+    // El `try/catch` queda como red de seguridad, no como mecanismo: el
+    // usuario YA está creado en la base y un error inesperado del cliente de
+    // correo no puede convertir un alta exitosa en un 500.
+    let envio: { enviado: boolean; motivo?: string };
     try {
-      await this.mailService.sendInvitation({
+      envio = await this.mailService.sendInvitation({
         to: data.email,
         fullName: data.full_name,
         tempPassword,
         tenantName: tenant?.name || 'Rusertech',
       });
-    } catch (mailError) {
-      console.error('[SettingsService] Invitation email failed:', mailError);
-      // User was still created — return a flag so the frontend can show a warning
-      const { password_hash, ...safeUser } = user;
-      return { ...safeUser, emailSent: false };
+    } catch (error) {
+      envio = { enviado: false, motivo: (error as Error).message };
     }
 
     const { password_hash, ...safeUser } = user;
+
+    if (!envio.enviado) {
+      // El motivo se registra SIN la contraseña temporal: que quedara en el
+      // log es lo que corrigió la Tanda 1 en el camino hermano.
+      this.logger.error(
+        `Usuario ${data.email} creado pero el correo de invitación no salió: ${envio.motivo ?? 'sin motivo'}`,
+      );
+      return { ...safeUser, emailSent: false, emailError: envio.motivo ?? 'sin motivo' };
+    }
+
     return { ...safeUser, emailSent: true };
   }
 
@@ -168,21 +202,31 @@ export class SettingsService {
       select: { settings_json: true }
     });
     const settings: any = tenant?.settings_json || {};
+    // La contraseña SMTP no sale de acá. La pantalla recibe el marcador
+    // `__guardado__` para poder distinguir "hay una configurada" de "no hay
+    // ninguna" sin llevarse el valor.
+    const enmascarado: any = enmascararSettingsJson(settings);
     return {
-      smtp: settings.smtp || null,
-      fcm: settings.fcm || null
+      smtp: enmascarado.smtp || null,
+      fcm: enmascarado.fcm || null
     };
   }
 
   async updateNotificationsConfig(tenantId: string, data: any) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     const settings: any = tenant?.settings_json || {};
-    settings.smtp = data.smtp;
+    // Los secretos se cifran al entrar. Si el formulario reenvía el marcador
+    // —porque el operador cambió el host y no tocó la contraseña— se conserva
+    // la que ya estaba en vez de pisarla con la cadena del marcador.
+    settings.smtp = cifrarCredencialesNotificaciones(data.smtp, settings.smtp);
     settings.fcm = data.fcm;
-    return this.prisma.tenant.update({
+    await this.prisma.tenant.update({
       where: { id: tenantId },
       data: { settings_json: settings }
     });
+    // La respuesta del guardado va enmascarada por lo mismo que la lectura: si
+    // no, filtraría justo lo que la lectura protege.
+    return enmascararSettingsJson(settings);
   }
 
   async getCarbonConfig(tenantId: string) {

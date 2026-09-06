@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../services/api';
 
 export const PrivateGuard: React.FC = () => {
   const { token, logout, setUser } = useAuthStore();
@@ -13,7 +14,7 @@ export const PrivateGuard: React.FC = () => {
         return;
       }
       try {
-        const res = await fetch('http://localhost:3000/auth/me', {
+        const res = await fetch(`${API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.status === 401) {

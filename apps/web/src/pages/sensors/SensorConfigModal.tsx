@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, Thermometer, Droplets } from 'lucide-react';
 import { avisar, escribir, mensajeDeError } from '../../services/avisos';
+import { API_URL } from '../../services/api';
 
 interface Props {
   vehicleId: string;
@@ -37,7 +38,7 @@ export const SensorConfigModal: React.FC<Props> = ({ vehicleId, vehicleLabel, on
     setLoading(true);
     setErrorCarga(null);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/sensors/config`, {
+      const res = await fetch(`${API_URL}/api/v1/sensors/config`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (!res.ok) {
@@ -133,7 +134,7 @@ export const SensorConfigModal: React.FC<Props> = ({ vehicleId, vehicleLabel, on
 
     const guardarUmbral = (sensor_type: string, min: number | '', max: number | '', activo: boolean) =>
       escribir(
-        () => fetch('http://localhost:3000/api/v1/sensors/config', {
+        () => fetch(`${API_URL}/api/v1/sensors/config`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

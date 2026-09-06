@@ -1,5 +1,9 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  enmascararSettingsJson,
+  cifrarCredencialesNotificaciones,
+} from '../common/crypto/credenciales-notificaciones';
 import { tenantWhere } from '../common/tenant/tenant-scope';
 import { AccesoEntidadesService } from '../common/access/acceso-entidades.service';
 
@@ -42,7 +46,11 @@ export class AlertsService {
       where: { id: tenantId },
       select: { settings_json: true },
     });
-    return tenant?.settings_json || {};
+    // ⚠️ Devolvía `settings_json` ENTERO, con la contraseña SMTP adentro, a
+    // cualquier usuario autenticado: un `viewer` abría la consola del
+    // navegador y la tenía. Y la pantalla no la muestra en ninguna parte, así
+    // que viajaba para nada. Ahora sale el marcador "hay una guardada".
+    return enmascararSettingsJson(tenant?.settings_json);
   }
 
   async updateSettings(tenantId: string, userId: string, settings: any) {
@@ -61,14 +69,24 @@ export class AlertsService {
       currentSettings = {};
     }
     
-    const updatedSettings = { ...currentSettings, ...settings };
+    // Los secretos entrantes se cifran; el marcador `__guardado__` que devuelve
+    // la lectura significa "no lo toqués" y conserva el valor previo, en vez de
+    // sobreescribir la contraseña real con la cadena del marcador.
+    const entrante = { ...settings };
+    if ('smtp' in entrante) {
+      entrante.smtp = cifrarCredencialesNotificaciones(entrante.smtp, currentSettings?.smtp);
+    }
+
+    const updatedSettings = { ...currentSettings, ...entrante };
 
     await this.prisma.tenant.update({
       where: { id: tenantId },
       data: { settings_json: updatedSettings },
     });
 
-    return updatedSettings;
+    // Lo que vuelve al navegador va enmascarado, igual que en la lectura: si
+    // no, la respuesta del guardado filtraría lo que la lectura protege.
+    return enmascararSettingsJson(updatedSettings);
   }
 
   async resolveAlert(tenantId: string, id: string, userId: string, resolution_note?: string) {

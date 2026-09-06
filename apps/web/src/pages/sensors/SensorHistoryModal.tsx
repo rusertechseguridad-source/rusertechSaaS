@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { X, Activity, Download } from 'lucide-react';
 import { exportToCsv } from '../../utils/export';
+import { API_URL } from '../../services/api';
 
 interface Props {
   vehicle: any;
@@ -22,7 +23,7 @@ export const SensorHistoryModal: React.FC<Props> = ({ vehicle, sensorType, token
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/sensors/history/${vehicle.id}?sensorType=${sensorType}&period=${period}`, {
+      const res = await fetch(`${API_URL}/api/v1/sensors/history/${vehicle.id}?sensorType=${sensorType}&period=${period}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

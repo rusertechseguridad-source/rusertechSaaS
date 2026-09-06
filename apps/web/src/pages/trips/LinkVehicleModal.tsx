@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Link as LinkIcon, Truck } from 'lucide-react';
 import { useTripsStore } from '../../store/tripsStore';
+import { API_URL } from '../../services/api';
 
 interface LinkVehicleModalProps {
   tripId: string;
@@ -26,7 +27,7 @@ export const LinkVehicleModal: React.FC<LinkVehicleModalProps> = ({ tripId, onCl
 
   const fetchVehicles = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/vehicles', {
+      const res = await fetch(`${API_URL}/api/v1/vehicles`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (res.ok) {

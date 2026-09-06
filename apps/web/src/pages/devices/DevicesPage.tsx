@@ -4,6 +4,7 @@ import { useDevicesStore, type Device } from '../../store/devicesStore';
 import { exportToCsv } from '../../utils/export';
 import { useTranslation } from 'react-i18next';
 import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
+import { API_URL } from '../../services/api';
 
 export const DevicesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -32,7 +33,7 @@ export const DevicesPage: React.FC = () => {
 
   useEffect(() => {
     fetchDevices();
-    fetch('http://localhost:3000/api/v1/avl-users', {
+    fetch(`${API_URL}/api/v1/avl-users`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
     })
       .then(res => res.json())

@@ -1,9 +1,13 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import { descifrarJson, CONTEXTO } from '../common/crypto/secretos-cifrados';
 
 @Processor('forwarding.send')
 export class ForwardingProcessor extends WorkerHost {
+  private readonly logger = new Logger(ForwardingProcessor.name);
+
   constructor(private readonly prisma: PrismaService) {
     super();
   }
@@ -26,9 +30,22 @@ export class ForwardingProcessor extends WorkerHost {
       };
 
       if (forwarder.auth_type === 'bearer' && forwarder.auth_credentials) {
-        const creds = forwarder.auth_credentials as any;
-        if (creds.token) {
-          headers['Authorization'] = `Bearer ${creds.token}`;
+        // El descifrado ocurre ACÁ, en el único punto que necesita el valor, y
+        // el resultado no sale de esta función. `descifrarJson` tolera el dato
+        // legado en texto plano (`esLegado`), así que las filas anteriores a la
+        // Tanda 7 siguen funcionando sin migración previa.
+        const { valor, esLegado } = descifrarJson<{ token?: string }>(
+          forwarder.auth_credentials,
+          CONTEXTO.forwarderAuthCredentials,
+        );
+        if (esLegado) {
+          this.logger.warn(
+            `El reenviador ${forwarder.id} guarda su credencial en texto plano. ` +
+              'Se vuelve a cifrar al guardarlo desde la pantalla.',
+          );
+        }
+        if (valor?.token) {
+          headers['Authorization'] = `Bearer ${valor.token}`;
         }
       }
 

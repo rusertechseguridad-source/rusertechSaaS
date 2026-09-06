@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_URL } from '../services/api';
 
 interface SimulatorJob {
   id: string;
@@ -28,7 +29,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
 
   fetchStatus: async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/simulator/status', {
+      const res = await fetch(`${API_URL}/api/v1/simulator/status`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch status');
@@ -42,7 +43,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   sendPoint: async (data) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/simulator/send', {
+      const res = await fetch(`${API_URL}/api/v1/simulator/send`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -59,7 +60,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   sendAlert: async (data) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/simulator/alert', {
+      const res = await fetch(`${API_URL}/api/v1/simulator/alert`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -76,7 +77,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
   startRoute: async (data) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/simulator/route', {
+      const res = await fetch(`${API_URL}/api/v1/simulator/route`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -92,7 +93,7 @@ export const useSimulatorStore = create<SimulatorState>((set) => ({
 
   deleteRoute: async (jobId) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/simulator/route/${jobId}`, {
+      const res = await fetch(`${API_URL}/api/v1/simulator/route/${jobId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { escribir, type Resultado } from '../services/avisos';
+import { API_URL } from '../services/api';
 
 interface Location {
   id: string;
@@ -40,7 +41,7 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
   fetchLocations: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/locations', {
+      const res = await fetch(`${API_URL}/api/v1/locations`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch locations');
@@ -53,7 +54,7 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
 
   createLocation: async (data) => {
     const r = await escribir(
-      () => fetch('http://localhost:3000/api/v1/locations', {
+      () => fetch(`${API_URL}/api/v1/locations`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -66,7 +67,7 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
 
   updateLocation: async (id, data) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/locations/${id}`, {
+      () => fetch(`${API_URL}/api/v1/locations/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -79,7 +80,7 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
 
   deleteLocation: async (id) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/locations/${id}`, {
+      () => fetch(`${API_URL}/api/v1/locations/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       }),
@@ -91,7 +92,7 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
 
   toggleActive: async (id, isActive) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/locations/${id}/toggle`, {
+      () => fetch(`${API_URL}/api/v1/locations/${id}/toggle`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ is_active: isActive }),

@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import { descifrarSecreto, CONTEXTO } from '../common/crypto/secretos-cifrados';
 import { Logger } from '@nestjs/common';
 
 @Processor('carbon')
@@ -84,7 +85,38 @@ export class CarbonProcessor extends WorkerHost {
           where: { tenant_id: tenantId },
         });
 
-        const useClimatiq = settings?.use_climatiq_api && settings?.climatiq_api_key;
+        // La clave se descifra ACÁ, en el único punto que la consume, y no sale
+        // de esta función. `descifrarSecreto` devuelve el texto plano tal cual
+        // si el valor es anterior a la Tanda 7 (`esLegado`), así que un tenant
+        // que ya tenía su clave guardada sigue calculando sin migración previa.
+        const claveClimatiq = (() => {
+          if (!settings?.climatiq_api_key) return null;
+          try {
+            const { valor, esLegado } = descifrarSecreto(
+              settings.climatiq_api_key,
+              CONTEXTO.climatiqApiKey,
+            );
+            if (esLegado) {
+              this.logger.warn(
+                `El tenant ${tenantId} guarda su clave de Climatiq en texto plano. ` +
+                  'Se cifra sola la próxima vez que se guarde desde la pantalla.',
+              );
+            }
+            return valor;
+          } catch (error) {
+            // Una clave indescifrable NO tumba el cálculo: se cae a la fórmula,
+            // que es el método por defecto, y queda dicho por qué. Lanzar acá
+            // dejaría sin huella de carbono a todo el tenant por un problema de
+            // configuración de una integración opcional.
+            this.logger.error(
+              `No se pudo descifrar la clave de Climatiq del tenant ${tenantId}: ` +
+                `${(error as Error).message} Se calcula por fórmula.`,
+            );
+            return null;
+          }
+        })();
+
+        const useClimatiq = settings?.use_climatiq_api && claveClimatiq;
         let co2_kg = 0;
         let method = 'formula';
         let climatiq_response = null;
@@ -100,7 +132,7 @@ export class CarbonProcessor extends WorkerHost {
               const res = await fetch('https://api.climatiq.io/data/v1/estimate', {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${settings.climatiq_api_key}`,
+                  'Authorization': `Bearer ${claveClimatiq}`,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({

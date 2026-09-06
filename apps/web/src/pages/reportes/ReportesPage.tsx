@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { BarChart3, Download } from 'lucide-react';
 import { RequirePermission, SinPermiso } from '../../components/RequirePermission';
 import { exportToCsv } from '../../utils/export';
+import { API_URL } from '../../services/api';
 
 /**
  * REPORTES AGREGADOS — tendencias por período.
@@ -16,7 +17,7 @@ import { exportToCsv } from '../../utils/export';
  * viaje se cerró. Los viajes en curso no son parte de las tendencias.
  */
 
-const API = 'http://localhost:3000/api/v1/informes/reportes';
+const API = `${API_URL}/api/v1/informes/reportes`;
 
 type Pestana = 'vehiculos' | 'conductores' | 'rutas' | 'paradas-no-declaradas' | 'cadena-frio';
 

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert, Key, Cpu, ChevronDown, BarChart3 } from 'lucide-react';
 import { isAdminRole } from '../constants/adminRoles';
 import { motivoSinPermiso } from '../components/RequirePermission';
+import { API_URL } from '../services/api';
 
 export const AppLayout: React.FC = () => {
   const { logout, user } = useAuthStore();
@@ -34,7 +35,7 @@ export const AppLayout: React.FC = () => {
       try {
         const token = localStorage.getItem('rusertech_token');
         if (!token) return;
-        const res = await fetch('http://localhost:3000/api/v1/alerts', {
+        const res = await fetch(`${API_URL}/api/v1/alerts`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {

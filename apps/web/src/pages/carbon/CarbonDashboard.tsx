@@ -3,6 +3,7 @@ import { Leaf, Activity, Download, BarChart2 } from 'lucide-react';
 import { RequirePermission } from '../../components/RequirePermission';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
+import { API_URL } from '../../services/api';
 
 export const CarbonDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ export const CarbonDashboard: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/carbon/settings', {
+      const res = await fetch(`${API_URL}/api/v1/carbon/settings`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (res.ok) {
@@ -36,7 +37,7 @@ export const CarbonDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/analytics/carbon?period=${period}`, {
+      const res = await fetch(`${API_URL}/api/v1/analytics/carbon?period=${period}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` }
       });
       if (res.ok) {
@@ -62,7 +63,7 @@ export const CarbonDashboard: React.FC = () => {
 
   const saveSettings = async (useClimatiq: boolean, key: string) => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/carbon/settings/toggle-climatiq', {
+      const res = await fetch(`${API_URL}/api/v1/carbon/settings/toggle-climatiq`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

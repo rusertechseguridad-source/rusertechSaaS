@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { OperationalProtocol, CreateProtocolDTO, UpdateProtocolDTO } from './types';
+import { API_URL } from '../../../services/api';
 
-const API_URL = 'http://localhost:3000/api/v1/operational-protocols';
+/** Prefijo de este módulo. La base sale de `services/api`. */
+const BASE = `${API_URL}/api/v1/operational-protocols`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('rusertech_token');
@@ -20,7 +22,7 @@ export const useProtocols = (filters?: { trip_status?: string; risk_level?: stri
       if (filters?.risk_level) queryParams.append('risk_level', filters.risk_level);
       if (filters?.is_active !== undefined) queryParams.append('is_active', String(filters.is_active));
 
-      const res = await fetch(`${API_URL}?${queryParams.toString()}`, { headers: getHeaders() });
+      const res = await fetch(`${BASE}?${queryParams.toString()}`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Error al cargar protocolos');
       return res.json();
     }
@@ -31,7 +33,7 @@ export const useCreateProtocol = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateProtocolDTO) => {
-      const res = await fetch(API_URL, {
+      const res = await fetch(BASE, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data)
@@ -52,7 +54,7 @@ export const useUpdateProtocol = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateProtocolDTO }) => {
-      const res = await fetch(`${API_URL}/${id}`, {
+      const res = await fetch(`${BASE}/${id}`, {
         method: 'PATCH',
         headers: getHeaders(),
         body: JSON.stringify(data)
@@ -73,7 +75,7 @@ export const useDeleteProtocol = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API_URL}/${id}`, {
+      const res = await fetch(`${BASE}/${id}`, {
         method: 'DELETE',
         headers: getHeaders()
       });

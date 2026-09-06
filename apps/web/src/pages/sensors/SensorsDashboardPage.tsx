@@ -8,6 +8,7 @@ import { SelectorVehiculoSensor } from './SelectorVehiculoSensor';
 import { Search, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTienePermiso, propsSinPermiso, CLASES_DESHABILITADO } from '../../components/RequirePermission';
+import { API_URL } from '../../services/api';
 
 export const SensorsDashboardPage: React.FC = () => {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export const SensorsDashboardPage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/sensors/dashboard', {
+      const res = await fetch(`${API_URL}/api/v1/sensors/dashboard`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

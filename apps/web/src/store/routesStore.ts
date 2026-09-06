@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_URL } from '../services/api';
 
 interface Route {
   id: string;
@@ -42,7 +43,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   fetchRoutes: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/routes', {
+      const res = await fetch(`${API_URL}/api/v1/routes`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch routes');
@@ -55,7 +56,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
   createRoute: async (data) => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/routes', {
+      const res = await fetch(`${API_URL}/api/v1/routes`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -69,7 +70,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
   updateRoute: async (id, data) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/routes/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/routes/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -83,7 +84,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
   deleteRoute: async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/routes/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/routes/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -96,7 +97,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
   toggleActive: async (id, isActive) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/routes/${id}/toggle`, {
+      const res = await fetch(`${API_URL}/api/v1/routes/${id}/toggle`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ is_active: isActive }),

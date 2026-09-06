@@ -289,7 +289,89 @@ export function descifrarSecreto(
 export const CONTEXTO = {
   avlProviderPassword: 'avl_users.provider_password',
   avlProviderApiKey: 'avl_users.provider_api_key',
+  // ── Agregados en la Tanda 7 ──────────────────────────────────────────────
+  // Las tres credenciales que quedaban en texto plano con este módulo ya
+  // escrito y probado desde la Fase C.
+  //
+  // ⚠️ La diferencia con las de `avl_users`: aquéllas existen para que una
+  // PERSONA las lea y se loguee a mano, así que se descifran al mostrarlas.
+  // Éstas las consume el BACKEND, así que se descifran en el punto de uso y
+  // NUNCA viajan al navegador — la pantalla recibe si hay credencial, no cuál.
+  forwarderAuthCredentials: 'position_forwarders.auth_credentials',
+  climatiqApiKey: 'carbon_settings.climatiq_api_key',
+  smtpPassword: 'tenants.settings_json.smtp.password',
 } as const;
+
+/**
+ * Marca de una credencial cifrada guardada DENTRO de una columna JSON.
+ *
+ * `position_forwarders.auth_credentials` es `Json?` y guarda un objeto cuya
+ * forma depende de `auth_type` (hoy `{ token }` para bearer). Cifrar la
+ * columna entera obligaría a cambiarla a `text`, que es una migración de
+ * esquema y este proyecto no corre migraciones automáticas.
+ *
+ * La alternativa es guardar el criptograma como una propiedad reconocible
+ * dentro del mismo JSON. La columna sigue siendo `Json`, no hay ALTER, y el
+ * prefijo `v1:` del propio criptograma sigue distinguiendo cifrado de legado.
+ */
+export const CLAVE_JSON_CIFRADO = '__cifrado';
+
+/**
+ * Un objeto JSON con la credencial cifrada adentro.
+ *
+ * Se declara como `Record<string, string>` y no como una interfaz con una sola
+ * propiedad porque Prisma exige un tipo con firma de índice para sus columnas
+ * `Json` (`InputJsonObject`). Una interfaz cerrada no la tiene y el tipado
+ * fallaba al guardar.
+ */
+export type JsonCifrado = Record<string, string>;
+
+/** ¿Este JSON guarda una credencial cifrada? */
+export function esJsonCifrado(valor: unknown): valor is JsonCifrado {
+  return (
+    typeof valor === 'object' &&
+    valor !== null &&
+    !Array.isArray(valor) &&
+    estaCifrado((valor as Record<string, unknown>)[CLAVE_JSON_CIFRADO] as string)
+  );
+}
+
+/**
+ * Cifra un objeto JSON entero para guardarlo en una columna `Json`.
+ *
+ * Devuelve `null` para un objeto vacío o ausente: mismo criterio que
+ * `cifrarSecreto`, para que "no hay credencial" no se convierta en un
+ * criptograma que miente sobre la existencia del dato.
+ */
+export function cifrarJson(valor: unknown, contexto: string): JsonCifrado | null {
+  if (valor === null || valor === undefined) return null;
+  if (esJsonCifrado(valor)) return valor; // ya cifrado: idempotente
+  if (typeof valor === 'object' && !Array.isArray(valor) && Object.keys(valor).length === 0) {
+    return null;
+  }
+
+  const cifrado = cifrarSecreto(JSON.stringify(valor), contexto);
+  return cifrado === null ? null : { [CLAVE_JSON_CIFRADO]: cifrado };
+}
+
+/**
+ * Descifra lo que `cifrarJson` guardó, tolerando el dato legado.
+ *
+ * Un JSON sin la marca es un valor anterior a la Tanda 7 y se devuelve tal
+ * cual, igual que hace `descifrarSecreto` con el texto plano: la convivencia
+ * es lo que permite cifrar sin una migración obligatoria previa.
+ */
+export function descifrarJson<T = unknown>(
+  guardado: unknown,
+  contexto: string,
+): { valor: T | null; esLegado: boolean } {
+  if (guardado === null || guardado === undefined) return { valor: null, esLegado: false };
+  if (!esJsonCifrado(guardado)) return { valor: guardado as T, esLegado: true };
+
+  const { valor } = descifrarSecreto(guardado[CLAVE_JSON_CIFRADO], contexto);
+  if (valor === null) return { valor: null, esLegado: false };
+  return { valor: JSON.parse(valor) as T, esLegado: false };
+}
 
 
 /** Comparación en tiempo constante, por si se necesita verificar un secreto. */

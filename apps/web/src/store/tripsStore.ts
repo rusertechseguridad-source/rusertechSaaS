@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { escribir, type Resultado } from '../services/avisos';
+import { API_URL } from '../services/api';
 
 export interface Trip {
   id: string;
@@ -64,7 +65,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   fetchTrips: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch('http://localhost:3000/api/v1/trips', {
+      const res = await fetch(`${API_URL}/api/v1/trips`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (!res.ok) throw new Error('Error al obtener viajes');
@@ -76,7 +77,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   createTrip: async (data) => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/trips', {
+      const res = await fetch(`${API_URL}/api/v1/trips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   cambiarEstado: async (id, status, notes) => {
     const r = await escribir(
-      () => fetch(`http://localhost:3000/api/v1/trips/${id}/status`, {
+      () => fetch(`${API_URL}/api/v1/trips/${id}/status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
 
   updateTrip: async (id, data) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +127,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   deleteTrip: async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
@@ -151,7 +152,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   getTrip: async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${id}`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (!res.ok) return null;
@@ -163,7 +164,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   getLinkedVehicles: async (tripId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/linked-vehicles`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
       if (!res.ok) throw new Error('Error al obtener vehículos enlazados');
@@ -175,7 +176,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   linkVehicle: async (tripId: string, data: any) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/linked-vehicles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +196,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   unlinkVehicle: async (tripId: string, vehicleId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/linked-vehicles/${vehicleId}`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/linked-vehicles/${vehicleId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
@@ -207,7 +208,7 @@ export const useTripsStore = create<TripsState>((set, get) => ({
   },
   generateMobilePairing: async (tripId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/trips/${tripId}/mobile-pairing`, {
+      const res = await fetch(`${API_URL}/api/v1/trips/${tripId}/mobile-pairing`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('rusertech_token')}` },
       });
