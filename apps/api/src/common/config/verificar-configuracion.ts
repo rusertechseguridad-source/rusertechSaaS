@@ -29,6 +29,7 @@ import { REQUIRED_SECRETS, getRequiredSecret } from './secrets';
 import { VARIABLE_CLAVE } from '../crypto/secretos-cifrados';
 import { problemasDeCors, origenesPermitidos, direccionPublica } from './direccion-publica';
 import { problemasDeRedis } from './redis-conexion';
+import { problemasDeUmbralesSalud, umbralesSalud } from './umbrales-salud';
 
 export interface Diagnostico {
   errores: string[];
@@ -156,6 +157,31 @@ function revisarFrontend(d: Diagnostico): void {
         'máquina de quien abra el navegador.',
     );
   }
+
+}
+
+/**
+ * El chequeo de salud.
+ *
+ * Los umbrales inválidos son ERROR y los aporta `problemasDeUmbralesSalud`.
+ * Acá va sólo el recordatorio de la sonda, que no se puede verificar desde el
+ * proceso: el timeout de la sonda vive en la plataforma, no en el `.env`.
+ *
+ * ⚠️ Sólo en producción. En desarrollo nadie tiene un balanceador delante y el
+ * aviso sería ruido en cada `npm run start:dev` — que es como se entrena a la
+ * gente a no leer los avisos.
+ */
+function revisarSalud(d: Diagnostico): void {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const { timeoutMs } = umbralesSalud();
+  d.avisos.push(
+    `El chequeo de salud espera hasta ${timeoutMs} ms por la base antes de ` +
+      'declararla caída. La sonda del balanceador tiene que tener un timeout ' +
+      'MAYOR que ese número: si corta antes, nunca ve el 503 ni el diagnóstico ' +
+      '—ve un timeout genérico, igual para una base caída que para un proceso ' +
+      'colgado. Ver README_DESPLIEGUE.md § Chequeo de salud.',
+  );
 }
 
 /** Reúne el diagnóstico completo sin lanzar. Es lo que prueban los tests. */
@@ -174,9 +200,16 @@ export function diagnosticarConfiguracion(): Diagnostico {
   revisarCifrado(d);
   revisarCorreo(d);
   revisarFrontend(d);
+  revisarSalud(d);
   const redis = problemasDeRedis();
   d.errores.push(...redis.errores);
   d.avisos.push(...redis.avisos);
+
+  // ⚠️ Un par de umbrales mal puesto no rompe nada visible: el chequeo de
+  // salud simplemente deja de distinguir "lenta" de "caída" y vuelve a sacar
+  // de rotación instancias sanas. Es exactamente la clase de fallo silencioso
+  // que este verificador existe para atrapar, así que va como ERROR.
+  d.errores.push(...problemasDeUmbralesSalud());
 
   return d;
 }

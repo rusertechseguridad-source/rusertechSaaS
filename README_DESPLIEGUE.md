@@ -66,6 +66,8 @@ PUBLIC_API_URL="https://api.midominio.com"
 | `REDIS_URL` | Redis. | Aviso. Quedan sin servicio: huella de carbono, reenvío de posiciones y simulador de rutas. |
 | `REDIS_TOKEN` | Token de Upstash. | Obligatorio **sólo** si `REDIS_URL` es una `https://` (ver abajo). |
 | `TRUST_PROXY` | `"true"` si hay un proxy de confianza delante. | El límite de peticiones cuenta por la IP del balanceador en vez de por la del cliente. |
+| `HEALTH_TIMEOUT_MS` | Tope antes de declarar caída la base. | 10 s. Ver §7. |
+| `HEALTH_DEGRADADO_MS` | A partir de cuánto la base cuenta como lenta. | 1 s. Ver §7. |
 | `PORT` | Puerto de escucha. | 3000. |
 
 ---
@@ -248,19 +250,86 @@ Las dos son **públicas y sin autenticación**: quien chequea salud es una
 máquina que no tiene credenciales. Por eso la respuesta no incluye versiones,
 cadenas de conexión ni errores crudos de la base.
 
-`GET /health` devuelve `200` si la base responde y `503` si no. **Redis caído
-no lo tumba**: la instancia sigue siendo útil (las posiciones en vivo salen de
-Postgres), así que informa `"estado": "degradado"` y responde 200. Un 503 ahí
-haría que el balanceador sacara de rotación una instancia sana.
+### Tres estados, y sólo uno saca de rotación
+
+| Estado | Qué pasó | HTTP | ¿Sale de rotación? |
+|---|---|---|---|
+| `ok` | la base respondió por debajo de `HEALTH_DEGRADADO_MS` | 200 | no |
+| `degradado` | la base respondió, pero más lento · **o** Redis está caído | 200 | no |
+| `caido` | la base **no respondió** antes de `HEALTH_TIMEOUT_MS` | 503 | sí |
+
+**Por qué "lenta" no es "caída".** Una base lenta sigue sirviendo. Sacar
+instancias de rotación por lentitud concentra el mismo tráfico en menos
+procesos contra la misma base lenta: empeora exactamente lo que quiere
+arreglar. Sólo "no respondió en absoluto" justifica el 503.
+
+**Redis nunca lo tumba.** Es opcional (las posiciones en vivo salen de
+Postgres): si está caído, la instancia sigue siendo útil.
 
 ```json
 {
-  "estado": "ok",
-  "base_de_datos": { "ok": true, "ms": 12 },
+  "estado": "degradado",
+  "base_de_datos": {
+    "ok": true, "ms": 1840, "lenta": true,
+    "detalle": "respondió en 1840 ms, por encima del umbral de 1000 ms
+                (HEALTH_DEGRADADO_MS). La instancia sigue sirviendo."
+  },
   "redis": { "ok": null, "ms": null, "detalle": "no configurado" },
+  "umbrales_ms": { "timeoutMs": 10000, "degradadoMs": 1000 },
   "tiempo_encendido_s": 341
 }
 ```
+
+Los umbrales viajan en la respuesta a propósito: sin ellos, un `ms: 1840` no
+dice si eso está bien o mal, y habría que ir al `.env` del servidor para
+interpretarlo.
+
+### Los dos números
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `HEALTH_TIMEOUT_MS` | `10000` | Pasado esto sin respuesta, la base se declara caída. Mínimo aceptado: 500 ms. |
+| `HEALTH_DEGRADADO_MS` | `1000` | Respondió, pero por encima de esto cuenta como lenta. |
+
+⚠️ **El valor por defecto es para una base REMOTA.** Medido en producción: con
+un tope de 3 s, la base en `us-west-2` consultada desde Buenos Aires devolvía
+`"estado":"caido"` con la base funcionando perfectamente — Prisma conectado y
+el motor sincronizando vehículos en el mismo arranque. Un balanceador habría
+sacado de rotación una instancia sana. 10 s cubre la latencia entre
+continentes más el arranque en frío del pooler.
+
+⚠️ **`HEALTH_DEGRADADO_MS` tiene que ser MENOR que `HEALTH_TIMEOUT_MS`.** Con
+el par al revés, el estado `degradado` es inalcanzable y el chequeo vuelve a
+ser binario. La aplicación **no arranca** y lo explica.
+
+### ⚠️ El timeout de la sonda
+
+La sonda del balanceador tiene que esperar **más** que `HEALTH_TIMEOUT_MS`. Si
+corta antes, nunca ve el 503 ni el cuerpo con el diagnóstico: ve un timeout
+genérico, que es lo mismo para una base caída que para un proceso colgado.
+
+Con los valores por defecto (tope de 10 s), la sonda necesita al menos 12–15 s.
+Eso está **por encima del default de casi todas las plataformas**, así que hay
+que ponerlo a mano:
+
+```yaml
+# Kubernetes
+readinessProbe:
+  httpGet: { path: /health, port: 3000 }
+  timeoutSeconds: 15        # > HEALTH_TIMEOUT_MS
+  periodSeconds: 30
+  failureThreshold: 3
+livenessProbe:
+  httpGet: { path: /health/vivo, port: 3000 }   # NO /health
+  timeoutSeconds: 3
+```
+
+El `livenessProbe` va contra `/health/vivo`, que **no toca la base**: si
+apuntara a `/health`, una base con un mal minuto reiniciaría todas las
+instancias a la vez y convertiría una lentitud en una caída.
+
+En Railway / Render / Fly, el equivalente es el campo de *health check timeout*
+de la plataforma; el valor por defecto suele ser 5 s y hay que subirlo.
 
 ---
 

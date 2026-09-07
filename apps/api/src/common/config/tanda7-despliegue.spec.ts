@@ -727,15 +727,203 @@ describe('Tanda 7 · 7 · configuración incompleta impide arrancar', () => {
     const t = leerApi('src/health/health.controller.ts');
     expect(t).toMatch(/@Get\('vivo'\)/);
     expect(t).toMatch(/ServiceUnavailableException/);
-    // Redis NO lo tumba: es opcional y sacar de rotación una instancia sana
-    // por eso sería peor que el problema.
-    expect(t).toMatch(/estado = base\.ok \? \(redis\.ok === false \? 'degradado' : 'ok'\) : 'caido'/);
+    // ⚠️ Se afirma el COMPORTAMIENTO, no la forma: la versión anterior de esta
+    // línea copiaba el ternario exacto y se habría roto sola con cualquier
+    // reescritura, además de no decir nada sobre lo que importa.
+    //
+    // Lo que importa: sólo "no respondió" saca de rotación. Ni una base lenta
+    // ni Redis caído — las dos cosas dejan la instancia sirviendo.
+    expect(t).toMatch(/if \(base\.ok === false\) estado = 'caido';/);
+    expect(t).toMatch(/else if \(base\.lenta \|\| redis\.ok === false\) estado = 'degradado';/);
+    expect(t).toMatch(/if \(estado === 'caido'\) throw new ServiceUnavailableException/);
+    // Y el tope ya no está escrito a mano.
+    expect(t).toMatch(/umbralesSalud\(\)/);
+    expect(soloCodigo(t)).not.toMatch(/3000/);
     // ⚠️ NO alcanza con buscar el nombre en el archivo: el `import` lo contiene
     // y el módulo puede estar importado sin estar REGISTRADO. Ya pasó en la
     // Tanda 4 con `PermissionsGuard`. Se busca dentro del array `imports`.
     const modulo = leerApi('src/app.module.ts');
     const bloqueImports = modulo.slice(modulo.indexOf('imports: ['), modulo.indexOf('controllers:'));
     expect(bloqueImports).toMatch(/^\s*HealthModule,\s*$/m);
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 7 bis · EL CHEQUEO DE SALUD NO PUEDE DAR FALSO NEGATIVO
+  // ══════════════════════════════════════════════════════════════════════════
+  describe('el tope de la base es configurable y distingue lenta de caída', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { HealthController } = require('../../health/health.controller');
+
+    /** Un `medir` real contra una dependencia que tarda lo que se le diga. */
+    const armar = (msBase: number, redisConfigurado = false, msRedis = 1) => {
+      const demora = (ms: number) => () =>
+        new Promise((resolver) => setTimeout(() => resolver(1), ms));
+      const prisma = { $queryRaw: (..._args: unknown[]) => demora(msBase)() } as any;
+      const redis = {
+        isConfigured: () => redisConfigurado,
+        getClient: () => ({ ping: demora(msRedis) }),
+      } as any;
+      return new HealthController(prisma, redis);
+    };
+
+    // `any` a propósito: el controlador entra por `require` para poder
+    // instanciarlo con dependencias falsas, así que no hay tipo que propagar.
+    // Sin esto, `tsc --noEmit` infiere `unknown` y falla — y `jest` NO lo
+    // detecta, que es justo por lo que el verificador corre las dos cosas.
+    const conUmbrales = async (
+      timeout: number,
+      degradado: number,
+      fn: () => Promise<any>,
+    ): Promise<any> => {
+      const previo = { ...process.env };
+      process.env.HEALTH_TIMEOUT_MS = String(timeout);
+      process.env.HEALTH_DEGRADADO_MS = String(degradado);
+      try {
+        return await fn();
+      } finally {
+        process.env = previo as NodeJS.ProcessEnv;
+      }
+    };
+
+    it('🔴 una base LENTA es degradado y responde 200, no 503', async () => {
+      // EL DEFECTO, exacto. Con un tope de 3 s y la base en us-west-2, una
+      // consulta que tardaba 3010 ms se declaraba `caido` y devolvía 503 con
+      // la base funcionando perfectamente. Un balanceador habría sacado de
+      // rotación una instancia sana.
+      const r = await conUmbrales(1000, 60, () => armar(150).salud());
+      expect(r.estado).toBe('degradado');
+      expect(r.base_de_datos.ok).toBe(true);
+      expect(r.base_de_datos.lenta).toBe(true);
+      // Y el motivo dice el número Y el umbral: sin el umbral, un "1400 ms"
+      // suelto no permite saber si eso está bien o mal.
+      expect(r.base_de_datos.detalle).toMatch(/por encima del umbral de 60 ms/);
+      expect(r.base_de_datos.detalle).toMatch(/sigue sirviendo/);
+    });
+
+    it('una base rápida es ok', async () => {
+      const r = await conUmbrales(1000, 500, () => armar(1).salud());
+      expect(r.estado).toBe('ok');
+      expect(r.base_de_datos.lenta).toBe(false);
+    });
+
+    it('🔴 una base que NO RESPONDE sí es caído, y sí lanza 503', async () => {
+      // El otro lado: aflojar el tope no puede hacer que una base caída pase
+      // por sana. `caido` es lo único que saca de rotación, y tiene que seguir
+      // funcionando.
+      // ⚠️ Los números respetan el piso de cordura de `umbrales-salud` (500 ms):
+      // por debajo de ese piso la configuración se descarta y vuelve al valor
+      // por defecto, así que una prueba con 60 ms habría estado midiendo el
+      // defecto de 10 s sin darse cuenta.
+      let capturada: any;
+      await conUmbrales(600, 100, async () => {
+        try {
+          await armar(1200).salud();
+        } catch (e) {
+          capturada = e;
+        }
+      });
+      expect(capturada?.getStatus()).toBe(503);
+      const cuerpo = capturada.getResponse();
+      expect(cuerpo.estado).toBe('caido');
+      expect(cuerpo.base_de_datos.ok).toBe(false);
+      expect(cuerpo.base_de_datos.detalle).toMatch(/sin respuesta/);
+    });
+
+    it('el tope sale de la variable, no de un número escrito a mano', async () => {
+      // Si volviera a estar fijo en 3000, este caso —tope de 60 ms— no
+      // detectaría nada y la base "caída" pasaría por sana.
+      const r = await conUmbrales(5000, 4000, () => armar(120).salud());
+      expect(r.estado).toBe('ok');
+      expect(r.umbrales_ms).toEqual({ timeoutMs: 5000, degradadoMs: 4000 });
+    });
+
+    it('Redis caído es degradado, nunca caído: la instancia sigue sirviendo', async () => {
+      const controlador = armar(1, true, 1200);
+      const r = await conUmbrales(600, 300, () => controlador.salud());
+      expect(r.estado).toBe('degradado');
+      expect(r.base_de_datos.ok).toBe(true);
+      expect(r.redis.ok).toBe(false);
+    });
+
+    it('🔴 cancela el temporizador en cada consulta, incluso al responder bien', async () => {
+      // Sin `clearTimeout`, cada llamada deja un timer de 10 s vivo; con una
+      // sonda cada 5 s son dos temporizadores permanentes por dependencia, y en
+      // Node un timer pendiente además retrasa el cierre limpio del proceso.
+      //
+      // ⚠️ La primera versión de esta prueba contaba `process._getActiveHandles()`
+      // y PASABA con el `clearTimeout` sacado: esa API no incluye los timers.
+      // Un contador que no cuenta lo que cree contar es peor que ninguno, así
+      // que ahora se espía la llamada, que es el hecho que importa.
+      const espia = jest.spyOn(global, 'clearTimeout');
+      espia.mockClear();
+
+      await conUmbrales(5000, 1000, async () => {
+        // Redis configurado: dos dependencias por consulta, dos temporizadores.
+        for (let i = 0; i < 3; i++) await armar(1, true, 1).salud();
+      });
+
+      expect(espia).toHaveBeenCalledTimes(6);
+      espia.mockRestore();
+    });
+  });
+
+  describe('los umbrales inválidos frenan el arranque', () => {
+    type Modulo = typeof import('./verificar-configuracion');
+
+    it('🔴 un degradado MAYOR que el tope hace inalcanzable "degradado"', () => {
+      // Fallo silencioso: nada revienta, el chequeo simplemente vuelve a ser
+      // binario y a sacar de rotación instancias sanas por lentitud.
+      const env = { ...entornoValido(), HEALTH_DEGRADADO_MS: '9000', HEALTH_TIMEOUT_MS: '5000' };
+      conEntorno(env, () => {
+        const m = importar<Modulo>('./verificar-configuracion');
+        expect(() => m.verificarConfiguracion()).toThrow(/inalcanzable/);
+      });
+    });
+
+    it('un tope ridículamente corto se rechaza nombrando el motivo', () => {
+      const env = { ...entornoValido(), HEALTH_TIMEOUT_MS: '50' };
+      conEntorno(env, () => {
+        const m = importar<Modulo>('./verificar-configuracion');
+        expect(() => m.verificarConfiguracion()).toThrow(/falso negativo/);
+      });
+    });
+
+    it('un valor que no es número se rechaza', () => {
+      const env = { ...entornoValido(), HEALTH_TIMEOUT_MS: 'diez segundos' };
+      conEntorno(env, () => {
+        const m = importar<Modulo>('./verificar-configuracion');
+        expect(() => m.verificarConfiguracion()).toThrow(/HEALTH_TIMEOUT_MS/);
+      });
+    });
+
+    it('los valores por defecto son los de una base REMOTA, no local', () => {
+      // El defecto original fue probar contra un Postgres local y quedarse con
+      // un número que sólo servía ahí.
+      conEntorno(entornoValido(), () => {
+        const m = importar<typeof import('./umbrales-salud')>('./umbrales-salud');
+        const { timeoutMs, degradadoMs } = m.umbralesSalud();
+        expect(timeoutMs).toBeGreaterThanOrEqual(10_000);
+        expect(degradadoMs).toBeLessThan(timeoutMs);
+      });
+    });
+
+    it('el arranque recuerda que la sonda tiene que esperar más que el tope', () => {
+      // Si la sonda corta antes, nunca ve el 503 ni el diagnóstico: ve un
+      // timeout genérico, igual para una base caída que para un proceso colgado.
+      // Sólo en producción: en desarrollo nadie tiene un balanceador delante y
+      // el aviso en cada arranque es cómo se entrena a la gente a no leerlos.
+      conEntorno({ ...entornoValido(), NODE_ENV: 'production',
+                   CORS_ORIGIN: 'https://app.midominio.com',
+                   PUBLIC_API_URL: 'https://api.midominio.com' }, () => {
+        const m = importar<Modulo>('./verificar-configuracion');
+        expect(m.verificarConfiguracion().join(' ')).toMatch(/sonda del balanceador/);
+      });
+
+      conEntorno(entornoValido(), () => {
+        const m = importar<Modulo>('./verificar-configuracion');
+        expect(m.verificarConfiguracion().join(' ')).not.toMatch(/sonda del balanceador/);
+      });
+    });
   });
 
   it('🔴 el diagnóstico de /health sobrevive al filtro global de excepciones', () => {
