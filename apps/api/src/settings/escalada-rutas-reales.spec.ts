@@ -2,8 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { readFileSync } from 'fs';
-import { join } from 'path';
-import { globSync } from 'glob';
+import { servicios as serviciosDelBackend, corto } from '../common/cableado/primitivas';
 
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
@@ -167,9 +166,13 @@ describe('Escalada de privilegios · las TRES rutas que escriben role_code', () 
     // Ésta es la prueba que faltaba. No verifica un caso: verifica que no haya
     // un CUARTO camino. Es el mismo patrón de `tanda1-cableado.spec.ts`, que
     // ya había encontrado dos decoradores inertes.
-    const raiz = join(__dirname, '..');
-    const servicios = globSync('**/*.service.ts', { cwd: raiz, absolute: true })
-      .filter((f) => !f.endsWith('.spec.ts'));
+    // ⚠️ TANDA 8 · la enumeración viene de `common/cableado/primitivas`, que
+    // ya excluye los `.spec.ts` y los `.d.ts`. Este barrido sigue siendo el
+    // de archivo entero, a propósito: `R8` en `cableado/reglas.spec.ts` lo
+    // hace por MÉTODO y es más estricto. Se conservan los dos porque prueban
+    // cosas distintas —éste, que la ESCALADA concreta de la Tanda 3 no
+    // vuelve; aquél, que ningún método nuevo escriba el rol sin la regla.
+    const servicios = serviciosDelBackend();
 
     it('encuentra los servicios a barrer', () => {
       expect(servicios.length).toBeGreaterThan(10);
@@ -198,8 +201,9 @@ describe('Escalada de privilegios · las TRES rutas que escriben role_code', () 
           .filter((l) => !/role_code:\s*\{/.test(l));
         if (escribe.length === 0) continue;
         if (!texto.includes('exigirRolAsignable')) {
-          // Separador normalizado: en Windows `replace(raiz,'')` deja `\`.
-          const relativo = archivo.replace(raiz, '').replace(/\\/g, '/');
+          // `corto` normaliza el separador: en Windows un `replace` a mano
+          // dejaba `\`, y ya rompió un barrido en la Tanda 4.
+          const relativo = corto(archivo);
           culpables.push(`${relativo} — escribe role_code y no llama a la regla`);
         }
       }

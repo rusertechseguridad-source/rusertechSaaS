@@ -21,5 +21,19 @@
   // de viajes. Acotar `include` a `src` arregla la ruta y saca esos scripts del
   // despliegue de una sola vez, sin borrar nada del repositorio.
   "include": ["src/**/*"],
-  "exclude": ["prisma.config.ts", "node_modules", "test", "dist", "**/*spec.ts"]
+  // ⚠️ `src/common/cableado` es INFRAESTRUCTURA DE BARRIDO, no aplicación: lo
+  // importan los `.spec.ts` y nadie más. Sin excluirlo, `dist/` se llevaría
+  // `primitivas.js`, que hace `require('glob')` — y `glob` no está declarado ni
+  // en `dependencies` ni en `devDependencies` (llega de arrastre). Es el mismo
+  // criterio que sacó `run-sql.js` y `seed_demo_data.js` del artefacto en la
+  // Tanda 7: al despliegue va lo que la aplicación usa, y nada más.
+  // Sigue verificándose con `tsc --noEmit`, que usa el tsconfig del padre.
+  "exclude": [
+    "prisma.config.ts",
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "src/common/cableado"
+  ]
 }

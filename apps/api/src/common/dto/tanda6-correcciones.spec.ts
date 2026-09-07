@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { globSync } from 'glob';
+import { RAIZ_WEB, hayWeb } from '../cableado/primitivas';
 
 import { CarriersController } from '../../carriers/carriers.controller';
 import { CarriersService } from '../../carriers/carriers.service';
@@ -28,12 +28,12 @@ const UUID = '00000000-0000-4000-8000-000000000001';
 const TENANT = '11111111-1111-4111-8111-111111111111';
 
 // ── El frontend, para los barridos ──────────────────────────────────────────
-// Corre desde `apps/api`, que es donde vive jest. La ruta se normaliza porque
-// el separador de Windows ya rompió un barrido en la Tanda 4.
-const WEB = join(__dirname, '..', '..', '..', '..', 'web', 'src');
+// ⚠️ TANDA 8 · la raíz y el `hayWeb` vienen de `common/cableado/primitivas`.
+// Esta suite tenía su propia copia; `tanda7` tenía otra. Dos copias es dos
+// sitios donde arreglar el mismo defecto, y uno de los dos se olvida.
+const WEB = RAIZ_WEB;
 const leer = (rel: string) => readFileSync(join(WEB, rel), 'utf-8');
-const hayWeb = (() => { try { return globSync('**/*.tsx', { cwd: WEB }).length > 0; } catch { return false; } })();
-const siHayWeb = hayWeb ? describe : describe.skip;
+const siHayWeb = hayWeb() ? describe : describe.skip;
 
 // ════════════════════════════════════════════════════════════════════════════
 // 1 · TRANSPORTISTAS: las tres columnas nuevas

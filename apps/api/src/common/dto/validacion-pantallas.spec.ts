@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { readFileSync } from 'fs';
+import { RAIZ_API, leer } from '../cableado/primitivas';
 import { join } from 'path';
 
 import { VehiclesController } from '../../vehicles/vehicles.controller';
@@ -373,7 +373,7 @@ describe('Validación del cuerpo · las seis pantallas de edición', () => {
     // las 23 pruebas de arriba seguirían en verde sobre un backend desprotegido
     // — exactamente el tipo de falso verde de la Tanda 2. Estas dos leen el
     // archivo real.
-    const main = readFileSync(join(__dirname, '..', '..', 'main.ts'), 'utf-8');
+    const main = leer(join(RAIZ_API, 'main.ts'));
 
     it.each([
       ['useGlobalPipes', 'useGlobalPipes'],

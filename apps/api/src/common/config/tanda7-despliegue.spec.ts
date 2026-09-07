@@ -1,7 +1,9 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
-import { globSync } from 'glob';
+import {
+  RAIZ_PAQUETE_API, RAIZ_WEB, hayWeb, fuentesWeb, soloCodigo, corto,
+} from '../cableado/primitivas';
 
 /**
  * TANDA 7 — QUE LA APLICACIÓN SE PUEDA DESPLEGAR.
@@ -11,35 +13,17 @@ import { globSync } from 'glob';
  * se deshizo la corrección y se comprobó que falla. Las reversiones y su
  * resultado están en el reporte.
  *
- * La raíz de `apps/api` se calcula desde `__dirname` y se normaliza el
- * separador: un barrido de la Tanda 4 ya se rompió en Windows por eso.
+ * ⚠️ TANDA 8 · las raíces, el `hayWeb` y el `soloCodigo` que esta suite tenía
+ * propios ahora vienen de `common/cableado/primitivas`. No cambia ninguna
+ * comprobación: cambia que haya UNA implementación. Esta suite tenía su copia
+ * de `soloCodigo`, `tanda6` tenía la suya de `hayWeb`, y `escalada-rutas-reales`
+ * globeaba los servicios por su cuenta — tres sitios donde arreglar el mismo
+ * defecto tres veces, que es exactamente el problema que esta tanda ataca.
  */
-const API = join(__dirname, '..', '..', '..');
+const API = RAIZ_PAQUETE_API;
 const WEB = join(API, '..', 'web');
 const leerApi = (rel: string) => readFileSync(join(API, rel), 'utf-8');
-const hayWeb = (() => {
-  try {
-    return globSync('src/**/*.tsx', { cwd: WEB }).length > 0;
-  } catch {
-    return false;
-  }
-})();
-const siHayWeb = hayWeb ? describe : describe.skip;
-
-/**
- * Quita comentarios antes de escanear.
- *
- * ⚠️ Sin esto, dos barridos de esta misma suite dieron falso positivo contra
- * los COMENTARIOS que explican la corrección ("era `Math.random()`…",
- * "`fetch('/api/v1/…')` resolvería contra Vite"). Es la tercera vez en esta
- * serie que un barrido se equivoca por leer prosa como si fuera código, así
- * que la limpieza vive en un solo lugar.
- */
-function soloCodigo(texto: string): string {
-  return texto
-    .replace(/\/\*[\s\S]*?\*\//g, '')   // bloques /* … */ y /** … */
-    .replace(/(^|[^:])\/\/.*$/gm, '$1'); // línea // …  (sin comerse http://)
-}
+const siHayWeb = hayWeb() ? describe : describe.skip;
 
 const CLAVE = randomBytes(32).toString('base64');
 const SECRETO = randomBytes(48).toString('base64');
@@ -79,7 +63,7 @@ function importar<T>(ruta: string): T {
 // 1 · LA APLICACIÓN YA NO ESTÁ ATADA A localhost
 // ════════════════════════════════════════════════════════════════════════════
 siHayWeb('Tanda 7 · 1 · la dirección de la API sale de una variable', () => {
-  const fuentes = globSync('src/**/*.{ts,tsx}', { cwd: WEB, absolute: true });
+  const fuentes = fuentesWeb();
 
   it('encuentra el frontend', () => {
     expect(fuentes.length).toBeGreaterThan(20);
@@ -90,7 +74,7 @@ siHayWeb('Tanda 7 · 1 · la dirección de la API sale de una variable', () => {
     // datos a la máquina de quien abría el navegador.
     const culpables = fuentes
       .filter((f) => readFileSync(f, 'utf-8').includes('localhost:3000'))
-      .map((f) => f.replace(WEB, '').replace(/\\/g, '/'));
+      .map((f) => corto(f, RAIZ_WEB));
     expect(culpables).toEqual([]);
   });
 
@@ -108,7 +92,7 @@ siHayWeb('Tanda 7 · 1 · la dirección de la API sale de una variable', () => {
     // volvería a incrustar una dirección, esta vez relativa (404 contra Vite).
     const sinImportar = fuentes
       .filter((f) => /fetch\(\s*[`'"]\/api\/v1/.test(soloCodigo(readFileSync(f, 'utf-8'))))
-      .map((f) => f.replace(WEB, '').replace(/\\/g, '/'));
+      .map((f) => corto(f, RAIZ_WEB));
     expect(sinImportar).toEqual([]);
   });
 
