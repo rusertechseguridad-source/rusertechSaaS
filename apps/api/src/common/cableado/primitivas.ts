@@ -633,3 +633,67 @@ export function importacionesSinUsar(texto: string): string[] {
   return simbolos.filter((s) => s && !new RegExp(`\\b${s}\\b`).test(cuerpo));
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// 8 · Qué métodos de una clase ESCRIBEN — siguiendo las llamadas internas
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Las formas en que este repositorio escribe en la base. */
+const ESCRITURA =
+  /INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/i;
+
+/**
+ * Los métodos de un archivo que escriben en la base, DIRECTA o INDIRECTAMENTE.
+ *
+ * ⚠️ LA TRANSITIVIDAD NO ES UN LUJO: ES LO QUE HACE QUE LA REGLA PUEDA FALLAR.
+ *
+ * La primera versión miraba sólo el cuerpo del método, y medida contra el
+ * repositorio encontró CATORCE métodos que escriben, todos con llamador — o
+ * sea, verde. Pero el método que motivó la regla, `SeguimientoService.recalcular`,
+ * NO aparecía en esa lista: escribe a través de un privado (`persistir`), así
+ * que su cuerpo no tiene ningún INSERT.
+ *
+ * Habría sido una regla nueva, escrita a propósito para cazar un defecto
+ * concreto, incapaz de cazar ese defecto. Es exactamente el género de barrido
+ * decorativo que la Tanda 8 encontró seis veces.
+ *
+ * Con el cierre transitivo aparece, y es el único culpable de todo el motor.
+ */
+export function metodosQueEscriben(texto: string): Set<string> {
+  const metodos = metodosDe(texto);
+  const escriben = new Set<string>();
+
+  for (const m of metodos) {
+    if (ESCRITURA.test(m.cuerpo)) escriben.add(m.nombre);
+  }
+
+  // Punto fijo: se repite hasta que no se agregue ninguno más. El tope de
+  // vueltas es la cantidad de métodos — una cadena no puede ser más larga.
+  for (let vuelta = 0; vuelta < metodos.length; vuelta += 1) {
+    let crecio = false;
+    for (const m of metodos) {
+      if (escriben.has(m.nombre)) continue;
+      for (const otro of escriben) {
+        if (new RegExp(`this\\.${otro}\\s*\\(`).test(m.cuerpo)) {
+          escriben.add(m.nombre);
+          crecio = true;
+          break;
+        }
+      }
+    }
+    if (!crecio) break;
+  }
+
+  return escriben;
+}
+
+/**
+ * ¿El método está declarado `private`?
+ *
+ * Se mira la línea de la declaración y no el cuerpo: un `private` mencionado
+ * adentro del método no lo hace privado.
+ */
+export function esPrivado(texto: string, metodo: Metodo): boolean {
+  const linea = soloCodigo(texto).split('\n')[metodo.linea - 1] ?? '';
+  return /\bprivate\b/.test(linea);
+}
+

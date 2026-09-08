@@ -7,6 +7,7 @@ import { MotorConfigService } from './motor-config.service';
 import { TransicionesService } from './transiciones.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
 import { TrabajosService } from './trabajos.service';
+import { SeguimientoService } from './seguimiento/seguimiento.service';
 import { evaluarGeocercas, evaluarTransicionesDeEstado } from './evaluadores/geocercas.evaluator';
 import type { ConfigMotor, Decision, EstadoVehiculo, PuntoEvaluable } from './tipos';
 import { EventosService } from './eventos.service';
@@ -58,6 +59,7 @@ export class MotorWorker {
     private readonly transiciones: TransicionesService,
     private readonly activos: VehiculosActivosService,
     private readonly trabajos: TrabajosService,
+    private readonly seguimiento: SeguimientoService,
   ) {}
 
   @Interval(INTERVALO_MS)
@@ -243,6 +245,49 @@ export class MotorWorker {
       this.logger.debug(
         `Vehículo ${vehicleId}: ${puntos.length} puntos, ${decisiones.length} decisiones.`,
       );
+    }
+
+    // ── EL ESTADO DE SEGUIMIENTO (Etapa 3A) ─────────────────────────────
+    //
+    // ⚠️ ESTA ES LA LÍNEA QUE FALTABA, Y ES LA SEGUNDA VEZ QUE PASA ACÁ.
+    // La Tanda 5 dejó `decisiones` muriendo con la función; la Etapa 3A dejó
+    // `recalcular()` escrito, probado y sin un solo llamador. El estado del
+    // operador quedaba en null con dos condiciones abiertas sobre el viaje.
+    //
+    // ── POR QUÉ ACÁ Y NO «CUANDO CAMBIA UNA CONDICIÓN» ──────────────────
+    //
+    // Enganchar el recálculo a la apertura de una condición parece más
+    // preciso y es una trampa: sólo cubriría las condiciones que abre ESTE
+    // código. Las que abre la Mobile API, o un script, o el evaluador de la
+    // 3B que todavía no existe, no dispararían nada — y el estado quedaría
+    // mintiendo hasta que alguien lo notara. Ya pasó tres veces en este
+    // sistema con la caché de posiciones, los códigos desconocidos y
+    // `last_data_at`: lo que mantiene un backend no lo ve el otro.
+    //
+    // La llegada de un punto es el latido del motor y no depende de quién
+    // escribió la condición. `recalcular` relee el estado del viaje entero y
+    // sólo escribe si cambió, así que un punto que no cambia nada no cuesta
+    // una escritura — sólo la lectura.
+    //
+    // ── POR QUÉ UNA VEZ POR VIAJE POR LOTE ──────────────────────────────
+    // El seguimiento es un evaluador «de estado actual» según §2.4 del
+    // diseño: sólo importa el último punto del vehículo en el lote. Los
+    // intermedios no cambian el veredicto.
+    //
+    // ── POR QUÉ VA AL FINAL ─────────────────────────────────────────────
+    // Después de las transiciones, porque una transición de ciclo de vida
+    // cambia el estado derivado cuando no hay condiciones abiertas; y después
+    // de `persistir`, para que el estado que se calcula sea el del mundo ya
+    // escrito y no el de mitad de camino.
+    //
+    // NO se envuelve en try/catch, igual que `persistir`: si falla, la
+    // excepción sube, el lote vuelve a la cola y se reprocesa. El reproceso
+    // es seguro —`huboCambio` no escribe dos veces lo mismo— y un estado que
+    // no se pudo calcular es un estado que el operador no tiene que ver
+    // desactualizado en silencio.
+    const ultimoMomento = ultimo.timestamp;
+    for (const tripId of new Set(puntos.map((p) => p.trip_id).filter((t): t is string => !!t))) {
+      await this.seguimiento.recalcular(tripId, tenantId, ultimoMomento);
     }
 
     return puntos.map((p) => p.cola_id);

@@ -5,6 +5,7 @@ import {
   hayWeb, soloCodigo, dentroDeDecorador, literalesDeDecorador,
   registradoEnArray, rutasDeEscritura, rutaTieneAutorizacion,
   llamadasPrisma, metodosDe, metodoEnLinea, importacionesSinUsar,
+  metodosQueEscriben, esPrivado,
 } from './primitivas';
 import {
   SIN_AUTORIZACION, CONSULTAS_SIN_TENANT, TOPE_RUTAS_SIN_DTO, ESCRITURAS_ROL_SIN_REGLA,
@@ -356,6 +357,59 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
       }
       expect(excesos).toEqual([]);
       expect(mejoras).toEqual([]);
+    });
+
+    it('R17 · todo método público del motor que ESCRIBE tiene quien lo llame', () => {
+      // ⚠️ LA GENERALIZACIÓN DE R10, Y LA ESCRIBO PORQUE MIS DIECISÉIS REGLAS
+      // NO CAZARON EL HALLAZGO QUE LAS ORIGINÓ.
+      //
+      // `SeguimientoService.recalcular` quedó escrito, con 31 pruebas propias,
+      // y sin UN SOLO LLAMADOR. Gustavo lo midió contra la base: dos
+      // condiciones abiertas sobre el viaje y `GET /seguimiento` devolviendo
+      // `{"estado": null}`. R10 vigila que el worker llame a
+      // `eventos.persistir` — una línea concreta— y no había nada equivalente
+      // para lo que viniera después. Ésta cubre la CLASE entera.
+      //
+      // ── Por qué el cierre transitivo (ver `metodosQueEscriben`) ──────────
+      // La primera versión miraba sólo el cuerpo del método. Medida contra el
+      // repositorio daba catorce métodos, todos con llamador: verde. Y
+      // `recalcular` NO estaba en esa lista, porque escribe a través de un
+      // privado. Habría sido una regla escrita para cazar un defecto concreto,
+      // incapaz de cazarlo.
+      //
+      // ── Por qué se exige el nombre de la CLASE en el llamador ────────────
+      // Buscar sólo `.recalcular(` sería un colador: cualquier archivo con un
+      // método homónimo contaría. En Nest el llamador SIEMPRE nombra la clase,
+      // porque la recibe por constructor. Exigir las dos cosas es barato y
+      // convierte la coincidencia en cableado real.
+      const servicosMotor = fuentesApi('motor/**/*.service.ts');
+      expect(servicosMotor.length).toBeGreaterThan(5);
+
+      const huerfanos: string[] = [];
+      for (const f of servicosMotor) {
+        const t = texto(f);
+        const clase = (/export class (\w+)/.exec(t) ?? [])[1];
+        if (!clase) continue;
+        const escriben = metodosQueEscriben(t);
+
+        for (const m of metodosDe(t)) {
+          if (m.nombre === 'constructor' || !escriben.has(m.nombre)) continue;
+          if (esPrivado(t, m)) continue;
+
+          const tieneLlamador = FUENTES_API.some(
+            (otro) =>
+              otro !== f &&
+              texto(otro).includes(clase) &&
+              texto(otro).includes(`.${m.nombre}(`),
+          );
+          if (!tieneLlamador) huerfanos.push(`${corto(f)} → ${clase}.${m.nombre}()`);
+        }
+      }
+
+      // Medido: cero. Todo lo que escribe en el motor tiene quien lo llame, y
+      // por eso esta regla entra SIN exenciones — que es como tiene que nacer
+      // una regla si se puede.
+      expect(huerfanos).toEqual([]);
     });
   });
 
