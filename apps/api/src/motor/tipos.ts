@@ -1,3 +1,8 @@
+import {
+  UMBRAL_PARADA_PROLONGADA_POR_DEFECTO,
+  UMBRAL_SIN_REPORTE_POR_DEFECTO,
+} from './condiciones/umbrales-condiciones';
+
 /**
  * TIPOS DEL MOTOR DE EVENTOS.
  *
@@ -103,6 +108,10 @@ export interface ConfigMotor {
   red_seguridad_activa: boolean;
   parada_minutos: number;
   parada_velocidad_kmh: number;
+  /** Etapa 3B. El default se espeja con el de la columna; hay prueba. */
+  parada_prolongada_minutos: number;
+  /** Etapa 3B. Ídem. */
+  sin_reporte_minutos: number;
   eval_geocercas: boolean;
   eval_reglas: boolean;
   eval_desvio: boolean;
@@ -120,6 +129,12 @@ export const CONFIG_MOTOR_POR_DEFECTO: ConfigMotor = {
   red_seguridad_activa: true,
   parada_minutos: 10,
   parada_velocidad_kmh: 5,
+  // ⚠️ Los dos de la 3B NO se escriben acá como literales: salen del archivo
+  // que la prueba compara contra el DEFAULT de la columna. Un número suelto
+  // en este objeto es exactamente cómo se separaron el código y la base con la
+  // tolerancia del recorrido.
+  parada_prolongada_minutos: UMBRAL_PARADA_PROLONGADA_POR_DEFECTO,
+  sin_reporte_minutos: UMBRAL_SIN_REPORTE_POR_DEFECTO,
   eval_geocercas: true,
   eval_reglas: true,
   eval_desvio: true,

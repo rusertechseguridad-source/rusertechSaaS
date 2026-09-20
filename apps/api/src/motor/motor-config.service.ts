@@ -25,6 +25,10 @@ export class MotorConfigService {
       const filas: ConfigMotor[] = await this.prisma.$queryRaw<ConfigMotor[]>`
         SELECT red_seguridad_minutos, red_seguridad_activa,
                parada_minutos, parada_velocidad_kmh,
+               -- Etapa 3B. Si la columna todavía no existe (script 31_ sin
+               -- correr), el manejo de error de abajo devuelve los defaults
+               -- en vez de romper el motor entero.
+               parada_prolongada_minutos, sin_reporte_minutos,
                eval_geocercas, eval_reglas, eval_desvio,
                eval_protocolos, eval_riesgo, eval_sensores
         FROM tenant_engine_config

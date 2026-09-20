@@ -8,6 +8,11 @@ import { TransicionesService } from './transiciones.service';
 import { VehiculosActivosService } from './vehiculos-activos.service';
 import { TrabajosService } from './trabajos.service';
 import { SeguimientoService } from './seguimiento/seguimiento.service';
+import { CondicionesService } from './condiciones/condiciones.service';
+import { evaluarParadas } from './condiciones/paradas.evaluator';
+import { evaluarDesvio } from './condiciones/desvio.evaluator';
+import { cerrarSinReportePorPunto } from './condiciones/sin-reporte.evaluator';
+import type { DecisionCondicion } from './condiciones/tipos-condiciones';
 import { evaluarGeocercas, evaluarTransicionesDeEstado } from './evaluadores/geocercas.evaluator';
 import type { ConfigMotor, Decision, EstadoVehiculo, PuntoEvaluable } from './tipos';
 import { EventosService } from './eventos.service';
@@ -60,6 +65,7 @@ export class MotorWorker {
     private readonly activos: VehiculosActivosService,
     private readonly trabajos: TrabajosService,
     private readonly seguimiento: SeguimientoService,
+    private readonly condiciones: CondicionesService,
   ) {}
 
   @Interval(INTERVALO_MS)
@@ -71,6 +77,23 @@ export class MotorWorker {
       await this.sincronizarSiCorresponde();
       await this.cola.recuperarHuerfanas();
       await this.procesarLote();
+
+      // ── EL BARRIDO DE SIN_REPORTE (Etapa 3B) ──────────────────────────
+      //
+      // ⚠️ ES LA ÚNICA CONDICIÓN QUE NO PUEDE COLGAR DE UN PUNTO. Las otras
+      // tres se disparan cuando llega uno; ésta se dispara cuando NO llega, y
+      // un punto que no llega no activa un trigger, no entra en la cola y no
+      // despierta a nadie.
+      //
+      // Va DESPUÉS de `procesarLote` a propósito: si en esta misma vuelta
+      // llegó un punto de un vehículo, ya se le cerró el silencio y el barrido
+      // lo ve reportando. Al revés, abriría una condición que el punto
+      // recién procesado acaba de desmentir.
+      //
+      // Cuesta una consulta sobre `motor_vehiculos_activos` —quince filas con
+      // quince viajes activos— y no sobre la telemetría.
+      await this.condiciones.barrerSinReporte(new Date());
+
       // Trabajos de cierre de viaje (resumen + series). Van al final de la
       // vuelta: el cierre no compite con la evaluación en vivo.
       await this.trabajos.procesarPendientes(this.workerId);
@@ -245,6 +268,65 @@ export class MotorWorker {
       this.logger.debug(
         `Vehículo ${vehicleId}: ${puntos.length} puntos, ${decisiones.length} decisiones.`,
       );
+    }
+
+    // ── LAS CONDICIONES (Etapa 3B) ──────────────────────────────────────
+    //
+    // ⚠️ VA ANTES DEL RECÁLCULO DEL SEGUIMIENTO, Y EL ORDEN ES LA ETAPA.
+    //
+    // El estado de la 3A se DERIVA de las condiciones abiertas. Si las
+    // condiciones se escribieran después, el recálculo miraría el mundo de
+    // hace un instante y el operador vería el estado viejo hasta el próximo
+    // punto. Con este orden, un camión que se detiene abre la condición y
+    // cambia de estado en la MISMA vuelta.
+    //
+    // Se evalúa con el ÚLTIMO punto del lote por vehículo, no con todos: las
+    // paradas y el desvío son evaluadores «de estado actual» (§2.4 del
+    // diseño). El desvío además cuesta una consulta geoespacial por
+    // evaluación, y pagarla por punto multiplicaría el costo por seis con un
+    // vehículo reportando cada cinco segundos.
+    //
+    // NO se envuelve en try/catch, igual que `persistir`: si falla, el lote
+    // vuelve a la cola. Reprocesar es seguro — la clave de identidad hace que
+    // el mismo hecho no entre dos veces.
+    const decisionesCondiciones: DecisionCondicion[] = [];
+    const abiertas = await this.condiciones.abiertasDe(tenantId, vehicleId);
+
+    // Si el vehículo mandó un punto, dejó de estar en silencio. La otra mitad
+    // de SIN_REPORTE —abrirla— no puede colgar de un punto y vive en el
+    // barrido de `vuelta()`.
+    decisionesCondiciones.push(
+      ...cerrarSinReportePorPunto(
+        { tenant_id: tenantId, vehicle_id: vehicleId, trip_id: ultimo.trip_id },
+        {
+          abierta: abiertas.has('SIN_REPORTE'),
+          inicioAbierta: abiertas.get('SIN_REPORTE') ?? null,
+          momentoDelPunto: ultimo.timestamp,
+        },
+      ),
+    );
+
+    decisionesCondiciones.push(
+      ...evaluarParadas(
+        estado,
+        ultimo,
+        {
+          parada_minutos: cfg.parada_minutos,
+          parada_velocidad_kmh: cfg.parada_velocidad_kmh,
+          parada_prolongada_minutos: cfg.parada_prolongada_minutos,
+        },
+        await this.condiciones.contextoDeParada(ultimo, abiertas),
+      ),
+    );
+
+    if (cfg.eval_desvio) {
+      decisionesCondiciones.push(
+        ...evaluarDesvio(ultimo, await this.condiciones.contextoDeDesvio(ultimo, abiertas)),
+      );
+    }
+
+    if (decisionesCondiciones.length > 0) {
+      await this.condiciones.aplicar(decisionesCondiciones);
     }
 
     // ── EL ESTADO DE SEGUIMIENTO (Etapa 3A) ─────────────────────────────

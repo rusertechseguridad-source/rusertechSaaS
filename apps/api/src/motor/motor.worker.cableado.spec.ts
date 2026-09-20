@@ -34,10 +34,22 @@ describe('MotorWorker · el cableado de la persistencia', () => {
   let eventos: { persistir: jest.Mock };
   let estado: any;
   let seguimiento: { recalcular: jest.Mock };
+  let condiciones: any;
 
   beforeEach(() => {
     eventos = { persistir: jest.fn().mockResolvedValue(1) };
     seguimiento = { recalcular: jest.fn().mockResolvedValue(undefined) };
+    condiciones = {
+      abiertasDe: jest.fn().mockResolvedValue(new Map()),
+      contextoDeParada: jest.fn().mockResolvedValue({
+        enParadaAutorizada: false, nombreUbicacion: null, abiertas: new Set(),
+      }),
+      contextoDeDesvio: jest.fn().mockResolvedValue({
+        distanciaMetros: null, corredorMetros: 500, abierta: false, inicioAbierta: null,
+      }),
+      aplicar: jest.fn().mockResolvedValue(0),
+      barrerSinReporte: jest.fn().mockResolvedValue(0),
+    };
     estado = {
       geocercasDelLote: jest.fn().mockResolvedValue(
         new Map([[0, [{ geofence_id: GEOCERCA, nombre: 'Zona Prohibida Norte', zone_type: 'restricted' }]]]),
@@ -47,7 +59,7 @@ describe('MotorWorker · el cableado de la persistencia', () => {
     };
     worker = new MotorWorker(
       eventos as any, {} as any, estado, {} as any, {} as any, {} as any, {} as any,
-      seguimiento as any,
+      seguimiento as any, condiciones as any,
     );
   });
 

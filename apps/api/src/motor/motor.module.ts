@@ -11,9 +11,10 @@ import { MotorController } from './motor.controller';
 import { EventosService } from './eventos.service';
 import { SeguimientoService } from './seguimiento/seguimiento.service';
 import { SeguimientoController } from './seguimiento/seguimiento.controller';
+import { CondicionesService } from './condiciones/condiciones.service';
 
 /**
- * MOTOR DE EVENTOS — Etapas 1 y 3A.
+ * MOTOR DE EVENTOS — Etapas 1, 3A y 3B.
  *
  * Cubre el circuito completo con un solo evaluador: la cola se drena, las
  * geocercas se evalúan, y los viajes cambian de estado solos cuando el
@@ -38,7 +39,8 @@ import { SeguimientoController } from './seguimiento/seguimiento.controller';
     TrabajosService,
     MotorWorker,
     SeguimientoService,
+    CondicionesService,
   ],
-  exports: [ColaService, VehiculosActivosService, TrabajosService, SeguimientoService],
+  exports: [ColaService, VehiculosActivosService, TrabajosService, SeguimientoService, CondicionesService],
 })
 export class MotorModule {}
