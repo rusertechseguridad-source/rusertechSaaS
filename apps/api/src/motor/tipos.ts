@@ -96,6 +96,21 @@ export interface EstadoVehiculo {
   vehicle_id: string;
   tenant_id: string;
   ultimo_punto_ts: Date | null;
+  /**
+   * DÓNDE estaba el vehículo en `ultimo_punto_ts`. Etapa 3B bis.
+   *
+   * ⚠️ Van con la fecha, y es la razón por la que viven acá y no se pasan
+   * sueltas a `guardar()`: el barrido de `SIN_REPORTE` pregunta «este vehículo
+   * que hace veinte minutos no habla, ¿estaba entrando a un túnel?». Si la
+   * fecha saliera de un punto y las coordenadas de otro, la respuesta sería
+   * sobre un lugar donde el vehículo no estaba, y el error no se vería: la
+   * consulta devolvería una zona, sólo que la equivocada.
+   *
+   * Están las dos o no está ninguna: se asignan en la misma expresión que
+   * `ultimo_punto_ts`, en el bucle del worker.
+   */
+  ultima_latitud: number | null;
+  ultima_longitud: number | null;
   ultima_velocidad: number | null;
   ultima_ignicion: boolean | null;
   detenido_desde: Date | null;

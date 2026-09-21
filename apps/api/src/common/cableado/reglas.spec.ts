@@ -6,6 +6,7 @@ import {
   registradoEnArray, rutasDeEscritura, rutaTieneAutorizacion,
   llamadasPrisma, metodosDe, metodoEnLinea, importacionesSinUsar,
   metodosQueEscriben, esPrivado,
+  sentenciasSql, tablasDe, creaFilasDe, columnasLeidasDe, columnasEscritasEn, lecturasSinAlias,
 } from './primitivas';
 import {
   SIN_AUTORIZACION, CONSULTAS_SIN_TENANT, TOPE_RUTAS_SIN_DTO, ESCRITURAS_ROL_SIN_REGLA,
@@ -410,6 +411,95 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
       // por eso esta regla entra SIN exenciones — que es como tiene que nacer
       // una regla si se puede.
       expect(huerfanos).toEqual([]);
+    });
+
+    it('R18 · toda columna que el código LEE de una tabla del motor tiene quien la escriba', () => {
+      // ⚠️ LA FORMA INVERSA DE R17, Y LA ESCRIBO PORQUE R17 NO PODÍA CAZARLA.
+      //
+      // R17 caza un método que nadie llama. Esto es lo simétrico: un DATO que
+      // se lee y nadie escribe. `barrerSinReporte` leía
+      // `motor_estado_vehiculo.ultimo_punto` para saber si el vehículo callado
+      // estaba dentro de una zona sin cobertura, y el INSERT de
+      // `EstadoVehiculoService` no escribía esa columna. Nunca. Para ningún
+      // vehículo.
+      //
+      // El resultado no fue un error: fue una supresión que no suprimía. La
+      // latitud llegaba en `null`, el barrido salteaba la consulta de zona y
+      // aplicaba el umbral normal. Verde en las 475 pruebas, verde en `tsc`, y
+      // la función apagada en producción.
+      //
+      // Por qué ninguna prueba lo vio: las del evaluador le pasan las
+      // coordenadas YA RESUELTAS. Probaban la regla, no el viaje del dato.
+      //
+      // ── Por qué sólo las tablas `motor_*` que el código INSERTA ──────────
+      // Medido antes de escribir la regla, y la medición la corrigió dos veces:
+      //
+      //   · `trips` la lee el motor en 18 columnas y escribe 2. No es un
+      //     defecto: la escribe el módulo de viajes. Una regla que exija que
+      //     quien lee escriba habría dado 18 culpables inocentes.
+      //   · Los cuatro catálogos del vocabulario (`motor_tipos_condicion`,
+      //     `motor_estados_viaje`, `motor_niveles_riesgo`,
+      //     `motor_valores_contexto`) no tienen escritor en el código y está
+      //     bien: los carga un script. Otros veinte culpables inocentes.
+      //   · `motor_cola` tampoco: medido, no hay un `INSERT INTO motor_cola`
+      //     en todo `apps/`. Las filas las pone la base.
+      //
+      // Quedan las tres tablas cuyas filas CREA este código. Ahí, y sólo ahí,
+      // «se lee y nadie la escribe» significa defecto.
+      //
+      // ⚠️ Una regla que arranca con exenciones enseña a agregar la siguiente.
+      // Las dos únicas columnas excluidas no son una exención sino una
+      // definición, y está verificada contra el esquema real: `id` sale de un
+      // `nextval` y `created_at` de un `now()`. No son trabajo del código.
+      const GENERADAS_POR_LA_BASE = new Set(['id', 'created_at']);
+
+      const porArchivo = new Map(FUENTES_API.map((f) => [f, sentenciasSql(texto(f))]));
+      const TODAS = [...porArchivo.values()].flat();
+
+      // El barrido tiene que ver SQL. Si un día las consultas dejan de ser
+      // plantillas, esto da cero y la regla pasaría sin mirar nada.
+      expect(TODAS.length).toBeGreaterThan(40);
+
+      const delMotor = [...tablasDe(TODAS)]
+        .filter((t) => t.startsWith('motor_') && creaFilasDe(TODAS, t))
+        .sort();
+      // Medido: motor_estado_vehiculo, motor_trabajos, motor_vehiculos_activos.
+      expect(delMotor.length).toBe(3);
+
+      const huerfanas: string[] = [];
+      const ciegas: string[] = [];
+
+      for (const tabla of delMotor) {
+        // ⚠️ El barrido tiene que poder DECIR QUE NO SABE. Una lectura sin
+        // alias —`SELECT columna FROM tabla`— no se puede atribuir, y un
+        // escáner que devuelve vacío cuando no entendió la entrada es
+        // indistinguible de uno que no encontró nada. Es el género de error
+        // que R13 tuvo antes de su reversión.
+        ciegas.push(...lecturasSinAlias(TODAS, tabla).map((q) => `${tabla} ← ${q}`));
+
+        const escritas = columnasEscritasEn(TODAS, tabla);
+        for (const col of columnasLeidasDe(TODAS, tabla)) {
+          if (GENERADAS_POR_LA_BASE.has(col) || escritas.has(col)) continue;
+          huerfanas.push(`${tabla}.${col}`);
+        }
+      }
+
+      // ⚠️ LA REVERSIÓN QUE LA DEMUESTRA, Y LO QUE LA REVERSIÓN CORRIGIÓ.
+      //
+      // Con el código tal como estaba ANTES de la corrección —sin
+      // `ultimo_punto` ni en el INSERT ni en el DO UPDATE— esta lista daba
+      // exactamente ['motor_estado_vehiculo.ultimo_punto']. Medido, no
+      // supuesto: la regla se escribió antes que el arreglo y se la vio fallar
+      // contra el repositorio real.
+      //
+      // Y lo que NO caza, que también se midió: sacar la columna de UNA SOLA
+      // de las dos ramas la deja con escritor, y esta regla pasa. Ese caso
+      // —peor que el original, porque la columna se llena una vez y se congela
+      // — lo cubre `estado-vehiculo.cableado.spec.ts`. Lo escribo porque lo
+      // había supuesto al revés, y una regla de la que se cree que caza más de
+      // lo que caza es una regla que deja de mirarse.
+      expect(huerfanas).toEqual([]);
+      expect(ciegas).toEqual([]);
     });
   });
 

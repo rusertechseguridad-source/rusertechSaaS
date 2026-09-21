@@ -40,6 +40,8 @@ function estado(dentro: string[] = []): EstadoVehiculo {
     vehicle_id: VEHICULO,
     tenant_id: TENANT,
     ultimo_punto_ts: null,
+    ultima_latitud: null,
+    ultima_longitud: null,
     ultima_velocidad: null,
     ultima_ignicion: null,
     detenido_desde: null,

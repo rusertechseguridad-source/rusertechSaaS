@@ -42,6 +42,7 @@ const punto = (over: Partial<PuntoEvaluable> = {}): PuntoEvaluable => ({
 
 const estado = (over: Partial<EstadoVehiculo> = {}): EstadoVehiculo => ({
   vehicle_id: VEHICULO, tenant_id: TENANT, ultimo_punto_ts: T0,
+  ultima_latitud: -34.6037, ultima_longitud: -58.3816,
   ultima_velocidad: 0, ultima_ignicion: true, detenido_desde: T0,
   geocercas_dentro: [], ...over,
 });

@@ -184,6 +184,8 @@ export class MotorWorker {
       vehicle_id: vehicleId,
       tenant_id: tenantId,
       ultimo_punto_ts: null,
+      ultima_latitud: null,
+      ultima_longitud: null,
       ultima_velocidad: null,
       ultima_ignicion: null,
       detenido_desde: null,
@@ -209,6 +211,13 @@ export class MotorWorker {
       estado = {
         ...estado,
         ultimo_punto_ts: punto.timestamp,
+        // ⚠️ LA FECHA Y EL LUGAR SALEN DEL MISMO PUNTO, en la misma expresión.
+        // Es lo que hace que no puedan separarse: el barrido de SIN_REPORTE
+        // usa las dos para preguntar dónde estaba el vehículo cuando dejó de
+        // hablar, y una fecha de un punto con las coordenadas de otro daría
+        // una respuesta sobre un lugar donde no estuvo.
+        ultima_latitud: punto.latitude,
+        ultima_longitud: punto.longitude,
         ultima_velocidad: punto.speed_kmh,
         ultima_ignicion: punto.ignition,
         detenido_desde: this.calcularDetenidoDesde(estado, punto, cfg),

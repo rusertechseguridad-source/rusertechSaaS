@@ -697,3 +697,300 @@ export function esPrivado(texto: string, metodo: Metodo): boolean {
   return /\bprivate\b/.test(linea);
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════
+// 9 · SQL crudo: qué columnas se leen y cuáles se escriben
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Las sentencias SQL escritas como plantilla, con los comentarios SQL fuera.
+ *
+ * ⚠️ DOS CAPAS DE COMENTARIOS, Y LAS DOS MUERDEN.
+ *
+ * La primera es `soloCodigo`, que saca los `//` de TypeScript. Sin eso, el
+ * comentario de `condiciones.service.ts` que dice «el último punto conocido ya
+ * está en `motor_estado_vehiculo`» contaría como una sentencia sobre esa tabla.
+ *
+ * La segunda son los `--` de SQL, que viven DENTRO de la plantilla y que
+ * `soloCodigo` no toca. En `barrerSinReporte` hay cuatro líneas de `--`
+ * explicando de dónde sale el umbral, y nombran columnas. Un barrido que las
+ * leyera daría por leída una columna que la consulta no lee. Es, otra vez, la
+ * prosa que explica el código haciéndose pasar por el código.
+ *
+ * No es un parser de SQL. Es un filtro para barridos, y cubre la única forma
+ * en que este repositorio escribe SQL: plantillas con acento grave pasadas a
+ * `$queryRaw` o `$executeRaw`.
+ */
+export function sentenciasSql(texto: string): string[] {
+  const codigo = soloCodigo(texto);
+  const salida: string[] = [];
+  let i = 0;
+
+  while (i < codigo.length) {
+    if (codigo[i] !== '`') { i += 1; continue; }
+
+    i += 1;
+    const inicio = i;
+    let profundidad = 0;
+    while (i < codigo.length) {
+      if (codigo[i] === '\\') { i += 2; continue; }
+      if (codigo[i] === '$' && codigo[i + 1] === '{') { profundidad += 1; i += 2; continue; }
+      if (profundidad > 0) {
+        if (codigo[i] === '}') profundidad -= 1;
+        i += 1;
+        continue;
+      }
+      if (codigo[i] === '`') break;
+      i += 1;
+    }
+
+    const bruto = codigo.slice(inicio, i);
+    i += 1;
+    // Los `--` de SQL, hasta el fin de línea.
+    salida.push(bruto.replace(/--[^\n]*/g, ' '));
+  }
+
+  return salida;
+}
+
+/** Palabras que siguen a `from`/`join`/`update` y NO son tablas. */
+const NO_SON_TABLAS = new Set([
+  'set', 'skip', 'select', 'lateral', 'unnest', 'values', 'only', 'where',
+  'on', 'as', 'using', 'left', 'right', 'inner', 'outer', 'full', 'cross',
+]);
+
+/**
+ * Las tablas que estas sentencias nombran.
+ *
+ * ⚠️ El filtro de `NO_SON_TABLAS` no es cosmético. Sin él aparecían dos
+ * «tablas» llamadas `set` y `skip`, sacadas de `DO UPDATE SET` y de
+ * `FOR UPDATE SKIP LOCKED`. La de `set` era la peligrosa: como la palabra
+ * aparece en toda sentencia con `DO UPDATE`, el barrido le atribuía veinte
+ * columnas escritas que eran de otras tablas. Un barrido que inventa una
+ * tabla también inventa sus conclusiones.
+ */
+export function tablasDe(sentencias: string[]): Set<string> {
+  const tablas = new Set<string>();
+  for (const sql of sentencias) {
+    for (const m of sql.matchAll(/\b(?:from|join|into|update)\s+([a-z_][a-z0-9_]*)/gi)) {
+      const t = m[1].toLowerCase();
+      if (!NO_SON_TABLAS.has(t)) tablas.add(t);
+    }
+  }
+  return tablas;
+}
+
+/** ¿Esta sentencia ESCRIBE en esa tabla? */
+export const escribeEn = (sql: string, tabla: string): boolean =>
+  new RegExp(`\\b(?:insert\\s+into|update)\\s+${tabla}\\b`, 'i').test(sql);
+
+/**
+ * ¿Esta sentencia LEE esa tabla (la nombra en un FROM o un JOIN)?
+ *
+ * ⚠️ El `delete from` NO es una lectura, y excluirlo no es un detalle: la
+ * primera versión lo contaba y reportaba el `DELETE FROM
+ * motor_vehiculos_activos` como una lectura que no podía analizar. Un barrido
+ * que se queja de algo correcto se desactiva solo, porque el primer reflejo
+ * ante una regla que grita en falso es callarla.
+ */
+export const leeDe = (sql: string, tabla: string): boolean =>
+  new RegExp(`\\b(?:from|join)\\s+${tabla}\\b`, 'i').test(sql) &&
+  !new RegExp(`\\bdelete\\s+from\\s+${tabla}\\b`, 'i').test(sql);
+
+/** Lo que puede seguir al nombre de una tabla sin ser un alias. */
+const PALABRAS_TRAS_TABLA = new Set([
+  'where', 'group', 'order', 'limit', 'returning', 'having', 'union', 'for',
+]);
+
+/**
+ * Los alias con los que una sentencia nombra a la tabla.
+ *
+ * `FROM t x`, `JOIN t AS x`, y el caso sin alias —`INSERT INTO t (…)`— que
+ * devuelve el propio nombre de la tabla, porque así es como se la referencia.
+ */
+function aliasDe(sql: string, tabla: string): string[] {
+  const alias = new Set<string>([tabla]);
+  const patron = new RegExp(
+    `\\b(?:from|join|into|update)\\s+${tabla}\\s+(?:as\\s+)?([a-zA-Z_]\\w*)`,
+    'gi',
+  );
+  for (const m of sql.matchAll(patron)) {
+    // `FROM t WHERE …` no declara un alias llamado `where`.
+    const candidato = m[1].toLowerCase();
+    if (NO_SON_TABLAS.has(candidato) || PALABRAS_TRAS_TABLA.has(candidato)) continue;
+    alias.add(m[1]);
+  }
+  return [...alias];
+}
+
+/**
+ * Columnas que las sentencias LEEN de esa tabla: todo `alias.columna`.
+ *
+ * ⚠️ Incluye las del `ON` de un JOIN. Es a propósito: una columna que sólo
+ * sirve para unir sigue siendo una columna que la consulta necesita que
+ * exista y que tenga valor.
+ */
+export function columnasLeidasDe(sentencias: string[], tabla: string): Set<string> {
+  const leidas = new Set<string>();
+  for (const sql of sentencias) {
+    // Una sentencia que sólo escribe no lee: sus `EXCLUDED.x` no son lecturas
+    // de la tabla y sus columnas ya las cuenta `columnasEscritasEn`.
+    if (!leeDe(sql, tabla)) continue;
+
+    const alias = aliasDe(sql, tabla).filter((a) => a !== tabla);
+    if (alias.length > 0) {
+      for (const a of alias) {
+        for (const m of sql.matchAll(new RegExp(`\\b${a}\\.(\\w+)`, 'g'))) {
+          leidas.add(m[1].toLowerCase());
+        }
+      }
+      continue;
+    }
+
+    // Sin alias. Si la sentencia nombra UNA SOLA tabla, un identificador suelto
+    // no puede ser de otra: se puede atribuir sin adivinar. Si nombra varias,
+    // no se toca — la reporta `lecturasSinAlias`.
+    if (tablasDe([sql]).size === 1) {
+      for (const col of identificadoresSueltos(sql, tablasDe([sql]))) leidas.add(col);
+    }
+  }
+  return leidas;
+}
+
+/** Palabras de SQL que aparecen sueltas y no son columnas. */
+const PALABRAS_SQL = new Set([
+  'select', 'from', 'where', 'group', 'by', 'order', 'having', 'limit', 'offset',
+  'and', 'or', 'not', 'is', 'null', 'as', 'asc', 'desc', 'distinct', 'on', 'in',
+  'insert', 'into', 'values', 'update', 'set', 'delete', 'join', 'left', 'right',
+  'inner', 'outer', 'full', 'cross', 'lateral', 'union', 'all', 'case', 'when',
+  'then', 'else', 'end', 'exists', 'returning', 'conflict', 'do', 'nothing',
+  'with', 'using', 'true', 'false', 'between', 'like', 'ilike', 'any', 'array',
+  'int', 'text', 'uuid', 'float8', 'boolean', 'interval', 'timestamptz',
+  'epoch', 'nulls', 'first', 'last', 'for', 'of', 'skip', 'locked', 'only',
+]);
+
+/**
+ * Identificadores sueltos de una sentencia de UNA sola tabla.
+ *
+ * Se descartan: las palabras de SQL, lo que va pegado a un `(` —que es una
+ * función y no una columna—, lo que sigue a un `AS` —que es un nombre de
+ * salida, no de entrada—, lo que va después de un punto, que ya lo cuenta la
+ * rama con alias, y EL NOMBRE DE LA TABLA, que viene justo detrás del `FROM`
+ * y que la primera versión devolvía como si fuera una columna de sí misma.
+ */
+function identificadoresSueltos(sql: string, tablas: Set<string>): string[] {
+  const salida: string[] = [];
+  const sinCast = sql.replace(/::\s*\w+/g, ' ');
+  const patron = /(\bas\s+)?(?<![.\w])([a-zA-Z_]\w*)\s*(\()?/gi;
+  for (const m of sinCast.matchAll(patron)) {
+    if (m[1] || m[3]) continue;
+    const id = m[2].toLowerCase();
+    if (PALABRAS_SQL.has(id) || tablas.has(id)) continue;
+    salida.push(id);
+  }
+  return salida;
+}
+
+/**
+ * Columnas que las sentencias ESCRIBEN en esa tabla.
+ *
+ * Dos lugares, porque este repositorio hace `upsert` a mano: la lista de
+ * columnas del `INSERT` y las asignaciones del `ON CONFLICT … DO UPDATE SET`.
+ * Se devuelven unidas: la pregunta que esta primitiva contesta es «¿alguien
+ * le pone valor a esta columna alguna vez?».
+ */
+export function columnasEscritasEn(sentencias: string[], tabla: string): Set<string> {
+  const escritas = new Set<string>();
+
+  for (const sql of sentencias) {
+    if (!escribeEn(sql, tabla)) continue;
+
+    // 1 · La lista de columnas del INSERT: el primer paréntesis tras la tabla.
+    const insert = new RegExp(`insert\\s+into\\s+${tabla}\\s*\\(([^)]*)\\)`, 'i').exec(sql);
+    if (insert) {
+      for (const col of insert[1].split(',')) {
+        const limpio = col.trim().toLowerCase();
+        if (/^\w+$/.test(limpio)) escritas.add(limpio);
+      }
+    }
+
+    // 2 · Las asignaciones del DO UPDATE SET, y las del UPDATE suelto.
+    const set = /\bset\b([\s\S]*?)(?:\bwhere\b|\breturning\b|$)/i.exec(sql);
+    if (set && (insert || new RegExp(`update\\s+${tabla}\\b`, 'i').test(sql))) {
+      for (const m of set[1].matchAll(/(?:^|,)\s*(\w+)\s*=/g)) {
+        escritas.add(m[1].toLowerCase());
+      }
+    }
+  }
+
+  return escritas;
+}
+
+/**
+ * Lecturas de la tabla que este barrido NO puede analizar: las que no le
+ * ponen alias, donde `SELECT columna FROM tabla` no se distingue de una
+ * columna de otra tabla del mismo `FROM`.
+ *
+ * ⚠️ Existe para que el barrido diga «no sé» en vez de «está bien». Un
+ * escáner que devuelve el conjunto vacío cuando no entendió la entrada es
+ * indistinguible de uno que no encontró nada, y ésa es exactamente la forma
+ * de error que esta serie viene cazando desde la Tanda 8.
+ */
+export function lecturasSinAlias(sentencias: string[], tabla: string): string[] {
+  return sentencias
+    .filter(
+      (sql) =>
+        leeDe(sql, tabla) &&
+        aliasDe(sql, tabla).length === 1 &&
+        // Con una sola tabla en juego no hay ambigüedad: `columnasLeidasDe`
+        // la resuelve. La ambigüedad aparece cuando hay más de una.
+        tablasDe([sql]).size > 1,
+    )
+    .map((sql) => sql.trim().replace(/\s+/g, ' ').slice(0, 90));
+}
+
+/**
+ * Las tablas cuyo ÚNICO escritor está dentro de la carpeta del motor.
+ *
+ * ⚠️ Sin esto, la regla que compara lecturas contra escrituras es falsa. El
+ * motor lee `trips` en ocho columnas y sólo escribe dos: no es un defecto, es
+ * que `trips` la escribe el módulo de declaración de viajes. Una regla que
+ * exija que el motor escriba todo lo que lee sobre una tabla ajena da ocho
+ * culpables inocentes en la primera corrida — y una regla que arranca con
+ * ocho exenciones enseña a agregar la novena.
+ *
+ * `archivosDelMotor` y `archivosRestantes` se pasan ya leídos para no releer
+ * el árbol dentro de la regla.
+ */
+export function tablasPropiasDelMotor(
+  sentenciasDelMotor: string[],
+  sentenciasDelResto: string[],
+): string[] {
+  const propias: string[] = [];
+  for (const tabla of tablasDe(sentenciasDelMotor)) {
+    const laEscribeElMotor = sentenciasDelMotor.some((s) => escribeEn(s, tabla));
+    if (!laEscribeElMotor) continue;
+    const laEscribeOtro = sentenciasDelResto.some((s) => escribeEn(s, tabla));
+    if (laEscribeOtro) continue;
+    propias.push(tabla);
+  }
+  return propias.sort();
+}
+
+/**
+ * ¿El código CREA las filas de esta tabla? (tiene un `INSERT INTO t (…)`)
+ *
+ * ⚠️ Es la pregunta que define de quién es la tabla, y separa tres cosas que
+ * un barrido ingenuo mezcla:
+ *
+ *   · `motor_tipos_condicion` y los otros tres catálogos del vocabulario: el
+ *     código los LEE y no los escribe nunca. Las carga un script de la Etapa 0.
+ *     Exigirles un escritor en el código daría veinte culpables inocentes.
+ *   · `motor_cola`: medido, no hay un solo `INSERT INTO motor_cola` en
+ *     `apps/`. Las filas las pone la base. El código las toma y las marca.
+ *   · `motor_estado_vehiculo`, `motor_trabajos`, `motor_vehiculos_activos`:
+ *     el código crea las filas. Acá sí, una columna que se lee y nadie
+ *     escribe es un defecto y no un reparto de tareas.
+ */
+export const creaFilasDe = (sentencias: string[], tabla: string): boolean =>
+  sentencias.some((s) => new RegExp(`insert\\s+into\\s+${tabla}\\s*\\(`, 'i').test(s));

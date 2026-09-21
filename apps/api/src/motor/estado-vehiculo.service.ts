@@ -6,6 +6,8 @@ interface FilaEstado {
   vehicle_id: string;
   tenant_id: string;
   ultimo_punto_ts: Date | null;
+  ultima_latitud: number | null;
+  ultima_longitud: number | null;
   ultima_velocidad: number | null;
   ultima_ignicion: boolean | null;
   detenido_desde: Date | null;
@@ -46,6 +48,13 @@ export class EstadoVehiculoService {
         v.id::text AS vehicle_id,
         v.tenant_id::text AS tenant_id,
         e.ultimo_punto_ts,
+        -- ⚠️ SE LEEN DE VUELTA, y no es simetría decorativa: el metodo guardar
+        -- escribe el estado ENTERO. Si estas dos no se cargaran, una escritura
+        -- que no viniera del bucle de puntos las pondría en null y borraría la
+        -- última posición conocida — la columna volvería a estar vacía, por
+        -- otra vía. (Sin acentos graves acá adentro: cierran la plantilla.)
+        ST_Y(e.ultimo_punto::geometry)::float8 AS ultima_latitud,
+        ST_X(e.ultimo_punto::geometry)::float8 AS ultima_longitud,
         e.ultima_velocidad,
         e.ultima_ignicion,
         e.detenido_desde,
@@ -67,6 +76,8 @@ export class EstadoVehiculoService {
           vehicle_id: f.vehicle_id,
           tenant_id: f.tenant_id,
           ultimo_punto_ts: f.ultimo_punto_ts ?? null,
+          ultima_latitud: f.ultima_latitud === null ? null : Number(f.ultima_latitud),
+          ultima_longitud: f.ultima_longitud === null ? null : Number(f.ultima_longitud),
           ultima_velocidad: f.ultima_velocidad === null ? null : Number(f.ultima_velocidad),
           ultima_ignicion: f.ultima_ignicion ?? null,
           detenido_desde: f.detenido_desde ?? null,
@@ -119,19 +130,57 @@ export class EstadoVehiculoService {
     return resultado;
   }
 
-  /** Persiste el estado del vehículo. Una escritura por vehículo por lote. */
+  /**
+   * Persiste el estado del vehículo. Una escritura por vehículo por lote.
+   *
+   * ══════════════════════════════════════════════════════════════════════
+   * ⚠️ `ultimo_punto` — LA COLUMNA QUE SE LEÍA Y NADIE ESCRIBÍA
+   * ══════════════════════════════════════════════════════════════════════
+   *
+   * `CondicionesService.barrerSinReporte` hace `ST_Y(ev.ultimo_punto)` para
+   * preguntar si el vehículo callado está dentro de una zona sin cobertura.
+   * Esta sentencia no escribía esa columna: ni en el INSERT ni en el UPDATE.
+   *
+   * No fallaba. La latitud llegaba en `null`, el barrido salteaba la consulta
+   * de zona y aplicaba el umbral normal. Medido en producción: dos filas, dos
+   * con `ultimo_punto_ts`, CERO con `ultimo_punto`. La supresión por zona sin
+   * señal no funcionaba para ningún vehículo, con las 475 pruebas en verde.
+   *
+   * Es la forma inversa del defecto de la 3A: allá había un método que nadie
+   * llamaba; acá un dato que se lee y nadie escribe. R18 lo caza.
+   *
+   * ⚠️ VA EN LAS DOS RAMAS. Sólo en el INSERT alcanzaría para un vehículo
+   * nuevo y se quedaría congelada en la primera posición para siempre después
+   * — que es peor que vacía: una zona sin señal de hace un mes contestando
+   * sobre un camión que está en otra provincia.
+   *
+   * ⚠️ `ST_MakePoint(lng, lat)` — LONGITUD PRIMERO. Es el orden de PostGIS (X
+   * es longitud) y el mismo que usa `geocercasDelLote`. Invertirlo no rompe
+   * nada visible: escribe un punto en otro lugar del mundo y la zona sin señal
+   * deja de encontrarse. Hay prueba de cableado que fija el orden.
+   *
+   * ⚠️ Sin `CASE` para el nulo: `ST_MakePoint` es STRICT —verificado contra la
+   * base— así que con una coordenada nula devuelve NULL, que es exactamente lo
+   * que corresponde guardar cuando todavía no hubo punto.
+   */
   async guardar(estado: EstadoVehiculo, evaluadoHasta: Date): Promise<void> {
     await this.prisma.$executeRaw`
       INSERT INTO motor_estado_vehiculo (
-        vehicle_id, tenant_id, ultimo_punto_ts, ultima_velocidad, ultima_ignicion,
+        vehicle_id, tenant_id, ultimo_punto_ts, ultimo_punto,
+        ultima_velocidad, ultima_ignicion,
         detenido_desde, evaluado_hasta, actualizado_at
       ) VALUES (
         ${estado.vehicle_id}::uuid, ${estado.tenant_id}::uuid, ${estado.ultimo_punto_ts},
+        ST_SetSRID(
+          ST_MakePoint(${estado.ultima_longitud}::float8, ${estado.ultima_latitud}::float8),
+          4326
+        )::geography,
         ${estado.ultima_velocidad}, ${estado.ultima_ignicion}, ${estado.detenido_desde},
         ${evaluadoHasta}, now()
       )
       ON CONFLICT (vehicle_id) DO UPDATE SET
         ultimo_punto_ts  = EXCLUDED.ultimo_punto_ts,
+        ultimo_punto     = EXCLUDED.ultimo_punto,
         ultima_velocidad = EXCLUDED.ultima_velocidad,
         ultima_ignicion  = EXCLUDED.ultima_ignicion,
         detenido_desde   = EXCLUDED.detenido_desde,
