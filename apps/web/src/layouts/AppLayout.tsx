@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { Campana } from '../components/campana/Campana';
 import { Map, Bell, Route, Truck, Smartphone, Building2, Users, MapPin, Navigation, Radio, Zap, LogOut, Shield, Thermometer, Leaf, PieChart, Settings, ShieldAlert, Key, Cpu, ChevronDown, BarChart3 } from 'lucide-react';
 import { isAdminRole } from '../constants/adminRoles';
-import { motivoSinPermiso } from '../components/RequirePermission';
+import { motivoSinPermiso, RequirePermission } from '../components/RequirePermission';
 import { API_URL } from '../services/api';
 
 export const AppLayout: React.FC = () => {
@@ -310,8 +311,18 @@ export const AppLayout: React.FC = () => {
               })()}
             </div>
 
-            {/* Right: User info + Language + Logout (flex-1 keeps symmetry) */}
+            {/* Right: Campana + User info + Language + Logout (flex-1 keeps symmetry) */}
             <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
+              {/* ⚠️ LA CAMPANA VA PRIMERA Y NO SE ESCONDE NUNCA. Es la regla de
+                  producto: un botón ausente es indistinguible de una función
+                  que no existe. Sin alertas se ve apagada y lo dice; si
+                  desapareciera, «no pasa nada» y «esto se rompió» se verían
+                  igual.
+                  Detrás del permiso `view_alerts`, el mismo que la pantalla de
+                  alertas: quien no puede verlas tampoco las oye. */}
+              <RequirePermission permission="view_alerts">
+                <Campana />
+              </RequirePermission>
               <span className="text-xs font-bold text-white hidden lg:block truncate max-w-[140px] drop-shadow-md">
                 {user?.email}
               </span>

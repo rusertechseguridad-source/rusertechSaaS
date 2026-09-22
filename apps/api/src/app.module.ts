@@ -33,6 +33,7 @@ import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
 import { ForwardingModule } from './forwarding/forwarding.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { DespachoModule } from './notifications/despacho/despacho.module';
 import { OperationalProtocolsModule } from './operational-protocols/operational-protocols.module';
 import { SecurityKeysModule } from './security-keys/security-keys.module';
 import { MotorModule } from './motor/motor.module';
@@ -72,6 +73,7 @@ import { HealthModule } from './health/health.module';
     SettingsModule,
     ForwardingModule,
     NotificationsModule,
+    DespachoModule,
     OperationalProtocolsModule,
     SecurityKeysModule,
     MotorModule,

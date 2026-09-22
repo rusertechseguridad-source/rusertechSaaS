@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DespachoService } from '../../notifications/despacho/despacho.service';
 import type { PuntoEvaluable } from '../tipos';
 import { claveDeIdentidad, type DecisionCondicion } from './tipos-condiciones';
 import { evaluarSinReporte, type ContextoSinReporte } from './sin-reporte.evaluator';
@@ -33,7 +34,16 @@ import { UMBRAL_SIN_REPORTE_POR_DEFECTO } from './umbrales-condiciones';
 export class CondicionesService {
   private readonly logger = new Logger(CondicionesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    /**
+     * ⚠️ EL MOTOR NO SABE QUIÉN SE ENTERA. Recibe el punto de despacho y le
+     * entrega lo que escribió; a quién le llega —campana hoy, Telegram y
+     * correo en las entregas 2 y 3— se decide del otro lado. Es lo que
+     * permite agregar un mensajero sin abrir este archivo.
+     */
+    private readonly despacho: DespachoService,
+  ) {}
 
   // ════════════════════════════════════════════════════════════════════════
   // CONTEXTO — lo que los evaluadores no pueden preguntar solos
@@ -200,16 +210,54 @@ export class CondicionesService {
    * puesto antes de esta etapa; la corrección de este método no depende de eso.
    */
   async aplicar(decisiones: DecisionCondicion[]): Promise<number> {
-    let escritas = 0;
+    const abiertas: string[] = [];
+    const cerradas: { id: string; motivo: string }[] = [];
+
     for (const d of decisiones) {
-      escritas += d.accion === 'abrir' ? await this.abrir(d) : await this.cerrar(d);
+      if (d.accion === 'abrir') {
+        abiertas.push(...(await this.abrir(d)));
+      } else {
+        cerradas.push(...(await this.cerrar(d)).map((id) => ({ id, motivo: d.disparador })));
+      }
     }
-    return escritas;
+
+    // ⚠️ EL DESPACHO VA DESPUÉS DE ESCRIBIR, Y CON LOS IDS QUE EL INSERT
+    // DEVOLVIÓ. Las dos cosas importan:
+    //
+    //   · después, porque el aviso tiene que describir un hecho que ya existe
+    //     en la base. Si el INSERT fallara después de avisar, el operador
+    //     tendría en pantalla una alerta que no está en ningún lado.
+    //   · con los ids devueltos, porque el `WHERE NOT EXISTS` de `abrir` es lo
+    //     que hace que 240 puntos de un camión parado sean UNA condición. Si
+    //     se despacharan las DECISIONES en vez de las filas escritas, la
+    //     campana sonaría 240 veces por el mismo camión quieto y el operador
+    //     la apagaría para siempre. La idempotencia se hereda; no se rehace.
+    await this.despacho.despacharCondiciones(abiertas);
+    for (const c of cerradas) {
+      await this.despacho.despacharResolucion({
+        fuente: 'condicion',
+        id: c.id,
+        tenant_id: decisiones[0]?.tenant_id ?? '',
+        resuelta_at: new Date(),
+        motivo: c.motivo,
+      });
+    }
+
+    return abiertas.length + cerradas.length;
   }
 
-  private async abrir(d: DecisionCondicion): Promise<number> {
+  /**
+   * Inserta y devuelve LOS IDS QUE CREÓ — cero si la clave ya existía.
+   *
+   * ⚠️ Devolvía un contador. Ahora devuelve los ids porque el despacho de
+   * avisos necesita saber QUÉ se escribió, no cuánto: con el contador habría
+   * que volver a buscar las filas por la clave, y entre el INSERT y esa
+   * búsqueda otra evaluación podría agregar otra. El `RETURNING` no tiene esa
+   * ventana.
+   */
+  private async abrir(d: DecisionCondicion): Promise<string[]> {
     const clave = claveDeIdentidad(d);
-    const filas = await this.prisma.$executeRaw`
+    const filas = await this.prisma.$queryRaw<{ id: string }[]>`
       INSERT INTO trip_conditions (
         tenant_id, vehicle_id, trip_id, tipo, nivel_riesgo,
         inicio, origen, disparador, datos, clave_identidad
@@ -231,18 +279,20 @@ export class CondicionesService {
           WHERE c.tenant_id = ${d.tenant_id}::uuid
             AND c.clave_identidad = ${clave}
         )
+      RETURNING id::text AS id
     `;
-    if (filas > 0) {
+    if (filas.length > 0) {
       this.logger.log(`Condición ABIERTA ${d.tipo} · vehículo ${d.vehicle_id} · ${d.disparador}`);
     }
-    return filas;
+    return filas.map((f) => f.id);
   }
 
-  private async cerrar(d: DecisionCondicion): Promise<number> {
+  /** Cierra y devuelve los ids cerrados: el aviso de «ya no suena» los necesita. */
+  private async cerrar(d: DecisionCondicion): Promise<string[]> {
     // Se cierra por (tenant, vehículo, tipo, abierta), no por la clave: el
     // hecho pudo haberse abierto con un `inicio` que este evaluador no conoce
     // exactamente —otro worker, un reproceso— y aun así hay que cerrarlo.
-    const filas = await this.prisma.$executeRaw`
+    const filas = await this.prisma.$queryRaw<{ id: string }[]>`
       UPDATE trip_conditions
          SET fin = ${d.fin ?? new Date()},
              datos = datos || ${JSON.stringify({ cierre: d.datos, motivo: d.disparador })}::jsonb
@@ -250,11 +300,12 @@ export class CondicionesService {
          AND vehicle_id = ${d.vehicle_id}::uuid
          AND tipo = ${d.tipo}
          AND fin IS NULL
+      RETURNING id::text AS id
     `;
-    if (filas > 0) {
+    if (filas.length > 0) {
       this.logger.log(`Condición CERRADA ${d.tipo} · vehículo ${d.vehicle_id} · ${d.disparador}`);
     }
-    return filas;
+    return filas.map((f) => f.id);
   }
 
   // ════════════════════════════════════════════════════════════════════════

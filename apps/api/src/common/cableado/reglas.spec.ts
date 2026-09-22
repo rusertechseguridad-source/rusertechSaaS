@@ -383,7 +383,17 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
       // método homónimo contaría. En Nest el llamador SIEMPRE nombra la clase,
       // porque la recibe por constructor. Exigir las dos cosas es barato y
       // convierte la coincidencia en cableado real.
-      const servicosMotor = fuentesApi('motor/**/*.service.ts');
+      // ⚠️ EL ALCANCE SE AMPLIÓ EN LA 1ª DE NOTIFICACIONES, y la razón es que
+      // el defecto que esta regla caza se acababa de mudar de carpeta. El
+      // punto de despacho vive en `notifications/despacho/` y es exactamente
+      // la misma forma: un servicio que escribe, con pruebas propias, que el
+      // motor puede dejar de llamar sin que nada se ponga rojo. Dejar la regla
+      // mirando sólo `motor/` habría sido tener el detector apuntando al lugar
+      // donde ya no está el riesgo.
+      const servicosMotor = [
+        ...fuentesApi('motor/**/*.service.ts'),
+        ...fuentesApi('notifications/despacho/**/*.service.ts'),
+      ];
       expect(servicosMotor.length).toBeGreaterThan(5);
 
       const huerfanos: string[] = [];
@@ -410,6 +420,59 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
       // Medido: cero. Todo lo que escribe en el motor tiene quien lo llame, y
       // por eso esta regla entra SIN exenciones — que es como tiene que nacer
       // una regla si se puede.
+      expect(huerfanos).toEqual([]);
+    });
+
+    it('R19 · todo método público del DESPACHO tiene quien lo llame', () => {
+      // ⚠️ POR QUÉ NO ALCANZA CON R17, Y LO SÉ PORQUE LO MEDÍ.
+      //
+      // Desconecté el despacho del motor —quité la línea que lo llama— y
+      // R17 se quedó en VERDE. La razón es su definición de «escribir»:
+      // `metodosQueEscriben` busca escrituras en la base, y el punto de
+      // despacho no escribe en la base. Lee el catálogo y empuja a un canal.
+      //
+      // O sea: la regla que existe para cazar «esto está escrito y nadie lo
+      // llama» no cubría justamente al servicio nuevo cuyo único trabajo es
+      // que lo llamen. Sin esto, el motor podría dejar de avisar y el barrido
+      // no diría nada — que es el defecto de la 3A otra vez, con otra ropa.
+      //
+      // Se exige el nombre de la clase Y el del método, por lo mismo que R17:
+      // buscar sólo `.despacharCondiciones(` sería un colador.
+      const archivo = fuentesApi('notifications/despacho/despacho.service.ts')[0];
+      expect(archivo).toBeDefined();
+
+      const t = texto(archivo);
+      const clase = (/export class (\w+)/.exec(t) ?? [])[1];
+      expect(clase).toBe('DespachoService');
+
+      // ⚠️ LOS GANCHOS DEL CICLO DE VIDA SÍ TIENEN LLAMADOR: lo llama NestJS.
+      // No es una exención sino la corrección de un error de la regla — la
+      // primera versión marcó `onModuleInit` como huérfano, y habría obligado
+      // a borrar el log de arranque para que el barrido se callara. Un barrido
+      // que pide romper código correcto se termina apagando.
+      const GANCHOS_DEL_FRAMEWORK = new Set([
+        'onModuleInit', 'onModuleDestroy',
+        'onApplicationBootstrap', 'onApplicationShutdown', 'beforeApplicationShutdown',
+      ]);
+
+      const huerfanos: string[] = [];
+      for (const m of metodosDe(t)) {
+        if (m.nombre === 'constructor' || esPrivado(t, m)) continue;
+        if (GANCHOS_DEL_FRAMEWORK.has(m.nombre)) continue;
+        const tieneLlamador = FUENTES_API.some(
+          (otro) =>
+            otro !== archivo &&
+            !otro.endsWith('.spec.ts') &&
+            texto(otro).includes(clase) &&
+            texto(otro).includes(`.${m.nombre}(`),
+        );
+        if (!tieneLlamador) huerfanos.push(`${clase}.${m.nombre}()`);
+      }
+
+      // ⚠️ Y NO cuentan las pruebas: `otro.endsWith('.spec.ts')` las excluye.
+      // Es la diferencia con R17, que sí las acepta. Acá no se puede: la suite
+      // de cableado del despacho llama a todo, así que con las pruebas dentro
+      // la regla daría verde siempre — decorativa desde el primer día.
       expect(huerfanos).toEqual([]);
     });
 

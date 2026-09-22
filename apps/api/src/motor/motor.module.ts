@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TelemetryModule } from '../telemetry/telemetry.module';
+import { DespachoModule } from '../notifications/despacho/despacho.module';
 import { ColaService } from './cola.service';
 import { EstadoVehiculoService } from './estado-vehiculo.service';
 import { MotorConfigService } from './motor-config.service';
@@ -28,7 +29,10 @@ import { CondicionesService } from './condiciones/condiciones.service';
  * PrismaModule es @Global, así que no hace falta importarlo.
  */
 @Module({
-  imports: [TelemetryModule],
+  // ⚠️ La dependencia apunta del que GENERA el hecho al que lo REPARTE, y
+  // nunca de vuelta: el despacho no sabe que existe un motor. Es lo que deja
+  // agregar Telegram y correo sin abrir una sola línea de esta carpeta.
+  imports: [TelemetryModule, DespachoModule],
   controllers: [MotorController, SeguimientoController],
   providers: [EventosService, 
     ColaService,

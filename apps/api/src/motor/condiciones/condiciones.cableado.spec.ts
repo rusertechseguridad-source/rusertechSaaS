@@ -171,20 +171,45 @@ describe('Condiciones · los evaluadores están enchufados al worker', () => {
 
 describe('Condiciones · la idempotencia, que es lo que evita el ruido', () => {
   /**
+   * ⚠️ POR QUÉ ESTE BLOQUE CAMBIÓ DE `$executeRaw` A `$queryRaw`.
+   *
+   * `abrir` y `cerrar` devolvían un CONTADOR y ahora devuelven LOS IDS que
+   * escribieron, con un `RETURNING`. Lo pide el despacho de avisos: para
+   * mandar una notificación hay que saber QUÉ fila se creó, no cuántas.
+   *
+   * El mecanismo cambió; la propiedad que estas pruebas fijan, no. Se
+   * actualizan en vez de borrarse, que es lo que corresponde cuando la
+   * afirmación sigue siendo cierta y el camino para comprobarla se movió.
+   */
+  function armarPrisma(): {
+    prisma: any;
+    ejecutadas: { sql: string; valores: any[] }[];
+    despacho: any;
+  } {
+    const ejecutadas: { sql: string; valores: any[] }[] = [];
+    const anotar = (devuelve: any) =>
+      jest.fn((s: TemplateStringsArray, ...v: any[]) => {
+        ejecutadas.push({ sql: s.join(' ? '), valores: v });
+        return Promise.resolve(devuelve);
+      });
+    // Una fila devuelta = una condición escrita = un aviso.
+    const prisma = { $executeRaw: anotar(1), $queryRaw: anotar([{ id: 'cond-1' }]) };
+    const despacho = {
+      despacharCondiciones: jest.fn().mockResolvedValue(1),
+      despacharResolucion: jest.fn().mockResolvedValue(1),
+      despacharAtencion: jest.fn().mockResolvedValue(1),
+    };
+    return { prisma, ejecutadas, despacho };
+  }
+
+  /**
    * ⚠️ Un camión parado 20 minutos genera 240 puntos. Si cada uno abriera una
    * condición, el operador recibiría 240 alertas del mismo hecho — y dejaría de
    * mirarlas, que es la peor forma de fallar de un producto de seguridad.
    */
   it('🔴 N puntos del MISMO hecho producen UNA sola clave de identidad', async () => {
-    const ejecutadas: { sql: string; valores: any[] }[] = [];
-    const prisma = {
-      $executeRaw: jest.fn((s: TemplateStringsArray, ...v: any[]) => {
-        ejecutadas.push({ sql: s.join(' ? '), valores: v });
-        return Promise.resolve(1);
-      }),
-      $queryRaw: jest.fn().mockResolvedValue([]),
-    };
-    const servicio = new CondicionesService(prisma as any);
+    const { prisma, ejecutadas, despacho } = armarPrisma();
+    const servicio = new CondicionesService(prisma, despacho);
 
     // Doscientas cuarenta evaluaciones de la misma parada: todas ven el mismo
     // `detenido_desde`, que es lo que hace estable la clave.
@@ -199,50 +224,43 @@ describe('Condiciones · la idempotencia, que es lo que evita el ruido', () => {
     await servicio.aplicar(decisionesRepetidas);
 
     const claves = new Set(
-      ejecutadas.map((e) => e.valores.find((v) => typeof v === 'string' && v.includes(':PARADA_NO_AUTORIZADA:'))),
+      ejecutadas.map((e) =>
+        e.valores.find((v) => typeof v === 'string' && v.includes(':PARADA_NO_AUTORIZADA:')),
+      ),
     );
     expect(claves.size).toBe(1);
   });
 
   it('🔴 el INSERT trae su propia guarda: no depende de un índice que no verifiqué', async () => {
-    // `ON CONFLICT` necesita apuntar a un índice único concreto, y el conector
-    // de esta sesión no expone índices. Un ON CONFLICT contra un índice que no
-    // existe falla en EJECUCIÓN, no en compilación.
-    const ejecutadas: string[] = [];
-    const prisma = {
-      $executeRaw: jest.fn((s: TemplateStringsArray) => {
-        ejecutadas.push(s.join(' ? '));
-        return Promise.resolve(1);
-      }),
-      $queryRaw: jest.fn().mockResolvedValue([]),
-    };
-    await new CondicionesService(prisma as any).aplicar([{
+    // El único índice único sobre la clave es sobre `clave_identidad` SOLA
+    // —medido en la 3B—, así que apuntar un ON CONFLICT al par (tenant, clave)
+    // habría roto en ejecución, no en compilación.
+    const { prisma, ejecutadas, despacho } = armarPrisma();
+    await new CondicionesService(prisma, despacho).aplicar([{
       accion: 'abrir', tipo: 'SIN_REPORTE',
       tenant_id: TENANT, vehicle_id: VEHICULO, trip_id: null,
       inicio: T0, disparador: 'x', datos: {},
     }]);
 
-    expect(ejecutadas[0]).toContain('NOT EXISTS');
-    expect(ejecutadas[0]).not.toContain('ON CONFLICT');
+    expect(ejecutadas[0].sql).toContain('NOT EXISTS');
+    expect(ejecutadas[0].sql).not.toContain('ON CONFLICT');
+    // Y el RETURNING, que es lo que hace posible avisar de lo que se escribió.
+    expect(ejecutadas[0].sql).toContain('RETURNING id::text AS id');
   });
 
   it('🔴 el riesgo NO se escribe: sale del catálogo', async () => {
     // Si mañana se decide que una parada no autorizada es crítica, se cambia
     // en una fila del catálogo y todas las condiciones nuevas la respetan sin
     // tocar código.
-    const ejecutadas: string[] = [];
-    const prisma = {
-      $executeRaw: jest.fn((s: TemplateStringsArray) => { ejecutadas.push(s.join(' ? ')); return Promise.resolve(1); }),
-      $queryRaw: jest.fn().mockResolvedValue([]),
-    };
-    await new CondicionesService(prisma as any).aplicar([{
+    const { prisma, ejecutadas, despacho } = armarPrisma();
+    await new CondicionesService(prisma, despacho).aplicar([{
       accion: 'abrir', tipo: 'DESVIO_DE_RUTA',
       tenant_id: TENANT, vehicle_id: VEHICULO, trip_id: VIAJE,
       inicio: T0, disparador: 'x', datos: {},
     }]);
 
-    expect(ejecutadas[0]).toContain('mt.riesgo_default');
-    expect(ejecutadas[0]).toContain('FROM motor_tipos_condicion mt');
+    expect(ejecutadas[0].sql).toContain('mt.riesgo_default');
+    expect(ejecutadas[0].sql).toContain('FROM motor_tipos_condicion mt');
   });
 
   it('🔴 toda consulta y toda escritura acotan por tenant', async () => {
@@ -255,7 +273,7 @@ describe('Condiciones · la idempotencia, que es lo que evita el ruido', () => {
     const prisma = { $executeRaw: anotar, $queryRaw: jest.fn((s: any, ...v: any[]) => {
       llamadas.push([s, ...v]); return Promise.resolve([]);
     }) };
-    const servicio = new CondicionesService(prisma as any);
+    const servicio = new CondicionesService(prisma as any, {} as any);
 
     await servicio.abiertasDe(TENANT, VEHICULO);
     await servicio.paradaAutorizadaEn(TENANT, -34.6, -58.4);
