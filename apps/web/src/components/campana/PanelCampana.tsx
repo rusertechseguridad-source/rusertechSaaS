@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, CircleDot, Inbox, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react';
 import type { Aviso, EstadoConexion } from '../../store/campanaStore';
-import { desde } from './AvisoCritico';
+import { desde } from '../../services/fechas';
 
 interface Props {
   avisos: Aviso[];

@@ -10,6 +10,9 @@ export const SYSTEM_PERMISSIONS = {
   view_map: 'Ver Mapa Global',
   view_alerts: 'Ver Alertas',
   manage_alerts: 'Administrar Alertas',
+  // ⚠️ Etapa 3C-A. Espejo exacto del catálogo del backend: si una clave falta
+  // acá, la pantalla esconde un botón que la API sí autoriza — o al revés.
+  manage_critical_alerts: 'Atender Alertas Críticas',
   view_trips: 'Ver Viajes',
   manage_trips: 'Administrar Viajes',
   view_vehicles: 'Ver Vehículos',

@@ -7,6 +7,7 @@ import {
   llamadasPrisma, metodosDe, metodoEnLinea, importacionesSinUsar,
   metodosQueEscriben, esPrivado,
   sentenciasSql, tablasDe, creaFilasDe, columnasLeidasDe, columnasEscritasEn, lecturasSinAlias,
+  rutasServidas, llamadasAlBackend, algunaRutaCoincide,
 } from './primitivas';
 import {
   SIN_AUTORIZACION, CONSULTAS_SIN_TENANT, TOPE_RUTAS_SIN_DTO, ESCRITURAS_ROL_SIN_REGLA,
@@ -648,6 +649,59 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
         .filter((f) => /localhost:\d{4}/.test(soloCodigo(texto(f))))
         .map((f) => corto(f, RAIZ_WEB));
       expect(culpables).toEqual([]);
+    });
+
+    it('R20 · toda URL que la pantalla pide EXISTE en el backend', () => {
+      // ═══════════════════════════════════════════════════════════════════
+      // ⚠️ LA REGLA QUE FALTABA, Y POR QUÉ NACE DE UN HALLAZGO
+      // ═══════════════════════════════════════════════════════════════════
+      //
+      // La bitácora existía, estaba probada, y desde el navegador no se veía
+      // nada. Las 19 reglas anteriores miran sólo el backend; `tsc` tipa el
+      // frontend pero no sabe qué rutas sirve la API; y la afirmación del ZIP
+      // comprobaba que el archivo NOMBRARA la función. Ninguna de las tres
+      // puede ver una URL que apunta a otro lado.
+      //
+      // Esto cruza las dos mitades del repositorio: cada `${API_URL}/…` del
+      // frontend tiene que corresponder con algún `@Controller` + `@Get/@Post`
+      // del backend. Una URL mal escrita, una ruta renombrada de un lado y no
+      // del otro, o un endpoint que nunca se implementó, caen acá.
+      //
+      // ⚠️ LO QUE ESTA REGLA NO PUEDE VER, dicho para que nadie se confunda:
+      // que el BOTÓN llame a la función que pide esa URL. Eso es comportamiento
+      // y se prueba ejecutando el componente — está en
+      // `apps/web/src/components/campana/campana.cableado.spec.tsx`. Son dos
+      // mitades y hacen falta las dos.
+      const servidas = rutasServidas(CONTROLADORES, texto);
+      // Si el barrido no encontrara rutas, la regla pasaría vacía y no
+      // protegría nada. Es el modo de fallo de seis barridos de esta serie.
+      expect(servidas.length).toBeGreaterThan(50);
+
+      const pedidas = llamadasAlBackend(fuentesWeb(), texto, RAIZ_WEB);
+      expect(pedidas.length).toBeGreaterThan(20);
+
+      const huerfanas = pedidas
+        .filter((l) => !algunaRutaCoincide(l.segmentos, servidas))
+        .map((l) => `${l.archivo} → ${l.cruda}`);
+
+      expect(huerfanas).toEqual([]);
+    });
+
+    it('R20-bis · y la regla CAZA una URL inventada', () => {
+      // ⚠️ Negativa obligatoria. Una regla que nunca se vio fallar contra el
+      // sistema real no prueba nada: seis barridos de esta serie pasaron su
+      // primera reversión porque miraban el lugar equivocado.
+      const servidas = rutasServidas(CONTROLADORES, texto);
+
+      const inventada = ['api', 'v1', 'bitacora-que-no-existe', ':p', 'protocolo'];
+      expect(algunaRutaCoincide(inventada, servidas)).toBe(false);
+
+      // Y la que SÍ existe se reconoce — si diera false también, la regla
+      // estaría diciendo que no hay nada en vez de que falta algo.
+      expect(algunaRutaCoincide(['api', 'v1', 'bitacora', ':p', 'protocolo'], servidas)).toBe(true);
+      // La ruta a la que el botón iba a parar también existe, y por eso la
+      // regla sola no alcanzaba: hacía falta la prueba del componente.
+      expect(algunaRutaCoincide(['api', 'v1', 'alerts'], servidas)).toBe(true);
     });
 
     it('R15 · nadie llama al backend con una ruta relativa', () => {

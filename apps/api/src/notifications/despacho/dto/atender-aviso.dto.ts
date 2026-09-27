@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 /**
  * Atender una alerta desde la campana.
@@ -16,9 +16,28 @@ export class AtenderAvisoDto {
   @IsIn(['condicion', 'evento'])
   fuente!: 'condicion' | 'evento';
 
-  /** Lo que el operador quiera dejar dicho. Va a `nota` / `resolution_note`. */
+  /**
+   * El paso del protocolo que se estaba ejecutando, si fue uno.
+   * ⚠️ Etapa 3C-A: atender dejó de ser «silenciar» para ser «registrar».
+   */
+  @IsOptional()
+  @IsUUID()
+  paso_id?: string;
+
+  /** Código del catálogo de resultados de ESE tipo de alerta. */
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(60)
+  resultado_codigo?: string;
+
+  /**
+   * Texto libre. Es la otra vía válida para registrar.
+   *
+   * ⚠️ Ya no alcanza con dejarla vacía: hay que elegir un resultado O escribir
+   * acá. La regla vive en `registroDiceAlgo` y en un CHECK de la tabla.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
   nota?: string;
 }

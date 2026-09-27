@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AccesoEntidadesModule } from '../../common/access/acceso-entidades.module';
+import { BitacoraController } from '../atencion/bitacora.controller';
+import { BitacoraService } from '../atencion/bitacora.service';
+import { ProtocoloService } from '../atencion/protocolo.service';
 import { CampanaController } from './campana.controller';
 import { CampanaService } from './campana.service';
 import { CanalCampanaService } from './canal-campana.service';
@@ -28,17 +31,24 @@ import { CANALES_DE_AVISO } from './tipos-despacho';
  */
 @Module({
   imports: [AccesoEntidadesModule],
-  controllers: [CampanaController],
+  controllers: [CampanaController, BitacoraController],
   providers: [
     CanalCampanaService,
     DespachoService,
     CampanaService,
+    // ⚠️ La bitácora vive en el mismo módulo que la campana y no en uno propio.
+    // No es pereza: `atender` escribe la entrada y silencia la alerta EN LA
+    // MISMA TRANSACCIÓN, así que separarlas en dos módulos obligaría a
+    // exponer la transacción entre ellos — que es el camino corto a que un
+    // día se escriba el `atendida_at` sin su entrada.
+    ProtocoloService,
+    BitacoraService,
     {
       provide: CANALES_DE_AVISO,
       useFactory: (campana: CanalCampanaService) => [campana],
       inject: [CanalCampanaService],
     },
   ],
-  exports: [DespachoService, CanalCampanaService],
+  exports: [DespachoService, CanalCampanaService, BitacoraService, ProtocoloService],
 })
 export class DespachoModule {}

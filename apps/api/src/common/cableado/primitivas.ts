@@ -994,3 +994,133 @@ export function tablasPropiasDelMotor(
  */
 export const creaFilasDe = (sentencias: string[], tabla: string): boolean =>
   sentencias.some((s) => new RegExp(`insert\\s+into\\s+${tabla}\\s*\\(`, 'i').test(s));
+
+// ══════════════════════════════════════════════════════════════════════════
+// 9 · El cable que cruza el repositorio: pantalla → API
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⚠️ POR QUÉ ESTAS DOS PRIMITIVAS EXISTEN.
+ *
+ * El botón «Atender esta alerta» quedó apuntando a otra ruta y nada lo vio:
+ * `tsc` tipa el frontend pero no sabe qué rutas sirve el backend, y la
+ * afirmación del ZIP comprobaba que el archivo NOMBRARA la función, no que el
+ * clic llegara a destino. Es la falla de la 3A —servicio probado, llamador
+ * ausente— del otro lado del cable.
+ *
+ * Una prueba de componente (`apps/web`) demuestra que el clic pide la URL que
+ * se espera. Esto demuestra lo otro: que esa URL EXISTE del lado del backend.
+ * Son dos mitades y hacen falta las dos — una URL correcta contra una ruta que
+ * nadie sirve da 404, y una ruta viva que nadie llama es código muerto.
+ */
+
+/** Una ruta tal como el backend la sirve, en segmentos. `:algo` es comodín. */
+export interface RutaServida {
+  metodo: string;
+  segmentos: string[];
+  origen: string;
+}
+
+// ⚠️ `Sse` está en la lista, y lo aprendí en la primera corrida: sin él, la
+// regla reportaba `/api/v1/campana/flujo` como ruta inexistente — el flujo en
+// vivo de la campana, que existe y funciona. Un barrido que grita por código
+// correcto se termina apagando, que es peor que no tenerlo.
+const VERBOS = ['Get', 'Post', 'Put', 'Patch', 'Delete', 'Sse'];
+
+const partir = (ruta: string): string[] =>
+  ruta.split('/').map((s) => s.trim()).filter((s) => s.length > 0);
+
+/** Todas las rutas que los controladores del backend declaran. */
+export function rutasServidas(
+  archivos: string[],
+  leerArchivo: (f: string) => string,
+): RutaServida[] {
+  const rutas: RutaServida[] = [];
+  for (const f of archivos) {
+    const t = leerArchivo(f);
+    const base = (/@Controller\(\s*['"`]([^'"`]*)['"`]\s*\)/.exec(t) ?? [])[1] ?? '';
+    for (const verbo of VERBOS) {
+      // `@Get()` sin argumento es la raíz del controlador.
+      const re = new RegExp(`@${verbo}\\(\\s*(?:['"\`]([^'"\`]*)['"\`])?\\s*\\)`, 'g');
+      for (const m of t.matchAll(re)) {
+        rutas.push({
+          metodo: verbo.toUpperCase(),
+          segmentos: [...partir(base), ...partir(m[1] ?? '')],
+          origen: corto(f),
+        });
+      }
+    }
+  }
+  return rutas;
+}
+
+/** Una llamada del frontend, con la URL normalizada en segmentos. */
+export interface LlamadaWeb {
+  segmentos: string[];
+  cruda: string;
+  archivo: string;
+}
+
+/**
+ * Las URLs del backend que el frontend pide.
+ *
+ * ⚠️ Se buscan sobre el TEXTO y no sobre `sinComentarios`: la URL vive dentro
+ * de un literal, y esa primitiva los vacía. Es la misma trampa que apagó a R14
+ * y R15 en la Tanda 7 — se deja escrita porque es la clase de error que se
+ * repite.
+ *
+ * ⚠️ Las interpolaciones se reemplazan por `:p`. `${aviso.id}` y `${fuente}`
+ * son valores de ejecución: lo que se puede comprobar es la FORMA de la ruta,
+ * y alcanza — el error que motivó la regla era `/alerts` en lugar de
+ * `/bitacora/:id/protocolo`, que difiere en la forma.
+ */
+export function llamadasAlBackend(
+  archivos: string[],
+  leerArchivo: (f: string) => string,
+  raiz: string,
+): LlamadaWeb[] {
+  const llamadas: LlamadaWeb[] = [];
+  // `${API_URL}/loquesea` y `urlApi('/loquesea')`.
+  const patrones = [
+    /\$\{API_URL\}(\/[A-Za-z0-9_\-/${}.[\]?=&:]*)/g,
+    /urlApi\(\s*[`'"]([^`'"]+)[`'"]/g,
+  ];
+  for (const f of archivos) {
+    const t = leerArchivo(f);
+    for (const re of patrones) {
+      for (const m of t.matchAll(re)) {
+        const cruda = m[1];
+        // La query no forma parte de la ruta.
+        const sinQuery = cruda.split('?')[0].split('$' + '{q}')[0];
+        const segmentos = partir(sinQuery).map((s) => (s.includes('${') ? ':p' : s));
+        if (segmentos.length === 0) continue;
+        llamadas.push({ segmentos, cruda, archivo: corto(f, raiz) });
+      }
+    }
+  }
+  return llamadas;
+}
+
+/**
+ * ¿Alguna ruta servida tiene esta forma? `:algo` de cualquier lado comodinea.
+ *
+ * ⚠️ COINCIDE TAMBIÉN POR PREFIJO, y tiene un motivo medido. El frontend
+ * arma bases: `const API = ${'$'}{API_URL}/api/v1/informes` y después
+ * `${'$'}{API}/viajes/${'$'}{id}`. Sin el prefijo, la regla reportaba cuatro bases
+ * como rutas inexistentes — código correcto — y la primera reacción de
+ * cualquiera habría sido exceptuarlas o apagarla.
+ *
+ * ⚠️ LO QUE SE PIERDE CON ESO, dicho en vez de tapado: una llamada a
+ * `/api/v1/informes/loquesea` pasa, porque su prefijo existe. La regla caza la
+ * ruta que no existe DE NINGUNA FORMA —el caso que motivó escribirla— y no
+ * la que existe a medias. Lo otro lo tiene que cazar una prueba de componente.
+ */
+export function algunaRutaCoincide(llamada: string[], rutas: RutaServida[]): boolean {
+  const casa = (a: string, b: string) => a.startsWith(':') || b.startsWith(':') || a === b;
+  return rutas.some(
+    (r) =>
+      // Exacta, o la llamada es una base de la que cuelga esta ruta.
+      llamada.length <= r.segmentos.length &&
+      llamada.every((seg, i) => casa(r.segmentos[i], seg)),
+  );
+}

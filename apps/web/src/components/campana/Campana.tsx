@@ -8,7 +8,9 @@ import {
   type Aviso,
 } from '../../store/campanaStore';
 import { sonido } from '../../services/sonido';
-import { AvisoCritico } from './AvisoCritico';
+import { useBitacoraStore } from '../../store/bitacoraStore';
+import { AvisoCritico, FranjaCritica } from './AvisoCritico';
+import { ModalAtencion } from './ModalAtencion';
 import { PanelCampana } from './PanelCampana';
 
 /**
@@ -30,13 +32,24 @@ import { PanelCampana } from './PanelCampana';
 export function Campana() {
   const {
     avisos, conexion, cargando, error, panelAbierto,
-    cargarPendientes, conectar, desconectar, atender, abrirPanel,
+    cargarPendientes, conectar, desconectar, abrirPanel,
   } = useCampanaStore();
+  const abrirBitacora = useBitacoraStore((s) => s.abrir);
 
   // El servicio de sonido no es un store de React: se escucha para que la
   // pantalla muestre el estado REAL del audio y no el que supone.
   const [, refrescar] = useState(0);
   useEffect(() => sonido.suscribir(() => refrescar((n) => n + 1)), []);
+
+  /**
+   * ⚠️ QUÉ ALERTA ESTÁ MINIMIZADA — se guarda el ID, no un booleano.
+   *
+   * Con un booleano, minimizar una crítica dejaría tapada también a la
+   * SIGUIENTE, que es otra alerta y otro hecho. Guardando el id, la que llega
+   * después se muestra entera: el operador minimizó «esta», no «las
+   * críticas».
+   */
+  const [minimizada, setMinimizada] = useState<string | null>(null);
 
   useEffect(() => {
     void cargarPendientes();
@@ -68,7 +81,14 @@ export function Campana() {
     sincronizarAlarma(useCampanaStore.getState().avisos);
   };
 
-  const atenderAviso = async (aviso: Aviso) => { await atender(aviso); };
+  /**
+   * ⚠️ «ATENDER» YA NO ES UN CLIC — ES UN FORMULARIO.
+   *
+   * Desde la 3C-A no se puede silenciar una alerta sin decir qué se hizo, así
+   * que el botón abre la ventana con el protocolo de ESA alerta y su hilo. El
+   * silencio lo produce el registro, no el clic.
+   */
+  const atenderAviso = async (aviso: Aviso) => { await abrirBitacora(aviso); };
 
   return (
     <div className="relative">
@@ -113,14 +133,31 @@ export function Campana() {
 
       {/* ⚠️ El aviso rojo se muestra AUNQUE el sonido esté silenciado. Silenciar
           es «no me hagas ruido», no «no me cuentes lo que pasa». */}
-      {enPantalla && (
-        <AvisoCritico
-          aviso={enPantalla}
-          sonidoActivo={sonido.activo}
-          onAtender={() => atenderAviso(enPantalla)}
-          onActivarSonido={activarSonido}
-        />
-      )}
+      <ModalAtencion />
+
+      {/* ⚠️ MINIMIZAR NO ES DESCARTAR, y por eso son dos vistas del MISMO
+          aviso y no dos avisos. La superposición se corre; la franja queda
+          fija, sigue sonando y sigue teniendo «Atender». Lo que se recupera
+          es la pantalla de atrás — el bloqueo circular era que el
+          administrador no podía llegar a Gestión de Usuarios a otorgar el
+          permiso que la propia alerta le exigía. */}
+      {enPantalla &&
+        (minimizada === `${enPantalla.fuente}:${enPantalla.id}` ? (
+          <FranjaCritica
+            aviso={enPantalla}
+            cantidad={criticas.length}
+            onAtender={() => atenderAviso(enPantalla)}
+            onAmpliar={() => setMinimizada(null)}
+          />
+        ) : (
+          <AvisoCritico
+            aviso={enPantalla}
+            sonidoActivo={sonido.activo}
+            onAtender={() => atenderAviso(enPantalla)}
+            onActivarSonido={activarSonido}
+            onMinimizar={() => setMinimizada(`${enPantalla.fuente}:${enPantalla.id}`)}
+          />
+        ))}
     </div>
   );
 }

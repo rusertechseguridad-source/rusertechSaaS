@@ -1,6 +1,9 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AccesoEntidadesService } from '../../common/access/acceso-entidades.service';
+import { isAdminRole } from '../../common/constants/admin-roles';
+import { BitacoraService, type EntradaNueva } from '../atencion/bitacora.service';
+import { motivoParaNoAtenderCritica } from '../atencion/tipos-atencion';
 import { DespachoService } from './despacho.service';
 import { AvisoDespacho, FuenteAviso, entraALaCampana, interrumpe } from './tipos-despacho';
 
@@ -74,6 +77,12 @@ export class CampanaService {
     private readonly prisma: PrismaService,
     private readonly acceso: AccesoEntidadesService,
     private readonly despacho: DespachoService,
+    /**
+     * ⚠️ ATENDER YA NO ES SÓLO SILENCIAR. Desde la 3C-A, silenciar una alerta
+     * sin decir qué se hizo es imposible: la entrada de bitácora y el
+     * `atendida_at` se escriben juntos o no se escribe ninguno.
+     */
+    private readonly bitacora: BitacoraService,
   ) {}
 
   /**
@@ -190,11 +199,16 @@ export class CampanaService {
    * diría que se hizo cargo el más lento.
    */
   async atender(
-    usuario: { id?: string; tenantId?: string; role?: string },
+    usuario: { id?: string; tenantId?: string; role?: string; permissions?: string[] },
     fuente: FuenteAviso,
     id: string,
-    nota: string | null,
-  ): Promise<{ atendida_por_nombre: string | null; atendida_at: Date; ya_estaba: boolean }> {
+    registro: EntradaNueva,
+  ): Promise<{
+    atendida_por_nombre: string | null;
+    atendida_at: Date;
+    ya_estaba: boolean;
+    habilita_escalada: boolean;
+  }> {
     const tenantId = usuario?.tenantId;
     const usuarioId = usuario?.id;
     if (!tenantId || !usuarioId) {
@@ -206,30 +220,66 @@ export class CampanaService {
     const vehiculos = await this.vehiculosVisibles(usuario);
     const sinLimite = vehiculos === null;
     const permitidos = vehiculos ?? [];
-    const ahora = new Date();
 
-    const filas =
-      fuente === 'condicion'
-        ? await this.prisma.$executeRaw`
-            UPDATE trip_conditions
-               SET atendida_por = ${usuarioId}::uuid,
-                   atendida_at  = ${ahora},
-                   nota         = ${nota}
-             WHERE id = ${id}::uuid
-               AND tenant_id = ${tenantId}::uuid
-               AND atendida_at IS NULL
-               AND (${sinLimite} OR vehicle_id = ANY(${permitidos}::uuid[]))
-          `
-        : await this.prisma.$executeRaw`
-            UPDATE event_logs
-               SET acknowledged_by = ${usuarioId}::uuid,
-                   acknowledged_at = ${ahora},
-                   resolution_note = coalesce(${nota}, resolution_note)
-             WHERE id = ${id}::uuid
-               AND tenant_id = ${tenantId}::uuid
-               AND acknowledged_at IS NULL
-               AND (${sinLimite} OR vehicle_id = ANY(${permitidos}::uuid[]))
-          `;
+    // ⚠️ EL TIPO PRIMERO, Y ACOTADO POR CLIENTE. Sirve para dos cosas a la
+    // vez: saber contra qué protocolo validar el registro, y comprobar que la
+    // alerta sea visible. No son dos comprobaciones que alguien pueda olvidar
+    // de encadenar: sin el tipo no hay contra qué validar.
+    const alerta = await this.bitacora.tipoDeAlerta(tenantId, fuente, id);
+    if (!alerta) {
+      throw new NotFoundException('La alerta no existe o no es visible para vos.');
+    }
+
+    await this.exigirPermisoSiEsCritica(tenantId, alerta.tipo, usuarioId, usuario);
+
+    // Registrar es obligatorio. Si esto tira, no se escribió nada.
+    const { habilitaEscalada } = await this.bitacora.validar(tenantId, alerta.tipo, registro);
+
+    const ahora = new Date();
+    // ⚠️ LAS DOS ESCRITURAS, JUNTAS. Un `atendida_at` sin su entrada de
+    // bitácora sería exactamente el estado que esta etapa vino a eliminar:
+    // una alerta silenciada sin decir qué se hizo.
+    const filas = await this.prisma.$transaction(async (tx) => {
+      const afectadas =
+        fuente === 'condicion'
+          ? await tx.$executeRaw`
+              UPDATE trip_conditions
+                 SET atendida_por = ${usuarioId}::uuid,
+                     atendida_at  = ${ahora},
+                     nota         = ${registro.nota ?? null}
+               WHERE id = ${id}::uuid
+                 AND tenant_id = ${tenantId}::uuid
+                 AND atendida_at IS NULL
+                 AND (${sinLimite} OR vehicle_id = ANY(${permitidos}::uuid[]))
+            `
+          : await tx.$executeRaw`
+              UPDATE event_logs
+                 SET acknowledged_by = ${usuarioId}::uuid,
+                     acknowledged_at = ${ahora},
+                     resolution_note = coalesce(${registro.nota ?? null}, resolution_note)
+               WHERE id = ${id}::uuid
+                 AND tenant_id = ${tenantId}::uuid
+                 AND acknowledged_at IS NULL
+                 AND (${sinLimite} OR vehicle_id = ANY(${permitidos}::uuid[]))
+            `;
+
+      // ⚠️ La entrada se escribe SIEMPRE, aunque el UPDATE no haya afectado
+      // filas porque otro llegó primero. Dos operadores que llamaron al mismo
+      // conductor hicieron dos cosas distintas, y las dos tienen que estar en
+      // el hilo: el que llegó segundo también trabajó.
+      await this.bitacora.registrar(tx as unknown as { $executeRaw: typeof tx.$executeRaw }, {
+        tenantId,
+        fuente,
+        alertaId: id,
+        usuarioId,
+        accion: 'registro',
+        paso_id: registro.paso_id ?? null,
+        resultado_codigo: registro.resultado_codigo ?? null,
+        nota: registro.nota ?? null,
+      });
+
+      return afectadas;
+    });
 
     const estado = await this.quienAtendio(fuente, tenantId, id);
     if (!estado) {
@@ -246,12 +296,12 @@ export class CampanaService {
       atendida_por: estado.atendida_por,
       atendida_por_nombre: estado.nombre,
       atendida_at: estado.atendida_at,
-      nota,
+      nota: registro.nota ?? null,
     });
 
     if (filas === 0) {
       this.logger.log(
-        `Atención duplicada sobre ${fuente} ${id}: ya la había atendido ${estado.nombre ?? estado.atendida_por}.`,
+        `Atención duplicada sobre ${fuente} ${id}: ya la había atendido ${estado.nombre ?? estado.atendida_por}. La entrada de bitácora se guardó igual.`,
       );
     }
 
@@ -259,7 +309,56 @@ export class CampanaService {
       atendida_por_nombre: estado.nombre,
       atendida_at: estado.atendida_at,
       ya_estaba: filas === 0,
+      habilita_escalada: habilitaEscalada,
     };
+  }
+
+  /**
+   * ⚠️ EL PERMISO DE LAS CRÍTICAS SE COMPRUEBA ACÁ Y NO EN EL CONTROLADOR.
+   *
+   * No se puede en el decorador: hasta no leer la alerta no se sabe si es
+   * crítica, y exigir el permiso para TODAS dejaría a un operador sin poder
+   * atender una parada prolongada. El decorador de la ruta sigue exigiendo
+   * `manage_alerts`, que es el piso; esto es el techo, y depende del dato.
+   *
+   * La pantalla ya muestra el botón deshabilitado con el motivo — esto es la
+   * puerta de atrás cerrada, no la primera línea.
+   */
+  private async exigirPermisoSiEsCritica(
+    tenantId: string,
+    tipoCondicion: string,
+    usuarioId: string,
+    usuario: { role?: string },
+  ): Promise<void> {
+    const filas = await this.prisma.$queryRaw<{ interrumpe: boolean }[]>`
+      SELECT coalesce(nr.interrumpe_al_operador, false) AS interrumpe
+      FROM motor_tipos_condicion mt
+      LEFT JOIN motor_niveles_riesgo nr
+             ON nr.codigo = mt.riesgo_default
+            AND (nr.tenant_id = ${tenantId}::uuid OR nr.tenant_id IS NULL)
+      WHERE mt.codigo = ${tipoCondicion}
+      LIMIT 1
+    `;
+    if (!filas[0]?.interrumpe) return;
+
+    // ⚠️ LOS PERMISOS SE RELEEN DE LA BASE, no se toman del token.
+    //
+    // El token se firma al iniciar sesión; el permiso «Atender Alertas
+    // Críticas» se otorga por usuario desde Gestión de Usuarios y no lo
+    // cambia. Si esta comprobación mirara `usuario.permissions`, entre el
+    // momento en que el supervisor lo otorga y el momento en que el operador
+    // vuelve a entrar la pantalla mostraría el botón habilitado —porque el
+    // frontend relee /auth/me— y la API lo rechazaría. Las dos puntas leen
+    // la base, así que no pueden discrepar.
+    //
+    // La consulta sólo corre cuando la alerta es crítica: el `return` de
+    // arriba ya salió para las demás.
+    const permisos = await this.bitacora.permisosVigentesDe(usuarioId);
+    const motivo = motivoParaNoAtenderCritica({
+      permisos,
+      esAdmin: isAdminRole(usuario.role),
+    });
+    if (motivo) throw new ForbiddenException(motivo);
   }
 
   private async quienAtendio(

@@ -68,6 +68,14 @@ export class CampanaController {
   @RequirePermissions('manage_alerts')
   @Put(':id/atender')
   atender(@Request() req: any, @Param('id') id: string, @Body() body: AtenderAvisoDto) {
-    return this.campana.atender(req.user, body.fuente, id, body.nota ?? null);
+    // ⚠️ Desde la 3C-A se manda el REGISTRO, no una nota suelta: qué paso se
+    // estaba haciendo, qué resultó, y el texto libre. Registrar es obligatorio
+    // y lo comprueba el servicio — silenciar sin decir qué se hizo dejó de ser
+    // posible.
+    return this.campana.atender(req.user, body.fuente, id, {
+      paso_id: body.paso_id ?? null,
+      resultado_codigo: body.resultado_codigo ?? null,
+      nota: body.nota ?? null,
+    });
   }
 }

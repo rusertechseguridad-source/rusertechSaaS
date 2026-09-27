@@ -160,9 +160,19 @@ describe('Campana · la lista y el flujo usan la MISMA decisión', () => {
       });
     const prisma = { $queryRaw: anotar([]), $executeRaw: anotar(1) };
     const despacho = { despacharAtencion: jest.fn().mockResolvedValue(1) };
+    // ⚠️ Desde la 3C-A, `atender` escribe la entrada de bitácora y silencia la
+    // alerta EN LA MISMA TRANSACCIÓN. El doble de prueba devuelve el tipo de
+    // la alerta —que es también el control de aislamiento— y valida sin
+    // objetar: lo que esta suite vigila es el ACOTAMIENTO, no la doctrina.
+    const bitacora = {
+      tipoDeAlerta: jest.fn().mockResolvedValue({ tipo: 'PARADA_PROLONGADA', cerrada: false }),
+      validar: jest.fn().mockResolvedValue({ habilitaEscalada: false }),
+      registrar: jest.fn().mockResolvedValue(1),
+    };
+    (prisma as any).$transaction = jest.fn(async (fn: any) => fn(prisma));
     return {
-      servicio: new CampanaService(prisma as any, acceso as any, despacho as any),
-      acceso, llamadas, despacho,
+      servicio: new CampanaService(prisma as any, acceso as any, despacho as any, bitacora as any),
+      acceso, llamadas, despacho, bitacora,
     };
   }
 
@@ -220,7 +230,9 @@ describe('Campana · la lista y el flujo usan la MISMA decisión', () => {
     const { servicio, llamadas, despacho } = armar([CAMION_MIO]);
 
     await servicio
-      .atender({ id: 'u1', tenantId: CLIENTE_A, role: 'operator' }, 'condicion', 'cond-1', null)
+      .atender({ id: 'u1', tenantId: CLIENTE_A, role: 'operator' }, 'condicion', 'cond-1', {
+        nota: 'llamé al conductor',
+      })
       .catch(() => undefined);
 
     const escritura = llamadas.find((l) => String(l[0]).includes('UPDATE trip_conditions'));

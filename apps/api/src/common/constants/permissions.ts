@@ -18,6 +18,11 @@ export const SYSTEM_PERMISSIONS = {
   view_map: 'Ver Mapa Global',
   view_alerts: 'Ver Alertas',
   manage_alerts: 'Administrar Alertas',
+  // ⚠️ Etapa 3C-A. Atender una alerta que INTERRUMPE la pantalla —las que el
+  // catálogo marca con `interrumpe_al_operador`— es una responsabilidad
+  // aparte: un supervisor lo otorga operador por operador. Quien no lo tiene
+  // VE la alerta roja y el botón deshabilitado CON EL MOTIVO, nunca escondido.
+  manage_critical_alerts: 'Atender Alertas Críticas',
   view_trips: 'Ver Viajes',
   manage_trips: 'Administrar Viajes',
   view_vehicles: 'Ver Vehículos',
