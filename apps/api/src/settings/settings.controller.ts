@@ -10,6 +10,21 @@ import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { InvitarUsuarioDto } from './dto/invitar-usuario.dto';
 
+/**
+ * ⚠️ QUIÉN GESTIONA LOS USUARIOS DEL CLIENTE, EN UN SOLO LUGAR.
+ *
+ * Antes la lista estaba escrita a mano dentro de cada handler, con un `if`
+ * sobre el rol: cambiar quién invita exigía acordarse de varios lugares, y el
+ * sistema de guards —y el barrido R3— no veía esa autorización. Ahora es un
+ * `@Roles` que lee de acá. Las listas son EXACTAMENTE las que tenían los `if`:
+ * nadie ganó ni perdió acceso.
+ *
+ * Son dos listas y no una, a propósito: VER los usuarios lo puede también el
+ * `manager`; invitar, editar, suspender y borrar, no.
+ */
+export const ROLES_GESTIONAN_USUARIOS = ['account_owner', 'rusertech_admin'];
+export const ROLES_VEN_USUARIOS = ['account_owner', 'manager', 'rusertech_admin'];
+
 @Controller('api/v1/settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SettingsController {
@@ -23,38 +38,30 @@ export class SettingsController {
     return this.settingsService.getProfile(req.user.tenantId);
   }
 
+  // Regla de producto (Etapa 2): configuración = solo administradores.
+  // manager pierde la edición del perfil; conserva la lectura. Misma lista que
+  // las demás escrituras de configuración de este controlador.
   @Put('profile')
+  @Roles('account_owner', 'rusertech_admin')
   updateProfile(@Request() req: any, @Body() body: any) {
-    // Regla de producto (Etapa 2): configuración = solo administradores.
-    // manager pierde la edición del perfil; conserva la lectura.
-    if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
-      throw new ForbiddenException('No tienes permisos para editar el perfil del Tenant.');
-    }
     return this.settingsService.updateProfile(req.user.tenantId, body);
   }
 
   @Get('users')
+  @Roles(...ROLES_VEN_USUARIOS)
   getUsers(@Request() req: any) {
-    if (req.user.role !== 'account_owner' && req.user.role !== 'manager' && req.user.role !== 'rusertech_admin') {
-      throw new ForbiddenException('No tienes permisos para ver usuarios.');
-    }
     return this.settingsService.getUsers(req.user.tenantId);
   }
 
   @Post('users/invite')
+  @Roles(...ROLES_GESTIONAN_USUARIOS)
   inviteUser(@Request() req: any, @Body() body: InvitarUsuarioDto) {
-    if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
-      throw new ForbiddenException('No tienes permisos para invitar usuarios.');
-    }
     return this.settingsService.inviteUser(req.user.tenantId, body);
   }
 
   @Put('users/:id')
+  @Roles(...ROLES_GESTIONAN_USUARIOS)
   updateUser(@Request() req: any, @Param('id') userId: string, @Body() body: ActualizarUsuarioDto) {
-    if (req.user.role !== 'account_owner' && req.user.role !== 'rusertech_admin') {
-      throw new ForbiddenException('Solo el propietario puede editar usuarios.');
-    }
-
     // La regla de qué rol se puede asignar ya NO vive acá: se movió al
     // servicio. Ponerla en el controller fue el error de la Tanda 3 — cubría
     // esta ruta y dejaba sin cubrir el `invite` y el panel de administración.
@@ -62,14 +69,14 @@ export class SettingsController {
   }
 
   @Patch('users/:id/toggle')
-  @Roles('account_owner', 'rusertech_admin')
+  @Roles(...ROLES_GESTIONAN_USUARIOS)
   async toggleUserStatus(@Req() req: Request, @Param('id') userId: string, @Body('is_active') isActive: boolean) {
     const { tenantId } = (req as any).user;
     return this.settingsService.toggleUserStatus(tenantId, userId, isActive);
   }
 
   @Delete('users/:id')
-  @Roles('account_owner', 'rusertech_admin')
+  @Roles(...ROLES_GESTIONAN_USUARIOS)
   async deleteUser(@Req() req: Request, @Param('id') userId: string) {
     const { tenantId, id: requesterId } = (req as any).user;
     if (requesterId === userId) {

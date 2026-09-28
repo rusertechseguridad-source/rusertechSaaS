@@ -1,13 +1,35 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import { WILDCARD_PERMISSION, type PermissionKey } from '../../common/constants/permissions';
+import {
+  SYSTEM_PERMISSIONS, WILDCARD_PERMISSION, type PermissionKey,
+} from '../../common/constants/permissions';
 import { isAdminRole } from '../../common/constants/admin-roles';
+
+/**
+ * El motivo del rechazo: el permiso que FALTA, con su nombre del catálogo.
+ *
+ * ⚠️ Nombra lo que la ruta exige y nada más. No enumera los permisos que
+ * existen ni los que el usuario tiene: eso es el mapa de autorización del
+ * sistema, y a quien lo rechazan le alcanza con saber qué pedir.
+ */
+export function motivoSinPermiso(requeridos: PermissionKey[]): string {
+  const nombres = requeridos.map((p) => `«${SYSTEM_PERMISSIONS[p] ?? p}»`);
+  return nombres.length === 1
+    ? `Necesitás el permiso ${nombres[0]}. Pedíselo a quien administra tu cuenta.`
+    : `Necesitás alguno de estos permisos: ${nombres.join(' o ')}. Pedíselo a quien administra tu cuenta.`;
+}
 
 /**
  * Autoriza el handler comparando los permisos declarados con los que trae el
  * JWT. Ambos lados usan ahora el mismo formato canónico (`accion_recurso`),
  * que es el que guarda la tabla `roles`.
+ *
+ * ⚠️ RECHAZA CON MOTIVO, no con `false`. Devolver `false` hace que Nest
+ * responda «Forbidden resource», y la pantalla lo mostraba tal cual: un
+ * rechazo sin motivo es indistinguible de una función rota. El código sigue
+ * siendo 403 — el frontend decide por el código, no por el texto (medido:
+ * nada en el repositorio compara contra «Forbidden resource»).
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -27,7 +49,7 @@ export class PermissionsGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
 
     if (!user || !Array.isArray(user.permissions)) {
-      return false;
+      throw new ForbiddenException('Tu sesión no trae permisos. Iniciá sesión nuevamente.');
     }
 
     // Administradores del sistema: única lista, en common/constants/admin-roles.
@@ -40,6 +62,9 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    return requiredPermissions.some((permission) => user.permissions.includes(permission));
+    if (requiredPermissions.some((permission) => user.permissions.includes(permission))) {
+      return true;
+    }
+    throw new ForbiddenException(motivoSinPermiso(requiredPermissions));
   }
 }

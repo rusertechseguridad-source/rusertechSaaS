@@ -79,7 +79,6 @@ describe('Cableado de autorización', () => {
       'auth/auth.controller.ts': 'POST /auth/login es la puerta de entrada: no puede exigir permisos.',
       'telemetry/telemetry.controller.ts': 'Ingesta del HUB: se autentica con ApiKeyGuard por AVL user, no con JWT.',
       'app.controller.ts': 'POST /upload sólo exige sesión; el permiso por tipo de archivo no existe en el catálogo.',
-      'simulator/simulator.controller.ts': 'Detrás de AVL_SIMULATOR_ENABLED; el catálogo tiene use_simulator y su cableado es de otra tanda.',
       'admin/admin.controller.ts': 'Las 17 rutas pasan por checkSuperAdmin(), que es más estricto que cualquier permiso.',
       'settings/settings.controller.ts': 'Usa @Roles con RolesGuard, verificado por la prueba de arriba.',
       'operational-protocols/operational-protocols.controller.ts': 'Usa @Roles con RolesGuard.',

@@ -9,6 +9,10 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
+  // ⚠️ Era la única ruta del controlador sin permiso: cualquier usuario
+  // autenticado del cliente listaba las alertas, mientras la campana —que
+  // muestra lo mismo— exigía `view_alerts`. Mismo dato, misma puerta.
+  @RequirePermissions('view_alerts')
   @Get()
   findAll(@Request() req: any) {
     return this.alertsService.findAll(req.user);

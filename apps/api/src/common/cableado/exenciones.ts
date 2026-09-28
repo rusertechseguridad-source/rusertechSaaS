@@ -83,33 +83,12 @@ export const SIN_AUTORIZACION: Exencion[] = [
     anotadoEn: 'REPORTE_TANDA_8.md § Lo que el barrido encontró',
   },
   {
-    archivo: 'simulator/simulator.controller.ts',
-    clase: 'temporal',
-    motivo:
-      'Está detrás de AVL_SIMULATOR_ENABLED, así que en producción no existe. El ' +
-      'catálogo SÍ tiene `use_simulator` y el decorador no está puesto: es ' +
-      'cableado pendiente, no una excepción de diseño.',
-    anotadoEn: 'REPORTE_TANDA_8.md § Lo que el barrido encontró',
-  },
-  {
     archivo: 'admin/admin.controller.ts',
     clase: 'permanente',
     motivo:
       'Las rutas pasan por checkSuperAdmin(), que compara contra ADMIN_ROLES y ' +
       'es MÁS estricto que cualquier permiso del catálogo: un permiso se puede ' +
       'conceder a un rol de cliente, el rol de plataforma no.',
-  },
-  {
-    archivo: 'settings/settings.controller.ts',
-    clase: 'temporal',
-    motivo:
-      '⚠️ HALLAZGO DEL BARRIDO. Tres rutas —PUT /profile, POST /users/invite y ' +
-      'PUT /users/:id— comprueban el rol con un `if (req.user.role !== …) throw ' +
-      'ForbiddenException` escrito a mano DENTRO del handler, en vez de con ' +
-      '@Roles. La autorización existe y funciona, pero queda fuera del sistema de ' +
-      'guards: no la ve este barrido, no la ve Nest, y la lista de roles está ' +
-      'duplicada en cada handler. Se anota, no se corrige: esta tanda es cableado.',
-    anotadoEn: 'REPORTE_TANDA_8.md § Lo que el barrido encontró',
   },
 ];
 
