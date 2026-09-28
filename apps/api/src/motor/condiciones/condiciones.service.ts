@@ -7,7 +7,7 @@ import { evaluarSinReporte, type ContextoSinReporte } from './sin-reporte.evalua
 import type { ContextoParada } from './paradas.evaluator';
 import type { ContextoDesvio } from './desvio.evaluator';
 // ⚠️ El default vive en UN solo lugar y una prueba lo compara contra el DEFAULT
-// de la columna en `prisma/migrations/031_etapa3b_condiciones.sql`. Es la
+// de la columna en `prisma/migrations/31_etapa3b_condiciones.sql`. Es la
 // lección de la tolerancia del recorrido: un comentario que dice «tiene que
 // coincidir» no impide que se separen; una prueba que falla, sí.
 import { UMBRAL_SIN_REPORTE_POR_DEFECTO } from './umbrales-condiciones';

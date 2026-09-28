@@ -13,7 +13,7 @@
  * impide es una PRUEBA QUE FALLE cuando se separan.
  *
  * Estas constantes son el espejo del `DEFAULT` de las columnas en
- * `prisma/migrations/031_etapa3b_condiciones.sql`, y
+ * `prisma/migrations/31_etapa3b_condiciones.sql`, y
  * `umbrales-condiciones.spec.ts` **lee ese archivo SQL** y compara número
  * contra número. Si alguien cambia uno de los dos lados, la suite falla y dice
  * cuál.
