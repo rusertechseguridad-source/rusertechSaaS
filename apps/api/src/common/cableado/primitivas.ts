@@ -1059,6 +1059,68 @@ export interface LlamadaWeb {
   segmentos: string[];
   cruda: string;
   archivo: string;
+  /**
+   * El verbo HTTP, o `null` si no se puede leer del texto. Ver
+   * `metodoDeLaLlamada`: `null` es «no sé», no «cualquiera».
+   */
+  metodo: string | null;
+}
+
+/**
+ * El método de un `fetch(`${'$'}{API_URL}/…`, opciones)` escrito en línea.
+ *
+ * ⚠️ POR QUÉ HACE FALTA. Comparar sólo la forma dejaba pasar un `POST` de
+ * escalar cambiado por `PUT`: la ruta existe, el verbo no, y el servidor
+ * responde 404. Se midió revirtiendo — `verificar` y el navegador pasaban
+ * completos con el método roto.
+ *
+ * ⚠️ LO QUE DEVUELVE `null`, dicho en vez de tapado: la URL que no es el
+ * primer argumento de un `fetch(` (bases como `const BASE = …`, `urlApi(…)`),
+ * las opciones que no son un objeto escrito ahí (`fetch(url, opts)`) y el
+ * `method` que no es un literal (`method,` con una ternaria arriba). En esos
+ * casos la regla sigue comparando sólo la forma. Sin segundo argumento, o con
+ * un objeto sin `method`, es `GET` — el default de `fetch`, no una suposición.
+ *
+ * @param t     el texto del archivo
+ * @param desde el índice donde empieza `${'$'}{API_URL}` dentro del literal
+ */
+export function metodoDeLaLlamada(t: string, desde: number): string | null {
+  const apertura = desde - 1;
+  if (t[apertura] !== '`') return null;
+  if (!/fetch\(\s*$/.test(t.slice(Math.max(0, apertura - 40), apertura))) return null;
+
+  // Fin del literal: la comilla invertida que no está dentro de un `${…}`.
+  let i = apertura + 1;
+  let prof = 0;
+  for (; i < t.length; i++) {
+    if (t[i] === '$' && t[i + 1] === '{') { prof++; i++; continue; }
+    if (t[i] === '}' && prof > 0) { prof--; continue; }
+    if (t[i] === '`' && prof === 0) break;
+  }
+  if (i >= t.length) return null;
+
+  const resto = t.slice(i + 1).replace(/^\s*/, '');
+  if (resto.startsWith(')')) return 'GET';
+  if (!resto.startsWith(',')) return null;
+  const segundo = resto.slice(1).replace(/^\s*/, '');
+  if (segundo.startsWith(')')) return 'GET';
+  if (!segundo.startsWith('{')) return null;
+
+  // El objeto de opciones, por llaves balanceadas. Los `${…}` de adentro
+  // (`Bearer ${'$'}{token}`) también están balanceados, así que cuentan bien.
+  let llaves = 0;
+  let fin = 0;
+  for (; fin < segundo.length; fin++) {
+    if (segundo[fin] === '{') llaves++;
+    if (segundo[fin] === '}' && --llaves === 0) break;
+  }
+  const opciones = segundo.slice(0, fin + 1);
+
+  const literal = /\bmethod\s*:\s*['"`]([A-Za-z]+)['"`]/.exec(opciones);
+  if (literal) return literal[1].toUpperCase();
+  // Hay `method` pero no es un literal: no se sabe cuál es.
+  if (/\bmethod\b/.test(opciones)) return null;
+  return 'GET';
 }
 
 /**
@@ -1071,8 +1133,11 @@ export interface LlamadaWeb {
  *
  * ⚠️ Las interpolaciones se reemplazan por `:p`. `${aviso.id}` y `${fuente}`
  * son valores de ejecución: lo que se puede comprobar es la FORMA de la ruta,
- * y alcanza — el error que motivó la regla era `/alerts` en lugar de
- * `/bitacora/:id/protocolo`, que difiere en la forma.
+ * y la forma NO ALCANZA para el error que motivó la regla. El botón pedía
+ * `/api/v1/alerts` en lugar de `/bitacora/:id/protocolo`, y `/api/v1/alerts`
+ * EXISTE: esta regla no lo caza — R20-bis lo afirma. Lo cazó la prueba de
+ * componente, que mira a qué URL sale el clic. Lo que la forma sí caza es la
+ * ruta que no existe de ninguna manera; el verbo, `metodoDeLaLlamada`.
  */
 export function llamadasAlBackend(
   archivos: string[],
@@ -1094,7 +1159,12 @@ export function llamadasAlBackend(
         const sinQuery = cruda.split('?')[0].split('$' + '{q}')[0];
         const segmentos = partir(sinQuery).map((s) => (s.includes('${') ? ':p' : s));
         if (segmentos.length === 0) continue;
-        llamadas.push({ segmentos, cruda, archivo: corto(f, raiz) });
+        llamadas.push({
+          segmentos,
+          cruda,
+          archivo: corto(f, raiz),
+          metodo: metodoDeLaLlamada(t, m.index ?? -1),
+        });
       }
     }
   }
@@ -1114,11 +1184,21 @@ export function llamadasAlBackend(
  * `/api/v1/informes/loquesea` pasa, porque su prefijo existe. La regla caza la
  * ruta que no existe DE NINGUNA FORMA —el caso que motivó escribirla— y no
  * la que existe a medias. Lo otro lo tiene que cazar una prueba de componente.
+ *
+ * ⚠️ CON `metodo`, LA RUTA TIENE QUE SERVIRSE CON ESE VERBO. Sin él —o con
+ * `null`, que es «no se pudo leer»— se compara sólo la forma, como antes.
+ * `@Sse` se sirve por GET: el navegador lo pide con un `fetch` común.
  */
-export function algunaRutaCoincide(llamada: string[], rutas: RutaServida[]): boolean {
+export function algunaRutaCoincide(
+  llamada: string[],
+  rutas: RutaServida[],
+  metodo: string | null = null,
+): boolean {
   const casa = (a: string, b: string) => a.startsWith(':') || b.startsWith(':') || a === b;
+  const verbo = (r: RutaServida) => (r.metodo === 'SSE' ? 'GET' : r.metodo);
   return rutas.some(
     (r) =>
+      (metodo === null || verbo(r) === metodo) &&
       // Exacta, o la llamada es una base de la que cuelga esta ruta.
       llamada.length <= r.segmentos.length &&
       llamada.every((seg, i) => casa(r.segmentos[i], seg)),

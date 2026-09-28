@@ -679,10 +679,16 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
 
       const pedidas = llamadasAlBackend(fuentesWeb(), texto, RAIZ_WEB);
       expect(pedidas.length).toBeGreaterThan(20);
+      // ⚠️ EL VERBO TAMBIÉN. Con sólo la forma, cambiar el `POST` de escalar
+      // por un `PUT` pasaba `verificar` y el navegador completos: la ruta
+      // existe, el verbo no, y el servidor responde 404. Y el mismo cuidado
+      // que arriba: si la lectura del método devolviera `null` para todas, la
+      // comparación de verbos sería una comparación vacía.
+      expect(pedidas.filter((l) => l.metodo !== null).length).toBeGreaterThan(100);
 
       const huerfanas = pedidas
-        .filter((l) => !algunaRutaCoincide(l.segmentos, servidas))
-        .map((l) => `${l.archivo} → ${l.cruda}`);
+        .filter((l) => !algunaRutaCoincide(l.segmentos, servidas, l.metodo))
+        .map((l) => `${l.archivo} → ${l.metodo ?? '¿?'} ${l.cruda}`);
 
       expect(huerfanas).toEqual([]);
     });
@@ -702,6 +708,28 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
       // La ruta a la que el botón iba a parar también existe, y por eso la
       // regla sola no alcanzaba: hacía falta la prueba del componente.
       expect(algunaRutaCoincide(['api', 'v1', 'alerts'], servidas)).toBe(true);
+
+      // El verbo: la ruta de escalar existe por POST y no por PUT.
+      const escalar = ['api', 'v1', 'bitacora', ':p', 'escalar'];
+      expect(algunaRutaCoincide(escalar, servidas, 'POST')).toBe(true);
+      expect(algunaRutaCoincide(escalar, servidas, 'PUT')).toBe(false);
+    });
+
+    it('R20-ter · el verbo se lee del `fetch` REAL, no de un ejemplo', () => {
+      // ⚠️ La negativa de arriba prueba la comparación con un verbo escrito a
+      // mano. Esto prueba la otra mitad: que la lectura del método, corrida
+      // sobre el store de verdad, encuentra el `POST` de escalar. Sin esto,
+      // una lectura que devolviera siempre `null` dejaría a R20 comparando
+      // sólo la forma, y la negativa seguiría verde.
+      const deLaBitacora = llamadasAlBackend(fuentesWeb(), texto, RAIZ_WEB)
+        .filter((l) => l.archivo.endsWith('bitacoraStore.ts'));
+      const verbo = (fin: string) =>
+        deLaBitacora.find((l) => l.segmentos[l.segmentos.length - 1] === fin)?.metodo;
+
+      expect(verbo('escalar')).toBe('POST');
+      expect(verbo('cerrar')).toBe('POST');
+      // Sin opciones con `method`, es el GET por omisión de `fetch`.
+      expect(verbo('protocolo')).toBe('GET');
     });
 
     it('R15 · nadie llama al backend con una ruta relativa', () => {

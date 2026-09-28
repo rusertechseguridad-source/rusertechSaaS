@@ -33,8 +33,11 @@ import { defineConfig, devices } from '@playwright/test';
  * ── El backend no hace falta ──────────────────────────────────────────────
  *
  * Todas las llamadas a la API se interceptan y se responden con datos fijos.
- * Lo que se prueba acá es la PANTALLA; que el botón llame a la URL correcta
- * ya está probado en vitest, y que la URL exista, en la regla R20.
+ * Lo que se prueba acá es la PANTALLA, no a dónde va el clic. Eso está en
+ * vitest (`campana.cableado.spec.tsx`): abrir pide el protocolo y el hilo, y
+ * registrar, escalar y cerrar salen con su URL y su verbo. Que esa ruta
+ * exista con ese verbo, en la regla R20. Lo que NINGUNA de las tres capas
+ * prueba es un backend de verdad respondiendo: acá se intercepta todo.
  */
 export default defineConfig({
   testDir: './pruebas-navegador',

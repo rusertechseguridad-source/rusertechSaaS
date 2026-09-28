@@ -35,6 +35,12 @@ import { useBitacoraStore } from '../../store/bitacoraStore';
  *       → cae «pide el PROTOCOLO y no la lista de alertas».
  *   H · Que el botón no llame a nada (`onAtender={() => {}}`)
  *       → caen las mismas, y además la del modal.
+ *   I · `registrar` con POST en vez de PUT          → cae «Registrar y atender».
+ *   J · `escalar` con PUT en vez de POST            → cae «Escalar a …».
+ *   K · `cerrarAlerta` con PUT en vez de POST       → cae «Confirmar cierre».
+ *   L · `onEscalar` del modal sin llamar a `escalar` → cae «Escalar a …».
+ *       Cada una tumba UNA prueba, la suya. J era el hueco medido: con el
+ *       verbo roto pasaban las 13 de acá y las 10 del navegador.
  */
 
 const ALERTA = 'cccc0001-0000-4000-8000-000000000001';
@@ -91,12 +97,19 @@ const PROTOCOLO = {
  */
 function armarFetch(sobre: Record<string, unknown> = {}) {
   const pedidas: string[] = [];
+  // ⚠️ La URL sola no alcanza para lo que ESCRIBE: la ruta de escalar existe
+  // por POST, y un PUT a la misma URL da 404. Se anota el verbo y el cuerpo.
+  const envios: { url: string; metodo: string; cuerpo: Record<string, unknown> | null }[] = [];
   const cuerpoVacio = () =>
     new ReadableStream({ start(c) { c.close(); } });
 
-  const doble = vi.fn(async (url: string | URL, _init?: RequestInit) => {
+  const doble = vi.fn(async (url: string | URL, init?: RequestInit) => {
     const u = String(url);
     pedidas.push(u);
+    const metodo = (init?.method ?? 'GET').toUpperCase();
+    if (metodo !== 'GET') {
+      envios.push({ url: u, metodo, cuerpo: init?.body ? JSON.parse(String(init.body)) : null });
+    }
     for (const [clave, valor] of Object.entries(sobre)) {
       if (u.includes(clave)) return valor as Response;
     }
@@ -112,7 +125,7 @@ function armarFetch(sobre: Record<string, unknown> = {}) {
   });
 
   vi.stubGlobal('fetch', doble);
-  return { pedidas };
+  return { pedidas, envios };
 }
 
 const respuesta = (datos: unknown, status = 200) =>
@@ -178,6 +191,72 @@ describe('Campana · el botón «Atender» está ENCHUFADO', () => {
 
     expect(await screen.findByText('Llamar al conductor')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Registrar y atender/i })).toBeInTheDocument();
+  });
+});
+
+describe('Campana · lo que la bitácora ESCRIBE llega al backend con su verbo', () => {
+  /**
+   * ⚠️ HASTA ACÁ, NINGUNA PRUEBA ENVIABA NADA. Las de arriba y las del
+   * navegador cubren ABRIR la bitácora y cómo se dibuja; registrar, escalar y
+   * cerrar se habían probado sólo a mano. Y la regla R20 del backend, que mira
+   * las URLs, no puede ver que el BOTÓN llame a la función: eso es
+   * comportamiento, y se prueba haciendo clic.
+   *
+   * Se afirma URL Y MÉTODO de lo que sale. La URL sola no alcanza: la de
+   * escalar existe por POST, y un PUT a la misma dirección da 404.
+   */
+  async function abrirLaBitacora() {
+    await userEvent.click(await screen.findByRole('button', { name: /Atender esta alerta/i }));
+    await screen.findByRole('dialog');
+  }
+
+  it('🔴 «Registrar y atender» hace PUT a /campana/<id>/atender, con lo elegido', async () => {
+    const { envios } = armarFetch();
+    render(<Campana />);
+    await abrirLaBitacora();
+
+    await userEvent.click(await screen.findByRole('radio', { name: /No responde/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Registrar y atender/i }));
+
+    await waitFor(() => expect(envios).toHaveLength(1));
+    expect(envios[0].url).toContain(`/api/v1/campana/${ALERTA}/atender`);
+    expect(envios[0].metodo).toBe('PUT');
+    // Lo que el operador eligió viaja: si no, el servidor rechaza con «elegí
+    // un resultado» a alguien que ya lo eligió.
+    expect(envios[0].cuerpo).toMatchObject({ fuente: 'condicion', resultado_codigo: 'NO_RESPONDE' });
+  });
+
+  it('🔴 «Escalar a …» hace POST a /bitacora/<id>/escalar', async () => {
+    const { envios } = armarFetch();
+    render(<Campana />);
+    await abrirLaBitacora();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Escalar a Gerente Demo/i }));
+
+    await waitFor(() => expect(envios).toHaveLength(1));
+    expect(envios[0].url).toContain(`/api/v1/bitacora/${ALERTA}/escalar`);
+    expect(envios[0].metodo).toBe('POST');
+    expect(envios[0].cuerpo).toMatchObject({ fuente: 'condicion' });
+  });
+
+  it('🔴 «Confirmar cierre» hace POST a /bitacora/<id>/cerrar, con el motivo escrito', async () => {
+    // Cerrar es facultad de un superior: con `puede_cerrar` en falso el
+    // botón ni aparece, así que el protocolo de esta prueba lo habilita.
+    const { envios } = armarFetch({ '/protocolo': respuesta({ ...PROTOCOLO, puede_cerrar: true }) });
+    render(<Campana />);
+    await abrirLaBitacora();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Cerrar esta alerta/i }));
+    await userEvent.type(screen.getByLabelText(/Motivo del cierre/i), 'El cliente confirmó que siguió normal');
+    await userEvent.click(screen.getByRole('button', { name: /Confirmar cierre/i }));
+
+    await waitFor(() => expect(envios).toHaveLength(1));
+    expect(envios[0].url).toContain(`/api/v1/bitacora/${ALERTA}/cerrar`);
+    expect(envios[0].metodo).toBe('POST');
+    expect(envios[0].cuerpo).toMatchObject({
+      fuente: 'condicion',
+      motivo: 'El cliente confirmó que siguió normal',
+    });
   });
 });
 
