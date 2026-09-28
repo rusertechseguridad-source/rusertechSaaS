@@ -69,8 +69,17 @@ export interface AvisoDespacho {
   /** Cuándo pasó el hecho, no cuándo se despachó. */
   ocurrio_at: Date;
   patente: string | null;
+  /** Dónde estaba. Ver `ubicacion-aviso.ts`: de dónde sale y en qué orden. */
   latitud: number | null;
   longitud: number | null;
+  /**
+   * ⚠️ La hora de ESA posición, no la de ahora. Un camión callado hace seis
+   * horas tiene una posición de hace seis horas, y la pantalla lo tiene que
+   * decir. `null` cuando no hay posición.
+   */
+  ubicacion_at: Date | null;
+  /** El nombre del lugar guardado o la geocerca que contiene el punto. */
+  lugar: string | null;
   direccion: string | null;
   /** El texto que el motor dejó escrito. */
   disparador: string | null;

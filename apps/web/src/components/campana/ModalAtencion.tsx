@@ -5,6 +5,7 @@ import { useBitacoraStore } from '../../store/bitacoraStore';
 import { useCampanaStore } from '../../store/campanaStore';
 import { FormularioAtencion } from './FormularioAtencion';
 import { DesdeQueOcurrio, HiloBitacora } from './HiloBitacora';
+import { UbicacionDelAviso } from './UbicacionDelAviso';
 
 /**
  * LA VENTANA DE ATENCIÓN — el formulario y el hilo, juntos.
@@ -67,6 +68,11 @@ export function ModalAtencion() {
                 {abierta.patente ?? 'vehículo sin identificar'}
               </span>
               <DesdeQueOcurrio desde={abierta.ocurrio_at} />
+            </div>
+            {/* En el encabezado y no en el cuerpo: el cuerpo se desplaza, y el
+                dónde tiene que seguir a la vista mientras se registra. */}
+            <div className="mt-2">
+              <UbicacionDelAviso aviso={abierta} />
             </div>
           </div>
           <button

@@ -43,7 +43,7 @@ const avisoDe = (tenant: string, vehiculo: string): MensajeDeCanal => ({
     nivel_riesgo: 'riesgo_critico', color: '#EF4444',
     interrumpe: true, requiere_atencion: true, clasificado: true,
     ocurrio_at: new Date(), patente: 'DEMO-001',
-    latitud: null, longitud: null, direccion: null, disparador: null,
+    latitud: null, longitud: null, ubicacion_at: null, lugar: null, direccion: null, disparador: null,
   },
 });
 

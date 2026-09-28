@@ -39,11 +39,20 @@ const CRITICA = {
   clasificado: true,
   ocurrio_at: '2026-09-22T23:19:51.000Z',
   patente: 'DEMO-001',
-  latitud: null,
-  longitud: null,
+  // ⚠️ CON POSICIÓN, Y CON UN NOMBRE DE LUGAR LARGO A PROPÓSITO. El bloque
+  // del «dónde» va en el encabezado fijo de la bitácora: cuanto más alto, menos
+  // lugar le queda al cuerpo. Las pruebas de abajo —el hilo largo incluido—
+  // corren en el peor caso, no en el cómodo.
+  latitud: -34.60372,
+  longitud: -58.38159,
+  ubicacion_at: '2026-09-22T17:05:00.000Z',
+  lugar: 'Depósito Norte — Playa de camiones del Mercado Central, acceso por Autopista Riccheri km 12',
   direccion: null,
   disparador: '35 minutos sin reportar (prueba de bitacora)',
 };
+
+/** El caso normal hoy en producción: medido, ninguna fila con posición. */
+const SIN_POSICION = { ...CRITICA, latitud: null, longitud: null, ubicacion_at: null, lugar: null };
 
 const PROTOCOLO = {
   existe: true,
@@ -268,4 +277,90 @@ test('🔴 la franja minimizada queda ABAJO, no encima del menú', async ({ page
   // Declarada `bottom-0`, se dibujaba arriba: el borde inferior de la barra
   // superior. Era la que más engañaba porque parecía funcionar.
   expect(franja.y).toBeGreaterThan(ventana.height / 2);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// EL «DÓNDE» — que se LEA, en los tres lugares, sin tapar nada
+// ══════════════════════════════════════════════════════════════════════════
+//
+// ⚠️ Lo que vitest no puede contestar: si el bloque entra en la pantalla y si
+// empuja los botones fuera de la vista. El hilo ya creció una vez y tapó
+// «Registrar y atender»; un encabezado más alto es la otra forma de hacerlo.
+
+const DONDE = { name: 'Dónde estaba' } as const;
+
+test('📍 el dónde se lee en el aviso crítico, entero en pantalla', async ({ page }) => {
+  const bloque = page.getByRole('alertdialog').getByRole('group', DONDE);
+  await expect(bloque).toBeVisible();
+  await expect(bloque).toContainText('Depósito Norte');
+  // Dónde ESTABA y CUÁNDO: la hora de la posición viaja con ella.
+  await expect(bloque).toContainText('Posición del');
+  expect(await porcentajeVisible(bloque)).toBeGreaterThan(0.99);
+
+  // Y el nombre largo no empuja la acción: «Atender» sigue entero y tocable.
+  const atender = page.getByRole('button', { name: /Atender esta alerta/i });
+  await atender.scrollIntoViewIfNeeded();
+  expect(await porcentajeVisible(atender)).toBeGreaterThan(0.9);
+  const caja = (await atender.boundingBox())!;
+  expect(await loQueEstaEn(page, caja.x + caja.width / 2, caja.y + caja.height / 2)).toContain('button');
+});
+
+test('📍 en la bitácora el dónde queda a la vista, y «Registrar» sigue alcanzable', async ({ page }) => {
+  await page.getByRole('button', { name: /Atender esta alerta/i }).click();
+  const modal = page.getByRole('dialog');
+  await expect(page.getByText(/Intento 8/).first()).toBeVisible();
+
+  // En el encabezado fijo: se ve sin desplazar nada.
+  const bloque = modal.getByRole('group', DONDE);
+  await expect(bloque).toContainText('Depósito Norte');
+  expect(await porcentajeVisible(bloque)).toBeGreaterThan(0.99);
+
+  // ⚠️ El caso que importa: encabezado alto + hilo de ocho entradas. El
+  // botón tiene que poder alcanzarse y TOCARSE, no sólo estar en el DOM.
+  const boton = page.getByRole('button', { name: /Registrar y atender/i });
+  await boton.scrollIntoViewIfNeeded();
+  expect(await porcentajeVisible(boton)).toBeGreaterThan(0.9);
+  const caja = (await boton.boundingBox())!;
+  expect(await loQueEstaEn(page, caja.x + caja.width / 2, caja.y + caja.height / 2)).toContain('button');
+
+  // Y desplazar el cuerpo NO se lleva el dónde: sigue en pantalla.
+  expect(await porcentajeVisible(bloque)).toBeGreaterThan(0.99);
+});
+
+test('📍 en la lista de la campana, el dónde se lee', async ({ page }) => {
+  await page.getByRole('button', { name: /Minimizar/i }).click();
+  await page.getByRole('button', { name: /Alertas: 1 sin atender/i }).click();
+
+  const lista = page.getByRole('region', { name: 'Alertas sin atender' });
+  const bloque = lista.getByRole('group', DONDE);
+  await expect(bloque).toContainText('Depósito Norte');
+  await bloque.scrollIntoViewIfNeeded();
+
+  // ⚠️ SE MIDE EL TEXTO, LÍNEA POR LÍNEA, Y NO EL BLOQUE ENTERO — y el motivo
+  // es un defecto que esta prueba NO arregla. En 390 px el PANEL de la
+  // campana se sale por la izquierda: medido, `x = -56` con 358 de ancho, y
+  // el botón «Atender» de la fila en `x = -11`. Es anterior a esta tanda —la
+  // misma medición en la base da los mismos números— y está anotado. Con el
+  // panel así, el ícono del bloque queda cortado; una prueba que midiera «el
+  // 95% del bloque» pasaba igual y lo escondía. Lo que se promete acá es que
+  // lo que el operador LEE —el lugar y la hora— entra entero.
+  for (const linea of await bloque.locator('p').all()) {
+    expect(await porcentajeVisible(linea)).toBeGreaterThan(0.99);
+  }
+  // El enlace al mapa también es algo que el operador tiene que poder tocar.
+  const enlace = bloque.getByRole('link', { name: /Abrir en Google Maps/i });
+  const caja = (await enlace.boundingBox())!;
+  expect(await loQueEstaEn(page, caja.x + caja.width / 2, caja.y + caja.height / 2)).toMatch(/^(a|svg|path)/);
+});
+
+test('📍 sin posición, el aviso LO DICE — y se lee', async ({ page }) => {
+  // El caso normal hoy en producción. Un hueco sería indistinguible de una
+  // pantalla rota; el texto tiene que estar y tiene que verse.
+  await page.route('**/api/v1/campana/pendientes', (r) => r.fulfill({ json: [SIN_POSICION] }));
+  await page.reload();
+
+  const bloque = page.getByRole('alertdialog').getByRole('group', DONDE);
+  await expect(bloque).toContainText('Sin posición');
+  expect(await porcentajeVisible(bloque)).toBeGreaterThan(0.99);
+  await expect(bloque.getByRole('link')).toHaveCount(0);
 });

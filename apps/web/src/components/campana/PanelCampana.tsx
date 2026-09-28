@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, CircleDot, Inbox, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react';
 import type { Aviso, EstadoConexion } from '../../store/campanaStore';
 import { desde } from '../../services/fechas';
+import { UbicacionDelAviso } from './UbicacionDelAviso';
 
 interface Props {
   avisos: Aviso[];
@@ -105,6 +106,10 @@ function FilaDeAviso({ aviso, onAtender }: { aviso: Aviso; onAtender: () => void
             {aviso.clasificado ? etiquetaDeNivel(aviso.nivel_riesgo) : 'sin clasificar'}
             {aviso.fuente === 'evento' ? ' · evento del motor de geocercas' : ''}
           </p>
+
+          <div className="mt-2">
+            <UbicacionDelAviso aviso={aviso} />
+          </div>
 
           {aviso.resuelta && (
             <p className="text-accentMint text-xs mt-1">

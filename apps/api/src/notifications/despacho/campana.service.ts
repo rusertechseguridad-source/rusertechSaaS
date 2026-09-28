@@ -6,6 +6,9 @@ import { BitacoraService, type EntradaNueva } from '../atencion/bitacora.service
 import { motivoParaNoAtenderCritica } from '../atencion/tipos-atencion';
 import { DespachoService } from './despacho.service';
 import { AvisoDespacho, FuenteAviso, entraALaCampana, interrumpe } from './tipos-despacho';
+import {
+  COLUMNAS_UBICACION, LUGAR_DEL_PUNTO, PUNTO_DE_CONDICION, PUNTO_DE_EVENTO,
+} from './ubicacion-aviso';
 
 /** Una fila de la unión de las dos fuentes. */
 interface FilaPendiente {
@@ -24,6 +27,8 @@ interface FilaPendiente {
   patente: string | null;
   latitud: number | null;
   longitud: number | null;
+  ubicacion_at: Date | null;
+  lugar: string | null;
   direccion: string | null;
   disparador: string | null;
 }
@@ -130,8 +135,7 @@ export class CampanaService {
         nr.requiere_atencion_operador    AS requiere_atencion_operador,
         c.inicio                         AS ocurrio_at,
         v.plate                          AS patente,
-        NULL::float8                     AS latitud,
-        NULL::float8                     AS longitud,
+        ${COLUMNAS_UBICACION},
         NULL::text                       AS direccion,
         c.disparador                     AS disparador
       FROM trip_conditions c
@@ -139,6 +143,8 @@ export class CampanaService {
       LEFT JOIN motor_niveles_riesgo  nr ON nr.codigo = c.nivel_riesgo
                                         AND (nr.tenant_id = c.tenant_id OR nr.tenant_id IS NULL)
       LEFT JOIN vehicles v ON v.id = c.vehicle_id
+      ${PUNTO_DE_CONDICION}
+      ${LUGAR_DEL_PUNTO}
       WHERE c.tenant_id = ${tenantId}::uuid
         AND c.fin IS NULL
         AND c.atendida_at IS NULL
@@ -165,8 +171,7 @@ export class CampanaService {
         nr.requiere_atencion_operador    AS requiere_atencion_operador,
         e.triggered_at                   AS ocurrio_at,
         v.plate                          AS patente,
-        e.latitude::float8               AS latitud,
-        e.longitude::float8              AS longitud,
+        ${COLUMNAS_UBICACION},
         e.address                        AS direccion,
         NULL::text                       AS disparador
       FROM event_logs e
@@ -177,6 +182,8 @@ export class CampanaService {
       LEFT JOIN motor_niveles_riesgo nr ON nr.severidad_evento = e.severity
                                        AND (nr.tenant_id = e.tenant_id OR nr.tenant_id IS NULL)
       LEFT JOIN vehicles v ON v.id = e.vehicle_id
+      ${PUNTO_DE_EVENTO}
+      ${LUGAR_DEL_PUNTO}
       WHERE e.tenant_id = ${tenantId}::uuid
         AND e.status = 'open'
         AND e.acknowledged_at IS NULL
@@ -417,6 +424,8 @@ export class CampanaService {
       patente: f.patente,
       latitud: f.latitud === null ? null : Number(f.latitud),
       longitud: f.longitud === null ? null : Number(f.longitud),
+      ubicacion_at: f.ubicacion_at ?? null,
+      lugar: f.lugar ?? null,
       direccion: f.direccion,
       disparador: f.disparador,
     };

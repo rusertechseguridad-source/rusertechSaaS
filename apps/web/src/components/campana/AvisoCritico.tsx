@@ -1,6 +1,7 @@
-import { AlertTriangle, ChevronDown, Clock, MapPin, Truck, VolumeX } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, Truck, VolumeX } from 'lucide-react';
 import type { Aviso } from '../../store/campanaStore';
 import { CapaSuperpuesta } from '../CapaSuperpuesta';
+import { UbicacionDelAviso } from './UbicacionDelAviso';
 import { desde, fechaHora } from '../../services/fechas';
 
 interface Props {
@@ -90,16 +91,8 @@ export function AvisoCritico({
                equivocada. Ver `services/fechas.ts`. */
             valor={`${fechaHora(cuando)} · ${desde(cuando)}`}
           />
-          <Dato
-            icono={MapPin}
-            etiqueta="Dónde"
-            valor={
-              aviso.direccion ??
-              (aviso.latitud !== null && aviso.longitud !== null
-                ? `${aviso.latitud.toFixed(5)}, ${aviso.longitud.toFixed(5)}`
-                : 'sin ubicación en el aviso')
-            }
-          />
+          {/* ⚠️ El mismo componente que la lista y la bitácora: un formato. */}
+          <UbicacionDelAviso aviso={aviso} />
 
           {aviso.disparador && (
             <p className="text-textMuted text-sm bg-bgStart/60 rounded-lg px-3 py-2 break-words">

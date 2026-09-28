@@ -21,6 +21,10 @@ export interface Aviso {
   patente: string | null;
   latitud: number | null;
   longitud: number | null;
+  /** La hora de ESA posición —el último punto conocido—, no la de ahora. */
+  ubicacion_at: string | null;
+  /** El lugar guardado o la geocerca que contiene el punto. */
+  lugar: string | null;
   direccion: string | null;
   disparador: string | null;
   /** Local: quién la atendió, cuando el aviso llega por el flujo. */

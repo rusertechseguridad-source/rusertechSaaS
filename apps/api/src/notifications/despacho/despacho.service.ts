@@ -10,6 +10,7 @@ import {
   entraALaCampana,
   interrumpe,
 } from './tipos-despacho';
+import { COLUMNAS_UBICACION, LUGAR_DEL_PUNTO, PUNTO_DE_CONDICION } from './ubicacion-aviso';
 
 /** Lo que devuelve la consulta que arma los avisos de condiciones. */
 interface FilaAviso {
@@ -27,6 +28,8 @@ interface FilaAviso {
   patente: string | null;
   latitud: number | null;
   longitud: number | null;
+  ubicacion_at: Date | null;
+  lugar: string | null;
   direccion: string | null;
   disparador: string | null;
 }
@@ -86,8 +89,7 @@ export class DespachoService implements OnModuleInit {
         nr.requiere_atencion_operador    AS requiere_atencion_operador,
         c.inicio                         AS ocurrio_at,
         v.plate                          AS patente,
-        NULL::float8                     AS latitud,
-        NULL::float8                     AS longitud,
+        ${COLUMNAS_UBICACION},
         NULL::text                       AS direccion,
         c.disparador                     AS disparador
       FROM trip_conditions c
@@ -95,6 +97,8 @@ export class DespachoService implements OnModuleInit {
       LEFT JOIN motor_niveles_riesgo  nr ON nr.codigo = c.nivel_riesgo
                                         AND (nr.tenant_id = c.tenant_id OR nr.tenant_id IS NULL)
       LEFT JOIN vehicles v ON v.id = c.vehicle_id
+      ${PUNTO_DE_CONDICION}
+      ${LUGAR_DEL_PUNTO}
       WHERE c.id = ANY(${ids}::uuid[])
     `;
 
@@ -165,6 +169,8 @@ export class DespachoService implements OnModuleInit {
       patente: f.patente,
       latitud: f.latitud === null ? null : Number(f.latitud),
       longitud: f.longitud === null ? null : Number(f.longitud),
+      ubicacion_at: f.ubicacion_at ?? null,
+      lugar: f.lugar ?? null,
       direccion: f.direccion,
       disparador: f.disparador,
     };

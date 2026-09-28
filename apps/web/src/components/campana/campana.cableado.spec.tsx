@@ -64,6 +64,8 @@ const CRITICA: Aviso = {
   patente: 'DEMO-001',
   latitud: -34.6,
   longitud: -58.4,
+  ubicacion_at: '2026-09-22T23:10:00.000Z',
+  lugar: null,
   direccion: 'Av. Siempreviva 742',
   disparador: '50 minutos sin reportar',
 };
@@ -326,7 +328,11 @@ describe('Campana · la hora va en 24 horas', () => {
     armarFetch();
     render(<Campana />);
 
-    const cuando = await screen.findByText(/2026/);
+    // ⚠️ Se apunta al campo «Cuándo», no al primer texto con «2026»: desde
+    // que el aviso muestra la hora de la POSICIÓN, hay dos fechas en pantalla,
+    // y un localizador ambiguo falla por ambiguo — no por el formato.
+    const etiqueta = await screen.findByText('Cuándo');
+    const cuando = etiqueta.nextElementSibling!;
     expect(cuando.textContent).toMatch(/20:19/);
     expect(cuando.textContent).not.toMatch(/\b08:19\b/);
   });
