@@ -446,6 +446,20 @@ describe('Campana · las superposiciones ESCAPAN de la barra superior', () => {
     expect(document.querySelector('nav.backdrop-blur-md')!.contains(franja)).toBe(false);
   });
 
+  it('🔴 y la LISTA de la campana tampoco — era la que se salía de la pantalla', async () => {
+    // Colgaba de la barra con `absolute right-0`: su borde caía donde cayera
+    // la campana. En 390 px, el panel arrancaba en x = -56 y «Atender» en
+    // x = -11. La posición es del navegador; esto fija la estructura.
+    armarFetch();
+    montarDentroDeLaBarra();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Alertas: 1 sin atender/i }));
+
+    const lista = await screen.findByRole('region', { name: 'Alertas sin atender' });
+    expect(document.querySelector('nav.backdrop-blur-md')!.contains(lista)).toBe(false);
+    expect(lista.parentElement).toBe(document.body);
+  });
+
   it('🔴 el cuerpo del modal tiene desplazamiento propio y altura acotada', async () => {
     // ⚠️ ESTO ES ESTRUCTURA, NO DISPOSICIÓN, y conviene no confundirlo: se
     // comprueba que las clases estén, no que el desplazamiento funcione. Que

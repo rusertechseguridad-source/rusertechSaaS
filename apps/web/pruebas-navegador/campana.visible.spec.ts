@@ -280,6 +280,55 @@ test('🔴 la franja minimizada queda ABAJO, no encima del menú', async ({ page
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// LA LISTA DE LA CAMPANA — que entre en el teléfono
+// ══════════════════════════════════════════════════════════════════════════
+//
+// ⚠️ Colgaba de la campana con `absolute right-0`, y la campana cae donde la
+// empuje el menú: con más ítems, más a la izquierda. Medido en 390 px: el
+// panel arrancaba en x = -56 con un operador y en x = -108 con un dueño de
+// cuenta, y «Atender» quedaba fuera de la pantalla. Se prueba con los DOS
+// perfiles porque la posición dependía de cuántos ítems tenía el menú.
+
+const DUENO = {
+  id: 'uuuu0003-0000-4000-8000-000000000003',
+  email: 'owner@rusertech.com',
+  role: 'account_owner',
+  role_code: 'account_owner',
+  tenant_id: '11111111-1111-1111-1111-111111111111',
+  permissions: [
+    'view_map', 'view_alerts', 'manage_alerts', 'manage_critical_alerts', 'view_trips',
+    'view_vehicles', 'view_drivers', 'view_carriers', 'view_devices', 'view_sensors',
+    'view_locations', 'view_analytics', 'view_avl', 'view_settings', 'manage_settings',
+    'view_simulator',
+  ],
+};
+
+for (const perfil of ['operador', 'dueño de cuenta'] as const) {
+  test(`🔴 la lista de la campana ENTRA en la pantalla y «Atender» se toca (${perfil})`, async ({ page }) => {
+    if (perfil === 'dueño de cuenta') {
+      await page.route('**/auth/me', (r) => r.fulfill({ json: DUENO }));
+      await page.reload();
+    }
+    await page.getByRole('button', { name: /Minimizar/i }).click();
+    await page.getByRole('button', { name: /Alertas: 1 sin atender/i }).click();
+
+    const lista = page.getByRole('region', { name: 'Alertas sin atender' });
+    await expect(lista).toBeVisible();
+    const caja = (await lista.boundingBox())!;
+    const ventana = page.viewportSize()!;
+    // Los dos bordes, no sólo el porcentaje: un panel corrido medio metro a
+    // la izquierda puede tener «casi todo» adentro y el botón afuera.
+    expect(caja.x).toBeGreaterThanOrEqual(0);
+    expect(caja.x + caja.width).toBeLessThanOrEqual(ventana.width);
+
+    const atender = lista.getByRole('button', { name: 'Atender' });
+    expect(await porcentajeVisible(atender)).toBeGreaterThan(0.99);
+    const b = (await atender.boundingBox())!;
+    expect(await loQueEstaEn(page, b.x + b.width / 2, b.y + b.height / 2)).toContain('button');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // EL «DÓNDE» — que se LEA, en los tres lugares, sin tapar nada
 // ══════════════════════════════════════════════════════════════════════════
 //
@@ -336,17 +385,10 @@ test('📍 en la lista de la campana, el dónde se lee', async ({ page }) => {
   await expect(bloque).toContainText('Depósito Norte');
   await bloque.scrollIntoViewIfNeeded();
 
-  // ⚠️ SE MIDE EL TEXTO, LÍNEA POR LÍNEA, Y NO EL BLOQUE ENTERO — y el motivo
-  // es un defecto que esta prueba NO arregla. En 390 px el PANEL de la
-  // campana se sale por la izquierda: medido, `x = -56` con 358 de ancho, y
-  // el botón «Atender» de la fila en `x = -11`. Es anterior a esta tanda —la
-  // misma medición en la base da los mismos números— y está anotado. Con el
-  // panel así, el ícono del bloque queda cortado; una prueba que midiera «el
-  // 95% del bloque» pasaba igual y lo escondía. Lo que se promete acá es que
-  // lo que el operador LEE —el lugar y la hora— entra entero.
-  for (const linea of await bloque.locator('p').all()) {
-    expect(await porcentajeVisible(linea)).toBeGreaterThan(0.99);
-  }
+  // El bloque ENTERO, ícono incluido. Hasta que el panel se posicionó contra
+  // la ventana, en 390 px arrancaba en x = -56 y esta prueba sólo podía
+  // prometer el texto, línea por línea. Ya no hace falta la concesión.
+  expect(await porcentajeVisible(bloque)).toBeGreaterThan(0.99);
   // El enlace al mapa también es algo que el operador tiene que poder tocar.
   const enlace = bloque.getByRole('link', { name: /Abrir en Google Maps/i });
   const caja = (await enlace.boundingBox())!;

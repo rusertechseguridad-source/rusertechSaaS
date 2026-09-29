@@ -2,6 +2,7 @@ import { AlertTriangle, Check, CircleDot, Inbox, Volume2, VolumeX, Wifi, WifiOff
 import type { Aviso, EstadoConexion } from '../../store/campanaStore';
 import { desde } from '../../services/fechas';
 import { UbicacionDelAviso } from './UbicacionDelAviso';
+import { CapaSuperpuesta } from '../CapaSuperpuesta';
 
 interface Props {
   avisos: Aviso[];
@@ -32,8 +33,19 @@ export function PanelCampana({
   onAtender, onAlternarSilencio, onActivarSonido,
 }: Props) {
   return (
+    // ⚠️ SE POSICIONA CONTRA LA VENTANA, NO CONTRA LA CAMPANA. Estaba
+    // `absolute right-0` bajo el botón: su borde derecho caía donde cayera la
+    // campana, y la campana cae donde la empuje el menú. Medido en 390 px: el
+    // panel arrancaba en x = -56 con un operador y en x = -108 con un dueño
+    // de cuenta —más ítems en el menú—, y el botón «Atender» de la fila
+    // quedaba fuera de la pantalla. Con 25 conductores en la calle, alguien
+    // mira esto desde el teléfono y no podía atender.
+    //
+    // ⚠️ Y POR EL PORTAL. `fixed` adentro del `<nav>` con `backdrop-blur` se
+    // mide contra la barra, no contra la ventana — ver `CapaSuperpuesta`.
+    <CapaSuperpuesta>
     <div
-      className="absolute right-0 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] rounded-xl border border-borderDefault bg-bgSurface shadow-card overflow-hidden z-50"
+      className="fixed top-[72px] inset-x-2 sm:inset-x-auto sm:right-4 sm:w-[26rem] rounded-xl border border-borderDefault bg-bgSurface shadow-card overflow-hidden z-50"
       role="region"
       aria-label="Alertas sin atender"
     >
@@ -79,6 +91,7 @@ export function PanelCampana({
         </ul>
       </div>
     </div>
+    </CapaSuperpuesta>
   );
 }
 
