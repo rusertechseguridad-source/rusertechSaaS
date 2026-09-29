@@ -55,7 +55,7 @@ export const DriversPage: React.FC = () => {
       if (!res.ok) throw new Error('Error al actualizar estado');
       await fetchDrivers();
     } catch (err: any) {
-      avisar.exito(err.message);
+      avisar.error(err.message);
     }
   };
 

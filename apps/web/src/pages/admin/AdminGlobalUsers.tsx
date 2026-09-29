@@ -155,9 +155,16 @@ export const AdminGlobalUsers: React.FC = () => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    avisar.exito(t('admin.copied'));
+  // ⚠️ Se ESPERA a que la copia termine. Antes decía «copiado» sin mirar el
+  // resultado, y el portapapeles falla —sin HTTPS, o si el navegador no da
+  // permiso—: el administrador pegaba otra cosa creyendo que tenía la clave.
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      avisar.exito(t('admin.copied'));
+    } catch {
+      avisar.error('No se pudo copiar al portapapeles. Seleccioná el texto y copialo a mano.');
+    }
   };
 
   const filtered = users.filter(u => {

@@ -1204,3 +1204,64 @@ export function algunaRutaCoincide(
       llamada.every((seg, i) => casa(r.segmentos[i], seg)),
   );
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 10 · Las pruebas que le pegan a una ruta: ¿afirman QUÉ código esperan?
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Las pruebas del backend. `fuentesApi` las excluye a propósito. */
+export const pruebasApi = (): string[] =>
+  globSync('**/*.spec.ts', { cwd: RAIZ_API, absolute: true });
+
+/**
+ * Las peticiones HTTP de una prueba que NO fijan un código exacto.
+ *
+ * ⚠️ POR QUÉ. `validacion-pantallas.spec.ts` afirmaba `not.toBe(400)` sobre
+ * una ruta que respondía 500: el doble del servicio no tenía el método que la
+ * ruta llamaba. La prueba daba verde contra un fallo del servidor y
+ * certificaba lo que no había probado. Un rango —`not.toBe`, `toBeLessThan`—
+ * o ninguna afirmación dejan pasar exactamente eso.
+ *
+ * Una petición cumple si su cadena de supertest tiene `.expect(NNN)`, o si se
+ * guarda en una variable y más abajo, en la misma prueba, hay
+ * `expect(variable.status).toBe(...)`. Se acepta un identificador además del
+ * número —`toBe(esperado)`— porque sigue siendo UN código: lo que se caza es
+ * el rango y el silencio, no la forma de escribir el número.
+ *
+ * ⚠️ LO QUE NO VE, Y SE MIDIÓ: las RAMAS. Lee texto, no flujo. Una
+ * afirmación exacta en una rama de un `if` la satisface aunque la otra rama
+ * use un rango — `permisos-rutas-reales.spec.ts` tenía `toBeLessThan(300)`
+ * en una rama y `toBe(403)` en la otra, y pasó. Se corrigió la prueba; la
+ * regla sigue sin poder verlo.
+ *
+ * ⚠️ Tampoco ve una petición que no se escribe como
+ * `request(app.getHttpServer())`. Medido al escribirla: las 57 del backend
+ * se escriben así, en 5 archivos. Si aparece otra forma, esta primitiva no la
+ * ve — y la regla lo vigila exigiendo que el barrido encuentre peticiones.
+ *
+ * @returns el número de línea de cada petición que no fija su código.
+ */
+export function peticionesSinCodigoExacto(texto: string): number[] {
+  const culpables: number[] = [];
+  for (const m of texto.matchAll(/request\(app\.getHttpServer\(\)\)[\s\S]*?;/g)) {
+    const cadena = m[0];
+    const inicio = m.index ?? 0;
+    const linea = texto.slice(0, inicio).split('\n').length;
+    if (/\.expect\(\s*(\d{3}|[A-Za-z_]\w*)\s*[,)]/.test(cadena)) continue;
+
+    // ¿Se guardó en una variable? `const res = await request(...)…;`
+    const antes = texto.slice(Math.max(0, inicio - 60), inicio);
+    const variable = /(?:const|let)\s+(\w+)\s*=\s*(?:await\s+)?\(?\s*$/.exec(antes)?.[1];
+    if (variable) {
+      // Hasta la próxima prueba: la afirmación tiene que estar en ESTA.
+      const resto = texto.slice(inicio + cadena.length);
+      const hastaLaProxima = resto.split(/\n\s*(?:it|test)(?:\.each\([\s\S]*?\))?\(/)[0];
+      const exacta = new RegExp(
+        `expect\\(\\s*${variable}\\.status\\s*\\)\\.toBe\\(\\s*(\\d{3}|[A-Za-z_]\\w*)\\s*\\)`,
+      );
+      if (exacta.test(hastaLaProxima)) continue;
+    }
+    culpables.push(linea);
+  }
+  return culpables;
+}

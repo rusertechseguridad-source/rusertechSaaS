@@ -73,7 +73,7 @@ describe('Validación del cuerpo · las seis pantallas de edición', () => {
     drivers: { create: jest.fn(), update: jest.fn() },
     carriers: { create: jest.fn(), update: jest.fn() },
     devices: { create: jest.fn(), update: jest.fn() },
-    settings: { updateUser: jest.fn() },
+    settings: { updateUser: jest.fn(), updateProfile: jest.fn() },
     avl: { addDictionaryEntry: jest.fn() },
   };
 
@@ -395,9 +395,20 @@ describe('Validación del cuerpo · las seis pantallas de edición', () => {
     // El pipe sólo valida cuando el parámetro está tipado con una clase. Éste
     // es el hecho que permite encender `forbidNonWhitelisted` de una vez: el
     // alcance son las rutas con DTO, no las 169.
-    servicios.settings.updateUser.mockResolvedValue({});
+    //
+    // ⚠️ ESTA PRUEBA PASABA CON UN 500. Preparaba `updateUser` y la ruta llama
+    // a `updateProfile`: el doble no lo tenía, el handler reventaba con
+    // «updateProfile is not a function», y `not.toBe(400)` lo daba por bueno.
+    // Certificaba que el cuerpo llegaba sin haberlo mirado. Ahora se afirma
+    // el código EXACTO y, sobre todo, lo que la prueba dice probar: que el
+    // campo sin DTO llegó al servicio.
+    servicios.settings.updateProfile.mockResolvedValue({});
     const res = await request(app.getHttpServer())
       .put(`/api/v1/settings/profile`).send({ cualquier_campo_raro: 1 });
-    expect(res.status).not.toBe(400);
+    expect(res.status).toBe(200);
+    expect(servicios.settings.updateProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ cualquier_campo_raro: 1 }),
+    );
   });
 });

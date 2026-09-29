@@ -168,11 +168,13 @@ describe('Permisos · rutas reales, con los guards de verdad', () => {
       como(rol, Object.keys(SYSTEM_PERMISSIONS));
       const res = await (request(app.getHttpServer()) as any)[verbo](ruta).send({});
 
+      // UN código exacto por caso, no un rango: `toBeLessThan(300)` aceptaba
+      // cualquier 2xx. Nest responde 201 a un POST y 200 al resto.
+      const esperado = !admitido ? 403 : verbo === 'post' ? 201 : 200;
+      expect(res.status).toBe(esperado);
       if (admitido) {
-        expect(res.status).toBeLessThan(300);
         expect((ajustes as any)[metodo]).toHaveBeenCalled();
       } else {
-        expect(res.status).toBe(403);
         expect((ajustes as any)[metodo]).not.toHaveBeenCalled();
       }
     });

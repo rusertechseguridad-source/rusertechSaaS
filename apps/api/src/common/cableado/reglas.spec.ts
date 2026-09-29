@@ -8,6 +8,7 @@ import {
   metodosQueEscriben, esPrivado,
   sentenciasSql, tablasDe, creaFilasDe, columnasLeidasDe, columnasEscritasEn, lecturasSinAlias,
   rutasServidas, llamadasAlBackend, algunaRutaCoincide,
+  pruebasApi, peticionesSinCodigoExacto,
 } from './primitivas';
 import {
   SIN_AUTORIZACION, CONSULTAS_SIN_TENANT, TOPE_RUTAS_SIN_DTO, ESCRITURAS_ROL_SIN_REGLA,
@@ -740,6 +741,56 @@ describe('Cableado · las reglas que impiden que los hallazgos vuelvan', () => {
         .filter((f) => /fetch\(\s*[`'"]\/api\/v1/.test(soloCodigo(texto(f))))
         .map((f) => corto(f, RAIZ_WEB));
       expect(culpables).toEqual([]);
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LAS PRUEBAS MISMAS
+  // ════════════════════════════════════════════════════════════════════════
+
+  describe('Las pruebas', () => {
+    it('R21 · toda petición HTTP de una prueba afirma UN código exacto', () => {
+      // ⚠️ La regla que faltaba, y nace de una prueba que mentía:
+      // `validacion-pantallas.spec.ts` afirmaba `not.toBe(400)` sobre una ruta
+      // que respondía 500, porque el doble del servicio no tenía el método que
+      // la ruta llamaba. Verde contra un fallo del servidor. Un rango o una
+      // petición sin afirmación dejan pasar exactamente eso.
+      const archivos = pruebasApi();
+      const peticiones = archivos
+        .map((f) => (texto(f).match(/request\(app\.getHttpServer\(\)\)/g) ?? []).length)
+        .reduce((a, b) => a + b, 0);
+      // Si el barrido no encontrara peticiones, la regla pasaría sin mirar
+      // nada. Medido al escribirla: 57, en 5 archivos.
+      expect(peticiones).toBeGreaterThan(40);
+
+      const culpables = archivos.flatMap((f) =>
+        peticionesSinCodigoExacto(texto(f)).map((l) => `${corto(f)}:${l}`),
+      );
+      expect(culpables).toEqual([]);
+    });
+
+    it('R21-bis · y la regla CAZA el rango, el silencio y la afirmación ajena', () => {
+      // Negativa obligatoria: sobre texto armado a mano, cada forma de dejar
+      // pasar un error tiene que caer, y cada forma correcta tiene que pasar.
+      // En dos pedazos: escrita entera, esta misma línea sería una petición
+      // para R21 —la primera corrida la marcó— y la regla se cazaría a sí misma.
+      const req = 'request(app' + '.getHttpServer())';
+      const casos: [string, boolean][] = [
+        [`await ${req}.get('/x').expect(200);`, true],
+        [`const res = await ${req}.get('/x');\n    expect(res.status).toBe(201);`, true],
+        [`const res = await ${req}.get('/x');\n    expect(res.status).toBe(esperado);`, true],
+        // El que motivó la regla: un rango que acepta el 500.
+        [`const res = await ${req}.put('/x');\n    expect(res.status).not.toBe(400);`, false],
+        [`const res = await ${req}.put('/x');\n    expect(res.status).toBeLessThan(500);`, false],
+        // El silencio: se pide, y no se mira.
+        [`await ${req}.delete('/x');`, false],
+        // La afirmación exacta en OTRA prueba no cuenta para ésta.
+        [`const res = await ${req}.get('/x');\n  });\n  it('otra', () => {\n    expect(res.status).toBe(200);`, false],
+      ];
+      for (const [fuente, cumple] of casos) {
+        expect({ fuente, cumple: peticionesSinCodigoExacto(fuente).length === 0 })
+          .toEqual({ fuente, cumple });
+      }
     });
   });
 });

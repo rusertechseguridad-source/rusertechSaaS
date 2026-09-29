@@ -57,7 +57,7 @@ export const CarriersPage: React.FC = () => {
       if (!res.ok) throw new Error('Error al actualizar estado');
       await fetchCarriers();
     } catch (err: any) {
-      avisar.exito(err.message);
+      avisar.error(err.message);
     }
   };
 

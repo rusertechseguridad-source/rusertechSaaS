@@ -132,7 +132,7 @@ export const AlertsPage: React.FC = () => {
   const submitResolve = async () => {
     if (!alertToResolve) return;
     if (!resolutionNote.trim()) {
-      avisar.exito('Debes ingresar una justificación para atender la alerta.');
+      avisar.error('Debes ingresar una justificación para atender la alerta.');
       return;
     }
     
@@ -168,7 +168,7 @@ export const AlertsPage: React.FC = () => {
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       if (res.status === 403) {
-        avisar.exito(errData.message || 'No tienes permisos de administrador para cambiar esta configuración.');
+        avisar.error(errData.message || 'No tienes permisos de administrador para cambiar esta configuración.');
       } else {
         throw new Error('Failed to update settings');
       }
